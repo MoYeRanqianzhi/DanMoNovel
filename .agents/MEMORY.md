@@ -12,6 +12,6 @@
 - [三站与分域名部署](memory/multi-site-deployment.md) — 做作者站、管理站、共享代码拆分、部署、Docker 与会话设计时读；三站同一风格、不同源，一套部署暴露多个端口，Docker 一键部署前后端
 - [身份与权限](memory/staff-roles.md) — 做管理站、身份任命、审核、编辑管理作者时读；站长唯一、只有站长能设超管、除站长与超管外无人能设身份
 - [移动端与电脑端布局](memory/responsive-layouts.md) — 设计或实现任何页面布局时读；两端要分别设计，原型起初只做了移动端
-- [Web 框架要求](memory/web-framework.md) — 选框架、设计路由与 URL、服务端渲染、缓存、SEO 时读；商业站要有缓存与搜索优化，框架尚未定下
+- [Web 框架：React Router v8](memory/web-framework.md) — 设计路由与 URL、服务端渲染、数据加载、缓存头、SEO、各站构建方式时读；用户已选定，小说站与作者站 SSR，管理站与客户端用 SPA
 - [Web 框架与 SEO、CDN 事实](memory/web-framework-facts.md) — 比较框架、设计 SSR 与 CDN 缓存、做百度或 Google SEO 时读；附出处，截至 2026-09-27
 - [后端语言：Go](memory/backend-language.md) — 写服务端代码、对接国内云服务、设计服务端进程与端口时读；用户已确认用 Go，Rust 只用于 Tauri 客户端
