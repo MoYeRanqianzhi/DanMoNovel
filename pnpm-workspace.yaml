@@ -1,0 +1,9 @@
+# pnpm workspace：三个站点在 apps/，三站共用的代码在 packages/
+# - apps/novel   小说站（服务端渲染）
+# - apps/author  作者站（服务端渲染，公开页面也要 SEO）
+# - apps/admin   管理站（SPA，只给内部工作人员使用）
+# - packages/design  设计系统：令牌与主题、Book3D、飞行引擎、页面栈、基础组件、字体
+# - packages/data    领域类型与原型的示例数据（以后换成调用 Go 接口的客户端）
+packages:
+  - apps/*
+  - packages/*

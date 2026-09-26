@@ -1,0 +1,8 @@
+{
+  // 设计系统的类型检查。vite/client 提供 CSS 等资源模块的类型声明。
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

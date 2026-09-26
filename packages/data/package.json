@@ -1,0 +1,13 @@
+{
+  "name": "@danmo/data",
+  "private": true,
+  "version": "0.1.0-alpha.1",
+  "description": "耽墨的领域类型与原型示例数据（书目、书架、章节）；正式版换成调用 Go 接口的客户端",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

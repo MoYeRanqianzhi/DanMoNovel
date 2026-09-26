@@ -1,0 +1,443 @@
+/* ============================================================
+ * 阅读器
+ * 正文排版变量由 Reader 写入：--rd-size 字号、--rd-leading 行距、
+ * --rd-pitch 一列（竖排）/一行（横排）的高度、--rd-font 字体。
+ * ============================================================ */
+
+/* 阅读页用专门的阅读纸色，而不是界面的页面色（data-page 由路由模块的 handle.name 给出） */
+.screen[data-page='reader'] {
+  overflow: hidden;
+  background-color: var(--reader-paper);
+}
+
+/* 本章开头：服务端渲染与水合的第一帧显示（还不知道页面尺寸，无法分页），尺寸就绪后换成分页正文 */
+.rd-leadin {
+  max-width: 34em;
+  margin: 0 auto;
+  padding: 8px 26px;
+}
+
+.reader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  color: var(--reader-ink);
+}
+
+/* ---- 页眉 / 页脚：安静的小字与红线 ---- */
+.rd-head {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  height: calc(40px + var(--safe-top));
+  padding: var(--safe-top) 26px 6px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.rd-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: calc(40px + var(--safe-bottom));
+  padding: 0 26px var(--safe-bottom);
+}
+.rd-foot .thread {
+  flex: 1;
+}
+.rd-foot__page {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 900px) {
+  .rd-head,
+  .rd-foot {
+    width: min(100%, 820px);
+    margin: 0 auto;
+  }
+}
+
+/* ---- 正文区域 ---- */
+.rd-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+/* 分页模式下横向手势全部交给翻页，禁止浏览器把它当成滚动 */
+.rd-body[data-paged] {
+  touch-action: none;
+  user-select: none;
+  cursor: default;
+}
+
+.rd-paged {
+  position: absolute;
+  inset: 0;
+}
+
+/* 一层页面：铺满正文区，窗口居中 */
+.rd-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--reader-paper);
+  background-image: var(--grain);
+  background-size: 220px 220px;
+  backface-visibility: hidden;
+}
+.rd-page[data-hinge='left'] {
+  transform-origin: 0 50%;
+}
+.rd-page[data-hinge='right'] {
+  transform-origin: 100% 50%;
+}
+/* 被掀起的那页：外缘带一圈柔和投影 */
+.rd-page--leaf {
+  box-shadow: 0 0 44px -10px rgb(var(--shadow-rgb) / 0.45);
+}
+.rd-page__shade {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+/* 掀起的页：离书脊越远的一侧越暗（页面在向观察者翻转） */
+.rd-page--leaf[data-hinge='left'] .rd-page__shade {
+  background: linear-gradient(90deg, transparent, #000);
+}
+.rd-page--leaf[data-hinge='right'] .rd-page__shade {
+  background: linear-gradient(270deg, transparent, #000);
+}
+/* 下层页：书脊附近落着上一页的阴影 */
+.rd-page--under[data-hinge='left'] .rd-page__shade {
+  background: linear-gradient(90deg, #000, transparent 45%);
+}
+.rd-page--under[data-hinge='right'] .rd-page__shade {
+  background: linear-gradient(270deg, #000, transparent 45%);
+}
+
+/* 窗口：裁出一页正文 */
+.rd-window {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ---- 正文排版 ---- */
+.rd-flow {
+  font-family: var(--rd-font);
+  font-size: var(--rd-size);
+  line-height: var(--rd-leading);
+  color: var(--reader-ink);
+  text-align: justify;
+  /* 中西文之间自动留出间距（需显式开启，浏览器默认关闭） */
+  text-autospace: normal;
+  hanging-punctuation: allow-end;
+}
+.rd-flow[data-writing='horizontal'] {
+  column-fill: auto;
+}
+.rd-flow[data-writing='vertical'] {
+  position: absolute;
+  top: 0;
+  right: 0;
+  writing-mode: vertical-rl;
+}
+.rd-flow p {
+  margin: 0;
+  text-indent: 2em;
+}
+/* 横排段间留一点空；竖排不留，否则列宽不再是 --rd-pitch 的整数倍，分页会切断一列字 */
+.rd-flow[data-writing='horizontal'] p + p {
+  margin-top: 0.4em;
+}
+.rd-title {
+  margin: 0.2em 0 1.1em;
+  font-family: var(--font-kai);
+  font-weight: 400;
+  font-size: 1.36em;
+  line-height: 1.5;
+  text-indent: 0;
+}
+.rd-flow[data-writing='vertical'] .rd-title {
+  margin: 0;
+  font-size: 1.3em;
+  /* 标题占两列宽，保持列宽网格对齐 */
+  line-height: calc(var(--rd-pitch) * 2);
+}
+.rd-note {
+  color: var(--ink-2);
+}
+
+/* 隐藏的测量层 */
+.rd-measure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ---- 滚动模式 ---- */
+.rd-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 26px 48px;
+}
+.rd-scroll .rd-flow {
+  max-width: 34em;
+  margin: 0 auto;
+}
+.rd-scroll[data-writing='vertical'] {
+  writing-mode: vertical-rl;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px 26px;
+}
+.rd-scroll[data-writing='vertical'] .rd-flow {
+  position: static;
+  height: 100%;
+  max-width: none;
+}
+
+.rd-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* ---- 工具栏：两张浮起的纸条，从上下边缘滑入 ---- */
+.rd-bar {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  z-index: 6;
+  border-radius: var(--radius-l);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 18px 40px -22px rgb(var(--shadow-rgb) / 0.65);
+  opacity: 0;
+  transition:
+    transform 380ms var(--ease-soft),
+    opacity 240ms ease;
+}
+.rd-bar[data-shown] {
+  opacity: 1;
+  transform: none;
+}
+.rd-bar--top {
+  top: calc(10px + var(--safe-top));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  transform: translateY(calc(-100% - 24px));
+}
+.rd-bar--bottom {
+  bottom: calc(10px + var(--safe-bottom));
+  padding: 10px 14px 6px;
+  transform: translateY(calc(100% + 24px));
+}
+@media (min-width: 900px) {
+  .rd-bar {
+    left: 50%;
+    right: auto;
+    width: min(640px, calc(100% - 40px));
+    translate: -50% 0;
+  }
+}
+.rd-bar__title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+.rd-bar__title span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  color: var(--ink);
+}
+.rd-bar__title small {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.rd-bar__progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rd-bar__chap {
+  flex: none;
+  padding: 8px 4px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.rd-bar__chap:hover {
+  color: var(--ink);
+}
+.rd-bar__pct {
+  flex: 1;
+  text-align: center;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+
+/* 页码滑块：一根红线 + 一个线结 */
+.rd-range {
+  flex: 1;
+  height: 28px;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.rd-range::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    var(--thread) var(--fill),
+    color-mix(in srgb, var(--ink) 18%, transparent) var(--fill)
+  );
+}
+.rd-range[dir='rtl']::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    270deg,
+    var(--thread) var(--fill),
+    color-mix(in srgb, var(--ink) 18%, transparent) var(--fill)
+  );
+}
+.rd-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: var(--thread);
+  box-shadow: 0 0 0 3px var(--sheet);
+}
+.rd-range::-moz-range-track {
+  height: 2px;
+  background: color-mix(in srgb, var(--ink) 18%, transparent);
+}
+.rd-range::-moz-range-progress {
+  height: 2px;
+  background: var(--thread);
+}
+.rd-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--thread);
+  box-shadow: 0 0 0 3px var(--sheet);
+}
+
+.rd-bar__tools {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 4px;
+}
+.rd-tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  border-radius: var(--radius-m);
+  transition: background-color var(--dur-quick) ease;
+}
+.rd-tool svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.6;
+  color: var(--ink);
+}
+.rd-tool:hover {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
+/* ---- 阅读设置面板 ---- */
+.rd-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.rd-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.rd-setting[data-stacked] {
+  flex-direction: column;
+  align-items: stretch;
+}
+.rd-setting__label {
+  flex: none;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.rd-stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rd-stepper output {
+  min-width: 2.4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.rd-stepper .icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.rd-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 8px;
+}
+.rd-swatch {
+  /* 选中环的颜色取自当前应用主题（在进入圆点的 data-theme 作用域之前先存下来） */
+  --ring: var(--thread);
+  --ring-gap: var(--sheet);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.rd-swatch[aria-pressed='true'] {
+  color: var(--ink);
+}
+.rd-swatch__dot {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-family: var(--font-kai);
+  font-size: 18px;
+  background: var(--reader-paper);
+  color: var(--reader-ink);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 4px 10px -6px rgb(var(--shadow-rgb) / 0.6);
+}
+.rd-swatch[aria-pressed='true'] .rd-swatch__dot {
+  box-shadow:
+    0 0 0 2px var(--ring-gap),
+    0 0 0 3.5px var(--ring);
+}

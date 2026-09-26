@@ -1,0 +1,9 @@
+{
+  // 作者站的类型检查（说明见小说站的 tsconfig.json）
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"],
+    "rootDirs": [".", "./.react-router/types"]
+  },
+  "include": ["app", "*.ts", ".react-router/types/**/*"]
+}

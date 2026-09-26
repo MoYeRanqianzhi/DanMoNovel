@@ -7,6 +7,9 @@
 node_modules/
 dist/
 *.tsbuildinfo
+# React Router：typegen 生成的路由类型（./+types/<路由>）与各站的构建产物
+.react-router/
+apps/*/build/
 
 # ---- 本地工作树：约定放在主检出目录的 .worktrees/ 下，永不提交 ----
 /.worktrees/

@@ -1,0 +1,30 @@
+{
+  "name": "@danmo/admin",
+  "private": true,
+  "version": "0.1.0-alpha.1",
+  "description": "耽墨管理站：审核、作者管理、身份与权限；只给内部工作人员使用，SPA 模式",
+  "type": "module",
+  "scripts": {
+    "dev": "react-router dev",
+    "build": "react-router build",
+    "typecheck": "react-router typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@danmo/data": "workspace:*",
+    "@danmo/design": "workspace:*",
+    "@react-router/node": "^8.4.0",
+    "isbot": "^5.2.2",
+    "lucide-react": "^1.48.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router": "^8.4.0"
+  },
+  "devDependencies": {
+    "@react-router/dev": "^8.4.0",
+    "@types/node": "^24.19.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1"
+  }
+}

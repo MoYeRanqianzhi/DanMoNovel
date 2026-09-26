@@ -1,0 +1,5 @@
+{
+  // 领域类型与示例数据：纯 TypeScript，不依赖 DOM 以外的环境
+  "extends": "../../tsconfig.base.json",
+  "include": ["src"]
+}

@@ -1,0 +1,27 @@
+{
+  // 全仓库共用的 TypeScript 选项：只做类型检查（noEmit），转译交给 Vite。
+  // 各包的 tsconfig.json 继承这里，只补充自己的 include 与类型声明。
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    // 共享包直接引用源码，不需要先构建。
+    // 路径相对于本文件所在的仓库根目录；Vite 通过 resolve.tsconfigPaths 使用同一份映射。
+    // 各包的 tsconfig 不要再定义 paths，否则会整体覆盖这里的映射。
+    "paths": {
+      "@danmo/design/*": ["./packages/design/src/*"],
+      "@danmo/data/*": ["./packages/data/src/*"]
+    }
+  }
+}

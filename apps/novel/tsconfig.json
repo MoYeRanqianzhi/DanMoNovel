@@ -1,0 +1,10 @@
+{
+  // 小说站的类型检查。.react-router/types 是 `react-router typegen` 生成的路由类型（./+types/<路由>），
+  // rootDirs 让 TypeScript 把它们当作与路由模块位于同一目录。
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"],
+    "rootDirs": [".", "./.react-router/types"]
+  },
+  "include": ["app", "*.ts", ".react-router/types/**/*"]
+}

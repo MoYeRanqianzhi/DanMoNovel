@@ -1,0 +1,32 @@
+{
+  "name": "@danmo/design",
+  "private": true,
+  "version": "0.1.0-alpha.1",
+  "description": "耽墨设计系统：设计令牌与 8 套主题、3D 书本、飞行过渡引擎、页面栈、基础组件与字体，三站共用",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "check:contrast": "node scripts/check-contrast.mjs"
+  },
+  "dependencies": {
+    "@danmo/data": "workspace:*",
+    "@fontsource/ma-shan-zheng": "^5.3.1",
+    "@fontsource/noto-serif-sc": "^5.3.0",
+    "lucide-react": "^1.48.0",
+    "lxgw-wenkai-screen-webfont": "^1.7.0"
+  },
+  "peerDependencies": {
+    "react": ">=19.2.7",
+    "react-dom": ">=19.2.7",
+    "react-router": "^8.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router": "^8.4.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1"
+  }
+}

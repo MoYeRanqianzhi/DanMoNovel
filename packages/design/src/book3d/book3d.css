@@ -1,0 +1,355 @@
+/* ============================================================
+ * Book3D 的立体结构
+ *
+ * 坐标约定（CSS 3D）：x 向右，y 向下，z 指向观察者。
+ * 书"站立"时：封面在 z = +d/2，封底在 z = -d/2，书脊在 x = 0（左侧），
+ * 书口（翻页的一侧）在 x = w。所有面都相对 .book3d__body（w×h）定位。
+ *
+ * 每个面都有一层"光照"伪元素：用 sin()/cos() 根据当前转角计算明暗，
+ * 转到侧面就变暗、正对观察者就最亮——不用 WebGL 也有一点体积感。
+ * ============================================================ */
+
+.book3d {
+  /* ---- 附加角的兜底值 ----
+   * 这些变量在 tokens.css 里已用 @property 注册了初始值；但 iOS 16.4 之前的
+   * WebKit 不支持 @property，未设置的变量会让整条 transform 失效（书直接"躺平"）。
+   * 在这里显式给出 0，JS 写入的行内样式仍然优先。 */
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --spin: 0deg;
+  --lift: 0;
+  --lines: 1;
+
+  /* ---- 基础尺寸 ----
+   * Book3D 只写出无单位的宽度数字 --wn-base / --wn-wide 与厚度比例 --ratio，
+   * 宽度、厚度、平面内容的缩放系数都从当前生效的 --wn 推导（断点见下方媒体查询）。
+   * --k 的分母 200 必须与 faces.tsx 的 COVER_BASE 一致。 */
+  --wn: var(--wn-base);
+  --w: calc(var(--wn) * 1px);
+  --d: calc(var(--wn) * var(--ratio) * 1px);
+  --k: calc(var(--wn) / 200);
+
+  /* ---- 派生尺寸 ---- */
+  --h: calc(var(--w) * 1.42);
+  --inset: calc(var(--w) * 0.028); /* 书页相对封面缩进的距离（封面"包"住书页） */
+  --cover-t: max(1px, calc(var(--w) * 0.012)); /* 封面板厚度 */
+  --page-w: calc(var(--w) - var(--inset));
+  --page-h: calc(var(--h) - var(--inset) * 2);
+  --page-d: calc(var(--d) - var(--cover-t) * 2);
+  --radius: calc(var(--w) * 0.025);
+  /* 当前朝向：光照与高光都从这里取角度 */
+  --turn: calc(var(--ry) + var(--spin) + var(--tilt-y));
+  --sheen-pos: calc(50% + sin(var(--turn)) * 80%);
+
+  position: relative;
+  flex: none;
+  width: var(--w);
+  height: var(--h);
+  perspective: var(--persp);
+  /* props 变化时平滑过渡；飞行引擎用 WAAPI 覆盖这些变量，不受 transition 影响 */
+  transition:
+    --rx 600ms var(--ease-soft),
+    --ry 600ms var(--ease-soft),
+    --rz 600ms var(--ease-soft),
+    --open 700ms var(--ease-inout),
+    --lift var(--dur-base) var(--ease-soft);
+}
+
+/* 宽屏断点（与 lib/useMedia.ts 的 useIsWide、各页面 CSS 的 900px 一致）：换成宽屏尺寸 */
+@media (min-width: 900px) {
+  .book3d {
+    --wn: var(--wn-wide);
+  }
+}
+
+/* 不自带透视：加入父元素的 3D 空间（例如发现页的书环） */
+.book3d[data-flat] {
+  transform-style: preserve-3d;
+}
+
+/* ---- 地面投影 ---- */
+.book3d__shadow {
+  position: absolute;
+  left: 2%;
+  right: -6%;
+  bottom: calc(var(--w) * -0.08);
+  height: calc(var(--w) * 0.18);
+  background: radial-gradient(
+    closest-side,
+    rgb(var(--shadow-rgb) / 0.36),
+    rgb(var(--shadow-rgb) / 0.12) 62%,
+    transparent
+  );
+  transform: scale(calc(1 - var(--lift) * 0.16));
+  opacity: calc(1 - var(--lift) * 0.4);
+  pointer-events: none;
+}
+
+/* ---- 漂浮层：上下浮动（animation 用 transform）+ 抬起（用独立的 translate 属性，两者可叠加） ---- */
+.book3d__float {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  translate: 0 calc(var(--lift) * var(--w) * -0.05) calc(var(--lift) * var(--w) * 0.14);
+}
+
+/* ---- 姿态层 ---- */
+.book3d__body {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(calc(var(--rx) + var(--tilt-x))) rotateY(var(--turn)) rotateZ(var(--rz));
+}
+
+.book3d__face {
+  position: absolute;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* 各面的光照层共用写法；具体明暗在各面里给 opacity */
+.book3d__face::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- 封面（可开合）：以书脊一侧为轴旋转 ---- */
+.book3d__cover {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform-origin: 0 50%;
+  transform: translateZ(calc(var(--d) / 2)) rotateY(calc(var(--open) * -165deg));
+}
+.book3d__cover-front {
+  inset: 0;
+  overflow: hidden;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+/* 精装书的"书槽"：靠近书脊处一道浅浅的压痕 */
+.book3d__cover-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    90deg,
+    rgb(0 0 0 / 0.2),
+    rgb(255 255 255 / 0.14) 2.5%,
+    rgb(0 0 0 / 0.08) 5%,
+    transparent 8%
+  );
+  pointer-events: none;
+}
+/* 转向侧面或打开时变暗 */
+.book3d__cover-front::after {
+  opacity: calc(0.3 - cos(var(--turn)) * 0.3 + var(--open) * 0.12);
+}
+.book3d__cover-inside {
+  inset: 0;
+  overflow: hidden;
+  transform: rotateY(180deg);
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+/* ---- 封底 ---- */
+.book3d__back {
+  inset: 0;
+  overflow: hidden;
+  transform: translateZ(calc(var(--d) / -2)) rotateY(180deg);
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.book3d__back::after {
+  opacity: calc(0.3 + cos(var(--turn)) * 0.3);
+}
+
+/* ---- 书脊：宽度等于厚度，贴在左侧并朝左 ---- */
+.book3d__spine {
+  top: 0;
+  left: calc(50% - var(--d) / 2);
+  width: var(--d);
+  height: 100%;
+  overflow: hidden;
+  transform: translateX(calc(var(--w) / -2)) rotateY(-90deg);
+  border-radius: calc(var(--d) * 0.12);
+}
+.book3d__spine::after {
+  opacity: calc(0.42 - sin(var(--turn)) * 0.42);
+}
+
+/* ---- 书页的三条边（书口、上切口、下切口），用细纹表现一页页纸 ---- */
+.book3d__edge {
+  background-color: var(--page);
+}
+.book3d__edge--fore {
+  top: var(--inset);
+  left: calc(50% - var(--page-d) / 2);
+  width: var(--page-d);
+  height: var(--page-h);
+  transform: translateX(calc(var(--w) / 2 - var(--inset))) rotateY(90deg);
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 1.4px, rgb(0 0 0 / 0.07) 1.4px 2px),
+    linear-gradient(90deg, rgb(0 0 0 / 0.08), transparent 25%, transparent 75%, rgb(0 0 0 / 0.08));
+}
+.book3d__edge--fore::after {
+  opacity: calc(0.3 + sin(var(--turn)) * 0.3);
+}
+.book3d__edge--top,
+.book3d__edge--bottom {
+  left: 0;
+  top: calc(50% - var(--page-d) / 2);
+  width: var(--page-w);
+  height: var(--page-d);
+  background-image: repeating-linear-gradient(0deg, transparent 0 1.4px, rgb(0 0 0 / 0.06) 1.4px 2px);
+}
+.book3d__edge--top {
+  transform: translateY(calc(var(--h) / -2 + var(--inset))) rotateX(90deg);
+}
+.book3d__edge--top::after {
+  opacity: 0.04;
+}
+.book3d__edge--bottom {
+  transform: translateY(calc(var(--h) / 2 - var(--inset))) rotateX(-90deg);
+}
+.book3d__edge--bottom::after {
+  opacity: 0.22;
+}
+
+/* ---- 内页：纸色跟随主题，用细横线模拟一行行文字 ---- */
+.book3d__page {
+  --line-color: color-mix(in srgb, var(--page-line) calc(var(--lines) * 100%), transparent);
+  padding: calc(var(--w) * 0.11) calc(var(--w) * 0.1) calc(var(--w) * 0.13);
+  background:
+    repeating-linear-gradient(
+        180deg,
+        var(--line-color) 0 calc(var(--w) * 0.011),
+        transparent calc(var(--w) * 0.011) calc(var(--w) * 0.05)
+      )
+      content-box,
+    var(--page);
+}
+/* 书页块顶面：书打开后右手边的那一页 */
+.book3d__block {
+  left: 0;
+  top: var(--inset);
+  width: var(--page-w);
+  height: var(--page-h);
+  transform: translateZ(calc(var(--d) / 2 - var(--cover-t) - 3.5px));
+}
+
+/* 单张内页：以书脊为轴翻动。打开时呈扇形散开，最上面一张翻得最远 */
+.book3d__leaf {
+  --leaf-angle: calc(var(--open) * (158deg - var(--i) * 5deg));
+  position: absolute;
+  left: 0;
+  top: var(--inset);
+  width: var(--page-w);
+  height: var(--page-h);
+  transform-style: preserve-3d;
+  transform-origin: 0 50%;
+  transform: translateZ(calc(var(--d) / 2 - var(--cover-t) - var(--i) * 0.6px))
+    rotateY(calc(var(--leaf-angle) * -1));
+}
+.book3d__leaf-front,
+.book3d__leaf-back {
+  inset: 0;
+}
+.book3d__leaf-back {
+  transform: rotateY(180deg);
+}
+/* 纸张立起来（翻到一半）时最暗 */
+.book3d__leaf-front::after,
+.book3d__leaf-back::after {
+  background: linear-gradient(90deg, #000, transparent 70%);
+  opacity: calc(sin(var(--leaf-angle)) * 0.22);
+}
+
+/* ---- 丝带书签：从书的底部垂出，夹在"读到的那一页"的深度 ---- */
+.book3d__ribbon {
+  position: absolute;
+  left: calc(var(--w) * 0.24);
+  top: calc(var(--h) - var(--inset) - var(--h) * 0.03);
+  width: calc(var(--w) * 0.05);
+  height: calc(var(--h) * 0.14);
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--thread) 80%, #000),
+    var(--thread) 45%,
+    color-mix(in oklab, var(--thread) 88%, #fff)
+  );
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%);
+  transform-origin: 50% 0;
+  transform: translateZ(calc(var(--d) / 2 - var(--cover-t) - var(--progress) * var(--page-d)));
+}
+
+/* ============================================================
+ * 状态
+ * ============================================================ */
+
+/* 漂浮：6.4 秒一个来回，幅度很小，像书被轻轻托着 */
+.book3d[data-state='float'] .book3d__float,
+.book3d[data-state='loading'] .book3d__float {
+  animation: book3d-float 6.4s ease-in-out infinite;
+}
+.book3d[data-state='float'] .book3d__shadow,
+.book3d[data-state='loading'] .book3d__shadow {
+  animation: book3d-shadow 6.4s ease-in-out infinite;
+}
+.book3d[data-state='float'] .book3d__ribbon {
+  animation: book3d-sway 3.2s ease-in-out infinite;
+}
+
+@keyframes book3d-float {
+  0%,
+  100% {
+    transform: translateY(0) rotateZ(0deg);
+  }
+  50% {
+    transform: translateY(calc(var(--w) * -0.045)) rotateZ(-0.8deg);
+  }
+}
+@keyframes book3d-shadow {
+  0%,
+  100% {
+    scale: 1;
+  }
+  50% {
+    scale: 0.88;
+    opacity: 0.7;
+  }
+}
+@keyframes book3d-sway {
+  0%,
+  100% {
+    transform: translateZ(calc(var(--d) / 2 - var(--cover-t) - var(--progress) * var(--page-d))) rotateX(-6deg);
+  }
+  50% {
+    transform: translateZ(calc(var(--d) / 2 - var(--cover-t) - var(--progress) * var(--page-d))) rotateX(10deg);
+  }
+}
+
+/* 加载：内页依次翻到左边、停一拍、再依次翻回——像在书里找你上次读到的地方 */
+.book3d[data-state='loading'] .book3d__leaf {
+  --leaf-angle: calc(var(--leaf) * 150deg);
+  animation: book3d-riffle 2.6s var(--ease-inout) infinite both;
+  animation-delay: calc(var(--i) * 150ms);
+}
+@keyframes book3d-riffle {
+  0%,
+  8% {
+    --leaf: 0;
+  }
+  42%,
+  62% {
+    --leaf: 1;
+  }
+  96%,
+  100% {
+    --leaf: 0;
+  }
+}
