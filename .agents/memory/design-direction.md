@@ -3,7 +3,7 @@ name: design-direction
 description: 做任何界面、视觉、主题、动效相关的设计或实现之前回忆——用户确立并认可的设计方向与母题
 metadata:
   type: project
-  scope: 耽墨小说所有客户端界面；当前体现在 prototype/（React 原型）
+  scope: 耽墨小说三个站点（小说站、作者站、管理站）的所有界面；当前体现在 prototype/（React 原型）
   status: active
   last_verified: 2026-09-27
 ---
@@ -21,7 +21,7 @@ metadata:
 
 **Why:** 用户的原始需求明确要求淡粉主色、多主题、3D 书本共享切换与加载动画，并对原型给出正面评价。这些母题是让界面区别于模板化"粉色阅读 App"的关键，丢掉任何一条都会削弱辨识度。
 
-**How to apply:** 新界面沿用上述母题与设计令牌（prototype/src/styles/tokens.css、themes.css）。新增主题必须补全 themes.css 头部注释列出的全部变量，并通过 `node prototype/scripts/check-contrast.mjs`。新增"红线"用法前先确认它编码了信息。正式设计文档写成后（计划中的 docs/design/）以文档为准。
+**How to apply:** 新界面沿用上述母题与设计令牌（prototype/src/styles/tokens.css、themes.css）。作者站与管理站使用同一套母题（用户 2026-09-27 要求三站"使用相同设计风格"，见 [[multi-site-deployment]]）；每个页面都要分别设计移动端与电脑端布局（见 [[responsive-layouts]]）。新增主题必须补全 themes.css 头部注释列出的全部变量，并通过 `node prototype/scripts/check-contrast.mjs`。新增"红线"用法前先确认它编码了信息。正式设计文档写成后（计划中的 docs/design/）以文档为准。
 
 **Evidence:** 用户 2026-09-26 原始需求；用户 2026-09-27 原话"UI我看到了，非常不错"；提交 15d7bba；对比度脚本 2026-09-26 运行结果为 8 套主题全部达标。
 
