@@ -1,0 +1,141 @@
+/* ============================================================
+ * 设计令牌（与主题无关的部分）
+ *
+ * 颜色随主题变化，定义在 themes.css；这里只放尺寸、字体、字号、
+ * 圆角、缓动、时长，以及需要"可插值动画"的 CSS 自定义属性注册。
+ * 修改任何令牌前请同步 docs/design/design-language.md。
+ * ============================================================ */
+
+/* ---- 可动画的自定义属性注册（@property） ----
+ * 只有注册过类型的自定义属性，才能被 CSS 动画 / Web Animations API
+ * 平滑插值；未注册的属性在动画中会"跳变"。
+ * Book3D 的整套姿态（旋转、开合、抬起）都由这些变量驱动，
+ * 飞行过渡引擎直接对它们做关键帧动画，因此这里是 3D 书本的"骨骼"。 */
+
+/* 书本绕 X 轴旋转（前后俯仰），正值=顶部远离观察者 */
+@property --rx {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+/* 书本绕 Y 轴旋转（左右转身）：0=正对封面，90deg=书脊朝向观察者 */
+@property --ry {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+/* 书本绕 Z 轴旋转（平面内歪斜） */
+@property --rz {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+/* 指针跟随倾斜的附加角度，由 useTilt 逐帧写入，与基础姿态叠加 */
+@property --tilt-x {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+@property --tilt-y {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+/* 拖拽翻转的附加角度，由 useSpin 写入（详情页拖动看封底） */
+@property --spin {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+/* 封面开合程度：0=合上，1=完全打开（约 165°） */
+@property --open {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+/* 抬起程度：0=放在桌面，1=拿在手里（影响投影的扩散与透明度） */
+@property --lift {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+/* 单张内页的翻动进度：0=在右侧未翻，1=翻到左侧。每张内页独立动画 */
+@property --leaf {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+/* 书页上"假文字行"的浓度：1=正常，0=空白。开书推进到占满屏幕时淡到 0，
+ * 这样放大后的书页不会出现模糊的灰条，能干净地衔接真正的阅读页 */
+@property --lines {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+/* 主题切换"墨晕扩散"的半径，由 View Transition 伪元素动画驱动 */
+@property --ink-r {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+:root {
+  /* ---- 字体 ----
+   * 界面只用两种字体：文楷（性格，用于标题与正文阅读）+ 系统无衬线（控件与数字）。
+   * 马善政毛笔楷书只用于 Logo 与线装书"题签"，思源宋体用于现代封面标题与阅读字体选项。 */
+  --font-kai: 'LXGW WenKai Screen', 'LXGW WenKai', 'Kaiti SC', 'STKaiti', 'KaiTi', serif;
+  --font-sans: system-ui, -apple-system, 'PingFang SC', 'HarmonyOS Sans SC', 'MiSans',
+    'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+  --font-brush: 'Ma Shan Zheng', 'LXGW WenKai Screen', 'KaiTi', serif;
+
+  /* ---- 字号：采用《排版的元素》经典字号序列（12/14/16/18/21/24/36/48/72） ---- */
+  --fs-12: 0.75rem;
+  --fs-14: 0.875rem;
+  --fs-16: 1rem;
+  --fs-18: 1.125rem;
+  --fs-21: 1.3125rem;
+  --fs-24: 1.5rem;
+  --fs-36: 2.25rem;
+  --fs-48: 3rem;
+  --fs-72: 4.5rem;
+
+  /* ---- 间距：4 的倍数 ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+
+  /* ---- 圆角：按层级区分，而不是所有东西一个圆角 ----
+   * 纸条类小控件用小圆角，浮起的纸面用中圆角，底部面板用大圆角，胶囊按钮全圆。 */
+  --radius-s: 6px;
+  --radius-m: 14px;
+  --radius-l: 24px;
+  --radius-pill: 999px;
+
+  /* ---- 缓动 ----
+   * soft：大多数进入与响应（快起慢收，像纸落在桌面上）
+   * inout：翻页、开合这类对称运动
+   * spring：带约 2% 轻微回弹的弹簧，用于书本落位、丝带指示器（CSS linear() 近似） */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: linear(0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%,
+      0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 63.9%, 1.001 85.9%, 1);
+
+  /* ---- 时长 ---- */
+  --dur-quick: 180ms;
+  --dur-base: 320ms;
+  --dur-slow: 560ms;
+
+  /* ---- 布局 ---- */
+  --rail-w: 88px; /* 桌面端侧栏宽度 */
+  --tabbar-h: 64px; /* 移动端底部导航高度（不含安全区） */
+  --content-max: 1180px; /* 桌面端内容最大宽度 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}

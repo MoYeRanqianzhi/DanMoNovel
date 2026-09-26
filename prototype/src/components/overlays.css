@@ -1,0 +1,136 @@
+/* ============================================================
+ * 浮层样式：Sheet（底部纸页面板）与 Toast（轻提示）
+ * ============================================================ */
+
+.sheet-root {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+.sheet-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  animation: overlay-fade-in var(--dur-base) ease both;
+}
+.sheet-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 10px var(--sp-5) calc(var(--sp-6) + var(--safe-bottom));
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+  box-shadow: 0 -16px 40px -24px rgb(var(--shadow-rgb) / 0.55);
+  outline: none;
+  animation: sheet-up 380ms var(--ease-soft) both;
+}
+.sheet-root[data-closing] .sheet-scrim {
+  animation: overlay-fade-out 260ms ease both;
+}
+.sheet-root[data-closing] .sheet-panel {
+  animation: sheet-down 260ms ease both;
+}
+.sheet-panel__grip {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto var(--sp-3);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
+}
+.sheet-panel__title {
+  margin-bottom: var(--sp-4);
+  font-size: var(--fs-21);
+  font-weight: 400;
+}
+
+/* 桌面端：居中的纸卡 */
+@media (min-width: 900px) {
+  .sheet-panel {
+    left: 50%;
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    width: min(480px, 92vw);
+    padding-bottom: var(--sp-6);
+    border-radius: var(--radius-l);
+    translate: -50% -50%;
+    animation-name: sheet-pop;
+  }
+  .sheet-panel__grip {
+    display: none;
+  }
+  .sheet-root[data-closing] .sheet-panel {
+    animation-name: overlay-fade-out;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes sheet-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes sheet-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes overlay-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ---------------- Toast：一张小纸条从底部浮起 ---------------- */
+.toast-region {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 28px);
+  z-index: 70;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.toast {
+  padding: 10px 18px;
+  border-radius: var(--radius-m);
+  font-size: var(--fs-14);
+  color: var(--ink);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 12px 30px -14px rgb(var(--shadow-rgb) / 0.5);
+  animation: toast-life 2200ms var(--ease-soft) both;
+}
+@keyframes toast-life {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  10%,
+  86% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (min-width: 900px) {
+  .toast-region {
+    bottom: 36px;
+    padding-left: var(--rail-w);
+  }
+}

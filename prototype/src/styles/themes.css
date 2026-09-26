@@ -1,0 +1,211 @@
+/* ============================================================
+ * 主题色板（8 套）
+ *
+ * 用法：在任意元素上设置 data-theme="<id>"，其后代即使用该主题。
+ * 根元素 <html data-theme> 决定整个应用的主题；主题页的每个"色样"
+ * 也各自带 data-theme，于是色样能在局部预览自己的配色——这是
+ * CSS 变量级联带来的免费能力，新增主题时无需额外写预览代码。
+ *
+ * 每套主题必须完整定义下列变量（缺一个都会从外层主题"漏色"）：
+ *   --paper       页面底色（纸）
+ *   --sheet       浮起的纸面：导航条、面板、按钮
+ *   --sheet-2     凹下的纸面：输入框、分段控件底
+ *   --ink         正文墨色（永不使用纯黑）
+ *   --ink-2       次要文字（对 --paper 的对比度 ≥ 4.5）
+ *   --line        分隔线与描边（带透明度）
+ *   --blush       主色：大面积柔和填充（主按钮、选中态）
+ *   --blush-ink   主色填充上的文字
+ *   --thread      "红线"：只用于进度、CP 配对、当前位置、焦点环
+ *   --thread-ink  红线色的文字（加深以满足 4.5 对比度）
+ *   --shadow-rgb  阴影色三元组（阴影随主题染色，而不是统一的灰）
+ *   --grain       纸纹背景图
+ *   --reader-paper / --reader-ink  阅读页纸色与正文色
+ *   --page / --page-line           3D 书本内页纸色与"文字行"色
+ *   --scrim       面板遮罩
+ *   color-scheme  告诉浏览器原生控件与滚动条使用亮/暗配色
+ *
+ * 对比度由 scripts/check-contrast.mjs 校验，改色后请重新运行。
+ * ============================================================ */
+
+/* 两种纸纹：深色细点用于浅色主题，浅色细点用于夜间主题。
+ * 细点（g）模拟纸浆颗粒，横向长纹（f）模拟帘纹纸的纤维走向。 */
+:root {
+  --grain-on-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.24 0 0 0 0 0.16 0 0 0 0 0.2 0 0 0 0.55 -0.2'/%3E%3C/filter%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.24' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.24 0 0 0 0 0.16 0 0 0 0 0.2 0 0 0 0.9 -0.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.28'/%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='0.22'/%3E%3C/svg%3E");
+  --grain-on-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 0.94 0 0 0 0 0.97 0 0 0 0.55 -0.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.12'/%3E%3C/svg%3E");
+}
+
+/* ---- 薛涛笺（默认）：淡粉色的笺纸。唐代薛涛自制的小幅粉笺，是本主题的名字来源 ---- */
+[data-theme='xuetao'] {
+  color-scheme: light;
+  --paper: #fbf1f3;
+  --sheet: #fffafb;
+  --sheet-2: #f5e6ea;
+  --ink: #3d2b35;
+  --ink-2: #7a6570;
+  --line: rgb(61 43 53 / 0.12);
+  --blush: #f2b6c3;
+  --blush-ink: #4a2a36;
+  --thread: #d0435f;
+  --thread-ink: #b3344f;
+  --shadow-rgb: 150 70 95;
+  --grain: var(--grain-on-light);
+  --reader-paper: #fcf4f5;
+  --reader-ink: #3a2a32;
+  --page: #fff8f9;
+  --page-line: rgb(61 43 53 / 0.16);
+  --scrim: rgb(61 30 45 / 0.28);
+}
+
+/* ---- 长夜（夜间）：深紫夜色。正文不用纯白，降低对比避免关灯后刺眼 ---- */
+[data-theme='changye'] {
+  color-scheme: dark;
+  --paper: #1c1921;
+  --sheet: #26222c;
+  --sheet-2: #15131a;
+  --ink: #ece2e8;
+  --ink-2: #aba0a7;
+  --line: rgb(236 226 232 / 0.12);
+  --blush: #8c5566;
+  --blush-ink: #fceef2;
+  --thread: #e8849a;
+  --thread-ink: #f09aae;
+  --shadow-rgb: 0 0 0;
+  --grain: var(--grain-on-dark);
+  --reader-paper: #1c1921;
+  --reader-ink: #cfc4ca;
+  --page: #2e2934;
+  --page-line: rgb(236 226 232 / 0.14);
+  --scrim: rgb(0 0 0 / 0.5);
+}
+
+/* ---- 豆青（护眼）：低饱和的豆绿，比传统"护眼绿"更柔，久读不累眼 ---- */
+[data-theme='douqing'] {
+  color-scheme: light;
+  --paper: #e3eddc;
+  --sheet: #edf4e8;
+  --sheet-2: #d6e3ce;
+  --ink: #2b3a2e;
+  --ink-2: #56675a;
+  --line: rgb(43 58 46 / 0.14);
+  --blush: #a9cdb0;
+  --blush-ink: #1f3324;
+  --thread: #b8505a;
+  --thread-ink: #9e3f49;
+  --shadow-rgb: 60 90 65;
+  --grain: var(--grain-on-light);
+  --reader-paper: #e1ecd9;
+  --reader-ink: #2e3b30;
+  --page: #eef5e9;
+  --page-line: rgb(43 58 46 / 0.16);
+  --scrim: rgb(30 50 35 / 0.28);
+}
+
+/* ---- 缃叶（护眼）：旧书页的暖黄，接近纸质书 ---- */
+[data-theme='xiangye'] {
+  color-scheme: light;
+  --paper: #f1e6d0;
+  --sheet: #f8f0e1;
+  --sheet-2: #e8dac0;
+  --ink: #42352a;
+  --ink-2: #6b5b4b;
+  --line: rgb(66 53 42 / 0.14);
+  --blush: #ddbf90;
+  --blush-ink: #3a2b1c;
+  --thread: #b04a38;
+  --thread-ink: #99402f;
+  --shadow-rgb: 110 80 45;
+  --grain: var(--grain-on-light);
+  --reader-paper: #f2e7d1;
+  --reader-ink: #3f3226;
+  --page: #f8f0e0;
+  --page-line: rgb(66 53 42 / 0.16);
+  --scrim: rgb(60 40 20 / 0.28);
+}
+
+/* ---- 天青：雨过天青的浅蓝，配一点朱砂红线 ---- */
+[data-theme='tianqing'] {
+  color-scheme: light;
+  --paper: #ecf2f4;
+  --sheet: #f8fbfc;
+  --sheet-2: #dde8ec;
+  --ink: #21323a;
+  --ink-2: #536771;
+  --line: rgb(33 50 58 / 0.13);
+  --blush: #a7cad8;
+  --blush-ink: #16303a;
+  --thread: #c4505a;
+  --thread-ink: #a8404a;
+  --shadow-rgb: 60 95 115;
+  --grain: var(--grain-on-light);
+  --reader-paper: #eef4f6;
+  --reader-ink: #22333b;
+  --page: #f7fafb;
+  --page-line: rgb(33 50 58 / 0.15);
+  --scrim: rgb(20 40 50 / 0.28);
+}
+
+/* ---- 紫藤：紫藤花的淡紫 ---- */
+[data-theme='ziteng'] {
+  color-scheme: light;
+  --paper: #f3eff8;
+  --sheet: #fcfafe;
+  --sheet-2: #e6def1;
+  --ink: #332a48;
+  --ink-2: #685e80;
+  --line: rgb(51 42 72 / 0.13);
+  --blush: #c7b6e6;
+  --blush-ink: #2a2040;
+  --thread: #be4c7e;
+  --thread-ink: #a33d6a;
+  --shadow-rgb: 95 75 140;
+  --grain: var(--grain-on-light);
+  --reader-paper: #f4f0f9;
+  --reader-ink: #322a45;
+  --page: #fbf9fe;
+  --page-line: rgb(51 42 72 / 0.15);
+  --scrim: rgb(40 30 60 / 0.28);
+}
+
+/* ---- 盐汽水：薄荷绿，夏天的教室 ---- */
+[data-theme='yanqishui'] {
+  color-scheme: light;
+  --paper: #e9f5f1;
+  --sheet: #f6fcfa;
+  --sheet-2: #d7ede6;
+  --ink: #1e3732;
+  --ink-2: #4f6962;
+  --line: rgb(30 55 50 / 0.13);
+  --blush: #9ad8c8;
+  --blush-ink: #133029;
+  --thread: #db5f7a;
+  --thread-ink: #b8425d;
+  --shadow-rgb: 50 110 95;
+  --grain: var(--grain-on-light);
+  --reader-paper: #ebf6f2;
+  --reader-ink: #1f3833;
+  --page: #f5fbf9;
+  --page-line: rgb(30 55 50 / 0.15);
+  --scrim: rgb(15 45 40 / 0.28);
+}
+
+/* ---- 墨白：宣纸与墨，只留一点印章红 ---- */
+[data-theme='mobai'] {
+  color-scheme: light;
+  --paper: #eeefef;
+  --sheet: #f8f8f8;
+  --sheet-2: #e1e2e3;
+  --ink: #1e1f24;
+  --ink-2: #5a5c63;
+  --line: rgb(30 31 36 / 0.13);
+  --blush: #c9cacf;
+  --blush-ink: #1e1f24;
+  --thread: #b8343f;
+  --thread-ink: #a12c36;
+  --shadow-rgb: 40 40 50;
+  --grain: var(--grain-on-light);
+  --reader-paper: #efefee;
+  --reader-ink: #23242a;
+  --page: #fafaf9;
+  --page-line: rgb(30 31 36 / 0.15);
+  --scrim: rgb(20 20 25 / 0.3);
+}

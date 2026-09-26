@@ -1,0 +1,83 @@
+/* ============================================================
+ * 主题配色页
+ * ============================================================ */
+
+.themes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-4);
+  padding-top: var(--sp-3);
+  padding-bottom: var(--sp-12);
+}
+@media (min-width: 900px) {
+  .themes-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--sp-6);
+    padding-top: var(--sp-6);
+  }
+}
+
+.swatch {
+  /* 选中环用当前应用主题的颜色：必须在进入色样的 data-theme 作用域之前声明 */
+  --ring: var(--thread);
+  --ring-gap: var(--paper);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 8px 14px;
+  text-align: left;
+  border-radius: var(--radius-l);
+  transition: background-color var(--dur-quick) ease;
+}
+.swatch:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+/* 一小块该主题的纸，书立在上面；选中时纸边系一圈红线（红线取当前应用主题的颜色） */
+.swatch__paper {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  padding-bottom: 8px;
+  border-radius: var(--radius-m);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 10px 24px -16px rgb(var(--shadow-rgb) / 0.6);
+}
+.swatch[aria-pressed='true'] .swatch__paper {
+  box-shadow:
+    0 0 0 2px var(--ring-gap),
+    0 0 0 3.5px var(--ring),
+    0 10px 24px -16px rgb(var(--shadow-rgb) / 0.6);
+}
+.swatch__paper .book3d {
+  transition: --lift var(--dur-base) var(--ease-soft);
+}
+.swatch:hover .swatch__paper .book3d,
+.swatch:focus-visible .swatch__paper .book3d {
+  --lift: 1;
+}
+
+.swatch__text {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+.swatch__name {
+  font-family: var(--font-kai);
+  font-size: var(--fs-21);
+}
+.swatch__kind {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.swatch__note {
+  padding: 0 4px;
+  font-size: var(--fs-14);
+  line-height: 1.5;
+  color: var(--ink-2);
+}

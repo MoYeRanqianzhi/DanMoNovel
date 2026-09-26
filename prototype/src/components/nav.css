@@ -1,0 +1,147 @@
+/* ============================================================
+ * 主导航样式
+ * ============================================================ */
+
+/* ---------------- 移动端底部导航 ---------------- */
+.tabbar {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(12px + var(--safe-bottom));
+  z-index: 30;
+  height: var(--tabbar-h);
+  display: grid;
+  /* 列数由导航项数决定（见 nav.tsx 的 --tab-count），新增或删减导航项不必改 CSS */
+  grid-template-columns: repeat(var(--tab-count), 1fr);
+  border-radius: 22px;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 14px 34px -16px rgb(var(--shadow-rgb) / 0.55);
+  transition:
+    transform 420ms var(--ease-soft),
+    opacity 240ms ease;
+}
+.tabbar[data-hidden] {
+  transform: translateY(calc(100% + 28px));
+  opacity: 0;
+}
+
+.tabbar__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  border-radius: 22px;
+  transition: color var(--dur-quick) ease;
+}
+.tabbar__item svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.6;
+}
+.tabbar__item[aria-current] {
+  color: var(--ink);
+}
+.tabbar__item:focus-visible {
+  outline-offset: -4px;
+}
+
+/* 书签丝带：从纸条的上沿探出来，尾端是燕尾缺口 */
+.tabbar__ribbon {
+  position: absolute;
+  /* 抬到纸条背景之上，否则会被纸条本身盖住 */
+  z-index: 1;
+  top: -11px;
+  left: calc((var(--tab) + 0.5) * 100% / var(--tab-count));
+  width: 10px;
+  height: 17px;
+  margin-left: -5px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--thread) 82%, #000),
+    var(--thread) 50%,
+    color-mix(in oklab, var(--thread) 88%, #fff)
+  );
+  clip-path: polygon(0 0, 50% 26%, 100% 0, 100% 100%, 0 100%);
+  transition: left 560ms var(--ease-spring);
+  pointer-events: none;
+}
+
+/* ---------------- 桌面端侧栏 ---------------- */
+.rail {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .tabbar {
+    display: none;
+  }
+
+  .rail {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 30;
+    width: var(--rail-w);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 36px;
+    padding: 30px 0 22px;
+    box-shadow: 1px 0 0 var(--line);
+  }
+
+  .rail__items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .rail__item {
+    position: relative;
+    width: 64px;
+    padding: 10px 0 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--fs-12);
+    color: var(--ink-2);
+    border-radius: var(--radius-m);
+    transition:
+      color var(--dur-quick) ease,
+      background-color var(--dur-quick) ease;
+  }
+  .rail__item svg {
+    width: 22px;
+    height: 22px;
+    stroke-width: 1.6;
+  }
+  .rail__item:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+  }
+  .rail__item[aria-current] {
+    color: var(--ink);
+  }
+  /* 当前项：左侧插着一枚竖向的书签丝带 */
+  .rail__item[aria-current]::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    width: 16px;
+    height: 9px;
+    margin-top: -4.5px;
+    background: var(--thread);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 26% 50%);
+  }
+
+  .rail__theme {
+    margin-top: auto;
+  }
+}

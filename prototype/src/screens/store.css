@@ -1,0 +1,289 @@
+/* ============================================================
+ * 书城
+ * ============================================================ */
+
+.store {
+  padding-top: var(--sp-5);
+}
+@media (min-width: 900px) {
+  .store {
+    padding-top: var(--sp-10);
+  }
+}
+.store-sub {
+  margin-top: 4px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+
+/* ---- 榜单：移动端一叠可以左右滑动的纸笺，露出下一张的边缘提示还有更多 ---- */
+.boards {
+  gap: 14px;
+  margin: var(--sp-5) calc(var(--sp-5) * -1) 0;
+  padding: 6px var(--sp-5) 22px;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--sp-5);
+}
+.board {
+  flex: none;
+  width: min(86%, 380px);
+  scroll-snap-align: start;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  border-radius: var(--radius-l);
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 16px 34px -26px rgb(var(--shadow-rgb) / 0.55);
+}
+@media (min-width: 900px) {
+  .boards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--sp-6);
+    overflow: visible;
+    margin: var(--sp-6) 0 0;
+    padding: 0;
+  }
+  .board {
+    width: auto;
+  }
+}
+
+/* 竖排题签：与线装书封面上的题签同一母题，榜名竖写 */
+.board__strip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 0;
+  background: color-mix(in srgb, var(--blush) 50%, var(--sheet));
+  box-shadow: inset -1px 0 0 var(--line);
+}
+.board__strip svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.7;
+  color: var(--thread-ink);
+}
+.board__name {
+  writing-mode: vertical-rl;
+  font-family: var(--font-kai);
+  font-weight: 400;
+  font-size: var(--fs-18);
+  letter-spacing: 0.18em;
+  color: var(--ink);
+}
+
+.board__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 14px 14px 12px;
+}
+
+/* 榜首：立体书 + 书名 + 依据数字 + 两行简介，整块可点 */
+.board__lead {
+  display: flex;
+  gap: 14px;
+  padding: 4px 2px 0;
+  text-align: left;
+  border-radius: var(--radius-m);
+}
+.board__lead .book3d {
+  margin: 4px 6px 14px 2px;
+}
+.board__lead:hover .book3d,
+.board__lead:focus-visible .book3d {
+  --lift: 1;
+}
+.board__lead-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.board__title {
+  font-family: var(--font-kai);
+  font-size: var(--fs-21);
+  line-height: 1.3;
+}
+.board__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+/* 榜单依据的数字用红线色，说明"它为什么排在这里" */
+.board__stat {
+  font-size: var(--fs-12);
+  color: var(--thread-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.board__blurb {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-size: var(--fs-14);
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+/* 第 2~5 名：名次 + 书脊 + 书名/作者 + 依据数字 */
+.board__rest {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.board__rest button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 18px 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 2px;
+  text-align: left;
+  border-radius: var(--radius-s);
+  transition: background-color var(--dur-quick) ease;
+}
+.board__rest button:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.board__rest button:hover .book3d,
+.board__rest button:focus-visible .book3d {
+  --lift: 1;
+}
+.board__no {
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  text-align: center;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.board__rest-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+.board__rest-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+}
+.board__rest-author {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.board__rule {
+  margin-top: auto;
+  padding-top: 10px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+
+/* ---- 新书上架 ---- */
+.fresh {
+  margin-top: var(--sp-8);
+}
+.fresh__row {
+  gap: 18px;
+  margin: var(--sp-4) calc(var(--sp-5) * -1) 0;
+  padding: 4px var(--sp-5) 12px;
+}
+@media (min-width: 900px) {
+  .fresh__row {
+    margin: var(--sp-4) 0 0;
+    padding: 4px 0 12px;
+    gap: 34px;
+  }
+}
+.fresh__book {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 4px;
+  text-align: left;
+  border-radius: var(--radius-m);
+}
+.fresh__book .book3d {
+  margin-bottom: 16px;
+}
+.fresh__book:hover .book3d,
+.fresh__book:focus-visible .book3d {
+  --lift: 1;
+}
+.fresh__title {
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+}
+.fresh__date {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+
+/* ---- 馆藏目录 ---- */
+.catalog {
+  margin-top: var(--sp-10);
+}
+.catalog__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.catalog__genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+.catalog__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-6) var(--sp-4);
+  margin-top: var(--sp-5);
+}
+@media (min-width: 640px) {
+  .catalog__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 900px) {
+  .catalog__grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--sp-8) var(--sp-6);
+  }
+}
+.catalog__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 6px;
+  text-align: left;
+  border-radius: var(--radius-m);
+}
+.catalog__item .book3d {
+  margin-bottom: 16px;
+}
+.catalog__item:hover .book3d,
+.catalog__item:focus-visible .book3d {
+  --lift: 1;
+}
+.catalog__title {
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+}
+.catalog__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}

@@ -1,0 +1,56 @@
+/* ============================================================
+ * 页面级过渡
+ * - 主题切换的"墨晕扩散"（View Transition API）
+ * - 页面进出场（只做淡入淡出：移动感交给飞行中的书，页面本身保持安静）
+ * ============================================================ */
+
+/* ---- 墨晕扩散 ----
+ * ThemeContext 在切换前把点击坐标写进 --ink-x / --ink-y，把最大半径写进 --ink-max，
+ * 并给 <html> 加上 .ink-switching。新主题的快照用一个边缘羽化的圆形遮罩逐渐露出，
+ * 羽化的边缘让它看起来像墨在纸上洇开，而不是一个硬边的圆。 */
+html.ink-switching::view-transition-old(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html.ink-switching::view-transition-new(root) {
+  mix-blend-mode: normal;
+  mask-image: radial-gradient(
+    circle at var(--ink-x) var(--ink-y),
+    #000 calc(var(--ink-r) - 90px),
+    rgb(0 0 0 / 0.6) calc(var(--ink-r) - 40px),
+    transparent var(--ink-r)
+  );
+  animation: ink-spread 900ms var(--ease-soft) both;
+}
+@keyframes ink-spread {
+  from {
+    --ink-r: 0px;
+  }
+  to {
+    --ink-r: var(--ink-max);
+  }
+}
+
+/* ---- 页面进出场 ---- */
+.screen[data-phase='enter'] {
+  animation: screen-in var(--dur-base) var(--ease-soft) both;
+}
+.screen[data-phase='exit'] {
+  animation: screen-out 260ms ease both;
+  pointer-events: none;
+}
+/* 进入阅读器：书打开并推进到占满屏幕之后，阅读页才出现（时间与 flight/timing.ts 的 DIVE 对齐） */
+.screen[data-phase='enter'][data-enter='dive'] {
+  animation: screen-in 1ms linear var(--dive-reveal, 1100ms) both;
+}
+
+@keyframes screen-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes screen-out {
+  to {
+    opacity: 0;
+  }
+}

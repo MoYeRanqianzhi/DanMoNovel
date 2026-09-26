@@ -1,0 +1,112 @@
+/* ============================================================
+ * 组件实验室
+ * ============================================================ */
+
+.lab-body {
+  display: grid;
+  gap: var(--sp-8);
+  padding-bottom: var(--sp-12);
+}
+@media (min-width: 900px) {
+  .lab-body {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  /* 预览固定在左侧，右侧滚动调参 */
+  .lab-preview {
+    position: sticky;
+    top: 72px;
+  }
+}
+
+.lab-preview {
+  display: grid;
+  place-items: center;
+  min-height: 420px;
+  padding: 40px 20px 60px;
+  border-radius: var(--radius-l);
+  box-shadow: inset 0 0 0 1px var(--line);
+  overflow: hidden;
+}
+
+.lab-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+.lab-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.lab-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+/* 滑块：标签 / 滑轨 / 数值 三列 */
+.lab-range {
+  display: grid;
+  grid-template-columns: 3em 1fr 4.5em;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.lab-range input {
+  width: 100%;
+  accent-color: var(--thread);
+}
+.lab-range output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.lab-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.lab-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--thread);
+}
+
+.lab-loaders {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-10);
+  padding: var(--sp-4) 0;
+}
+
+.lab-note {
+  max-width: 36em;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.lab-flight {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: var(--sp-6);
+  min-height: 260px;
+  padding: var(--sp-6) var(--sp-4) var(--sp-8);
+  border-radius: var(--radius-l);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+/* 书不在的那一端只保留位置、不显示书（用 opacity，飞行引擎只改 visibility，两者互不干扰） */
+.lab-slot .book3d {
+  opacity: 0;
+  transition: opacity var(--dur-quick) ease;
+}
+.lab-slot[data-here] .book3d {
+  opacity: 1;
+}
+.lab-block > .btn {
+  align-self: flex-start;
+}

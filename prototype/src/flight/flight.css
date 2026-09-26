@@ -1,0 +1,18 @@
+/* 飞行覆盖层：位于所有页面与底部导航之上（z-index 见 docs/design/design-language.md 的层级表） */
+.flight-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  /* 开书推进时书会被放大到超出屏幕，裁掉超出部分 */
+  overflow: hidden;
+}
+
+/* 外壳只做 2D 的平移与缩放；3D 在里面的 Book3D 自己的透视空间中完成 */
+.flight {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  will-change: transform, opacity;
+}

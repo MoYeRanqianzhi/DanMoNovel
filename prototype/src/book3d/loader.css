@@ -1,0 +1,14 @@
+/* 加载动画：书摊开在桌上翻页 */
+.loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.loader__stage {
+  padding-left: var(--size);
+}
+.loader__caption {
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
