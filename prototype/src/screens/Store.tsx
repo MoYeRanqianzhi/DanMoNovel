@@ -148,7 +148,8 @@ interface BoardCardProps {
 }
 
 /**
- * 一张榜单笺：左侧是竖排的题签（榜名），右侧是榜首（立体书 + 简介）与第 2~5 名（书脊）。
+ * 一张榜单笺：左侧是竖排的题签（榜名），右侧是榜首（立体书 + 简介）与第 2~5 名（小封面）。
+ * 这里不用书脊：书脊在小尺寸下看不清书名，列表里一律让封面朝外。
  * 榜单本身就是序列，所以名次数字是信息，不是装饰。
  */
 function BoardCard({ board, routeKey, wide, onOpen }: BoardCardProps) {
@@ -178,7 +179,7 @@ function BoardCard({ board, routeKey, wide, onOpen }: BoardCardProps) {
             <li key={b.id}>
               <button type="button" onClick={() => onOpen(b.id, slot(b))}>
                 <span className="board__no">{i + 2}</span>
-                <BookSlot slotId={slot(b)} book={b} width={32} {...POSES.spine} shadow={false} label={null} />
+                <BookSlot slotId={slot(b)} book={b} width={30} {...POSES.thumb} shadow={false} label={null} />
                 <span className="board__rest-text">
                   <span className="board__rest-title">{b.title}</span>
                   <span className="board__rest-author">{b.author}</span>

@@ -133,7 +133,7 @@
   color: var(--ink-2);
 }
 
-/* 第 2~5 名：名次 + 书脊 + 书名/作者 + 依据数字 */
+/* 第 2~5 名：名次 + 小封面 + 书名/作者 + 依据数字 */
 .board__rest {
   margin-top: 4px;
   border-top: 1px solid var(--line);
@@ -141,7 +141,7 @@
 .board__rest button {
   width: 100%;
   display: grid;
-  grid-template-columns: 18px 32px minmax(0, 1fr) auto;
+  grid-template-columns: 18px 34px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 7px 2px;
