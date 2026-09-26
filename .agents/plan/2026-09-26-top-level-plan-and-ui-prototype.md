@@ -36,6 +36,7 @@
 - 防爬虫的目标是挡大规模自动化爬取，不是阻止复制；保留读屏模式，后续加入 AI 听书 → [content-protection-goal](../memory/content-protection-goal.md)。
 - 设计方向与母题 → [design-direction](../memory/design-direction.md)。
 - 选项命名要面向读者 → [reader-facing-naming](../memory/reader-facing-naming.md)。
+- 后端用 Go（2026-09-27 确认）→ [backend-language](../memory/backend-language.md)。
 
 **建议中，待用户确认**
 - 技术路线：Web 内核（React + TS + Vite）+ 原生外壳（Tauri 2 桌面与移动端；鸿蒙后续用 ArkWeb 承载同一 Web 包）。理由：浏览器的中文排版能力最强（竖排、标点挤压、中西文间距），3D 与动效能力最强，并且只需维护一套 UI 代码。事实与出处见 [platform-support-facts](../memory/platform-support-facts.md)。
@@ -61,7 +62,7 @@
 
 需求原话与判断理由见各条记忆；这里只记实现层面的思路，**尚未实现也未验证**。
 
-1. **三站结构**（先做，后面的工作都建立在它上面）：`prototype/src/` 拆成 `shared/`（令牌与主题样式、theme、book3d、flight、基础组件、lib、data、fonts）与 `novel/`、`author/`、`admin/` 三个站点目录。每个站一个 HTML 入口 `prototype/sites/<站点>/index.html`。一个启动脚本用 Vite 的 JS 接口在同一进程里起三个开发服务器：5173 小说站、5174 作者站、5175 管理站。`vite build` 按站点分别输出到 `dist/<站点>/`。
+1. **三站结构**（取决于 Web 框架：用户 2026-09-27 指出框架一直没定下，商业站需要能做缓存与搜索优化的框架，见 [web-framework](../memory/web-framework.md)。框架定下之前只做与框架无关的工作；定下后很可能改为 pnpm workspace 的 `apps/`（各站）加 `packages/`（共享设计系统）结构，下面这套 Vite 多入口方案作废）：`prototype/src/` 拆成 `shared/`（令牌与主题样式、theme、book3d、flight、基础组件、lib、data、fonts）与 `novel/`、`author/`、`admin/` 三个站点目录。每个站一个 HTML 入口 `prototype/sites/<站点>/index.html`。一个启动脚本用 Vite 的 JS 接口在同一进程里起三个开发服务器：5173 小说站、5174 作者站、5175 管理站。`vite build` 按站点分别输出到 `dist/<站点>/`。
 2. **字体**（共享模块 `shared/fonts/`）：平台字体目录（名称、分类、许可、客户端下载大小、网页字体入口）；按需动态加载网页字体 CSS；系统字体检测（常见字体清单加画布对比，Chromium 上可选 `queryLocalFonts`）；导入字体（校验文件头，解析 name 表取字体名，存 IndexedDB，FontFace 注册）。原型通过"模拟客户端"开关展示下载按钮与进度，下载本身是模拟的。阅读器"文字"面板里的字体行点开后是一页可滚动的字体列表，预览当前段落的文字。
 3. **作者站**：书房首页（今日字数、连更印章、在写的书、审核与编辑消息）、作品（列表与作品设置，封面上传后自动生成书脊与封底，并用 3D 书转动展示）、章节与写作编辑器（电脑端三栏：章节列表、正文、信息与预览；手机端单栏切换）、数据（红线折线图）、读者互动。
 4. **管理站**：总览、审核队列与审核详情、作者（编辑视角）、身份（层级图：红线表示"谁能任命谁"，身份用印章样式的标签表示）、审计日志、站点设置。提供原型专用的"以某个身份预览"切换，按 staff-roles 的规则显示或禁用操作。功能不接数据，按钮给出"原型阶段未接入"的提示。
