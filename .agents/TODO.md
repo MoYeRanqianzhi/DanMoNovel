@@ -23,6 +23,7 @@
 ## 首轮遗留
 
 - [ ] **docs/ 顶层规划与设计文档**：产品规划、技术架构（选型理由与出处见 [平台事实](memory/platform-support-facts.md)）、路线图、设计语言（含层级表，flight.css 注释已引用它）、Book3D 规范（含书脊方案）、阅读器与内容保护设计、根目录 README。
+- [ ] **字体引入改用分片入口**：原型入口引入的 Fontsource `chinese-simplified-400.css`/`-700.css` 其实是整个 woff2 文件，不按需分片；改用 `400.css`、`700.css`（依据见 [字体相关平台事实](memory/font-platform-facts.md)）。
 - [ ] **视觉修正**：纸纹的横向纤维太明显，像扫描线，需要减淡；补 favicon。
 - [ ] **浏览器验收**：补齐 [实现说明](docs/prototype.md) 第 11 节列出的未验证部分。
 - [ ] **代码审查与修复**，完成后在里程碑处打 tag（版本格式 x.x.x-alpha.x）。
