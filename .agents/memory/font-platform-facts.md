@@ -26,6 +26,7 @@ metadata:
 **浏览器能力**
 - `queryLocalFonts()`：只有桌面版 Chrome/Edge 103+ 与 Opera 89+ 支持；Android Chrome、Android WebView、Firefox、Safari 都不支持。必须在安全上下文中、由用户操作触发，否则抛 SecurityError；用户拒绝时抛 NotAllowedError。WebView2 有对应的权限类型 `LocalFonts`；Tauri 2.12.0（2026-09-26）开放了权限回调 `Builder::on_permission_request`。WebView2 里的实际表现未实测。
 - Safari 只让网页使用网页字体与系统自带字体，看不到用户自己安装的字体。WebKit 的 `ShouldAllowUserInstalledFonts` 由嵌入方决定、默认允许，推断 Tauri 的 macOS 版能看到用户安装的字体。Firefox 默认可见用户安装的字体（`layout.css.font-visibility` 默认 3），隐私窗口里会被指纹防护收紧（推断）。
+- 通用字体族：`system-ui` 在 Chrome 与 Android WebView 56+、Safari 与 iOS 11+、Firefox 92+ 可用；`ui-serif`、`ui-sans-serif`、`ui-rounded`、`ui-monospace` 只有 Safari 13.1+ 与 iOS 13.4+ 支持（@mdn/browser-compat-data 8.1.3，2026-09-27 查得）。
 - `document.fonts.check()` 对不存在的字体也返回 true，不能用来检测字体是否安装。用画布比较渲染结果可以检测，但这是已知的指纹手段。
 - FontFace 从二进制加载：Chromium 接受 TTF、OTF、WOFF、WOFF2，单个字体上限 128MB（Chrome 107 起，此前 30MB）。字体合集（TTC）在 Chromium 里只能用到第一款（推断），Firefox 直接丢弃，所以导入合集时要自己拆出单款。
 - IndexedDB：Safari 10 起完整支持。配额：Chromium 单个源最多占磁盘 60%；Safari 17+ 浏览器 60%、嵌入 WKWebView 的其他应用 15%。`navigator.storage.persist()`：Chrome 55、Firefox 57（会弹窗）、Safari 15.2（自动决定）。Safari 的跟踪防护会删除 7 天内没有用户交互的站点的全部脚本可写存储（包括 IndexedDB），添加到主屏幕的网页应用除外。
@@ -38,7 +39,7 @@ metadata:
 
 **Why:** 这些事实直接决定了平台字库收哪些字体、怎样引入字体包、系统字体与导入字体在各平台能做到什么程度。这次调研用了约 25 分钟、42 次工具调用，重查代价高。
 
-**How to apply:** 收录字体前先核对许可，不能只看 npm 包的 license 字段。引入 Fontsource 字体时用分片入口。系统字体的检测只在用户主动点击时运行，结果只留在本机。
+**How to apply:** 收录字体前先核对许可，不能只看 npm 包的 license 字段。引入 Fontsource 字体时用分片入口。系统字体用通用字体族实现，不检测也不枚举（见 [[reading-fonts]]）；上面关于枚举与检测的事实留作客户端以后可能的扩展参考。
 
 **Evidence:** 调研代理 2026-09-27 的报告。主要出处：npm 元数据 https://registry.npmmirror.com/<包名>/latest ；jsDelivr 文件列表；各字体的 GitHub 仓库与 google/fonts 的 ofl 目录；@mdn/browser-compat-data 8.1.3；WICG Local Font Access 规范；learn.microsoft.com 的 WebView2 与 Windows 11 字体列表文档；https://webkit.org/tracking-prevention/ 与 WebKit 的 UnifiedWebPreferences.yaml；Firefox 的 StaticPrefList.yaml；Chromium 的 web_font_decoder.cc 与 chromiumdash 上 commit 3c603c1 的版本信息；https://webkit.org/blog/14403/updates-to-storage-policy/ ；https://developer.apple.com/fonts/system-fonts/ ；AOSP 的 fonts.xml；tauri-apps 的 plugins-workspace 与 wry 仓库。
 
