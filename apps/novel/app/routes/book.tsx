@@ -53,6 +53,8 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
         bookFormat: 'https://schema.org/EBook',
         url: `${NOVEL_ORIGIN}${path}`,
         numberOfPages: book.chapters,
+        // 平台书号（DMBN）：一本书唯一且不可变的标识，书名改了它也不变
+        identifier: { '@type': 'PropertyValue', propertyID: 'DMBN', value: book.id },
       },
     },
   ];

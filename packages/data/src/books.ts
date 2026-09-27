@@ -6,6 +6,17 @@
  *
  * 数据形状刻意贴近正式版的领域模型（见 docs/planning/architecture.md
  * "领域模型"一节），便于原型组件日后直接迁移。
+ *
+ * ┌ 书号（DMBN，规则见 book-number 记忆）───────────────────────────┐
+ * │ 每本书的 id 就是它的书号：16 位数字，以 1 开头，是一本书唯一且不可变的索引， │
+ * │ 地址、接口、存储都只用它（不用拼音或书名：同音书名会撞）。               │
+ * │ 创建时按当时的分类分配前四位（第一个分类是 1001），后 12 位是分类内序号， │
+ * │ 每个分类各自从 100000010001 起、预留前一万个号。                        │
+ * │ 这只是分配时的安排：书号本身不含任何信息，严禁从书号判断分类——分类、书名、 │
+ * │ 简介、章节都可以改，书号永远不变。                                      │
+ * │ 16 位超出 JavaScript 的安全整数，书号一律当字符串，不要转成 number。      │
+ * │ 示例数据的分配：古代 1001、现代 1002、未来 1003，分类内按上架日期排序号。 │
+ * └────────────────────────────────────────────────────────────────┘
  */
 
 /**
@@ -47,6 +58,7 @@ export interface CoverPalette {
 
 /** 一本书的元信息 */
 export interface Book {
+  /** 书号（DMBN）：16 位数字的字符串，唯一且不可变，本身不含任何信息（见文件开头） */
   id: string;
   title: string;
   author: string;
@@ -75,7 +87,7 @@ export interface Book {
 
 export const BOOKS: Book[] = [
   {
-    id: 'yanxia',
+    id: '1001100000010002',
     title: '檐下听雪',
     author: '墨迟迟',
     binding: 'thread',
@@ -94,7 +106,7 @@ export const BOOKS: Book[] = [
     added: '2025-12-22',
   },
   {
-    id: 'yanqishui',
+    id: '1002100000010004',
     title: '盐汽水与蝉',
     author: '栖迟',
     binding: 'modern',
@@ -114,7 +126,7 @@ export const BOOKS: Book[] = [
     added: '2026-08-28',
   },
   {
-    id: 'diqifengxin',
+    id: '1002100000010001',
     title: '他的第七封信',
     author: '林间有鹿',
     binding: 'modern',
@@ -134,7 +146,7 @@ export const BOOKS: Book[] = [
     added: '2026-05-02',
   },
   {
-    id: 'wugang',
+    id: '1002100000010005',
     title: '雾港无灯',
     author: '北途',
     binding: 'modern',
@@ -153,7 +165,7 @@ export const BOOKS: Book[] = [
     added: '2026-09-05',
   },
   {
-    id: 'yunxiu',
+    id: '1001100000010001',
     title: '云岫不归',
     author: '山月',
     binding: 'thread',
@@ -171,7 +183,7 @@ export const BOOKS: Book[] = [
     added: '2025-08-09',
   },
   {
-    id: 'xinggui',
+    id: '1003100000010001',
     title: '星轨同行',
     author: '白昼',
     binding: 'modern',
@@ -190,7 +202,7 @@ export const BOOKS: Book[] = [
     added: '2026-09-12',
   },
   {
-    id: 'chaoxi',
+    id: '1002100000010002',
     title: '潮汐来信',
     author: '渡川',
     binding: 'modern',
@@ -210,7 +222,7 @@ export const BOOKS: Book[] = [
     added: '2026-06-16',
   },
   {
-    id: 'zhemei',
+    id: '1001100000010003',
     title: '折梅寄远',
     author: '温酒',
     binding: 'thread',
@@ -228,7 +240,7 @@ export const BOOKS: Book[] = [
     added: '2026-03-21',
   },
   {
-    id: 'jingtou',
+    id: '1002100000010006',
     title: '镜头之外',
     author: '季夏',
     binding: 'modern',
@@ -247,7 +259,7 @@ export const BOOKS: Book[] = [
     added: '2026-09-18',
   },
   {
-    id: 'yuting',
+    id: '1002100000010003',
     title: '雨停之前',
     author: '知夏',
     binding: 'modern',
@@ -269,10 +281,10 @@ export const BOOKS: Book[] = [
 
 /**
  * 品牌书：不属于书目，只在没有"当前这本书"可用时出现，
- * 例如通用的加载动画、组件实验室的默认示例。
+ * 例如通用的加载动画、组件实验室的默认示例。书号取预留号段的第一个号（预留号给平台自己用）。
  */
 export const BRAND_BOOK: Book = {
-  id: 'danmo',
+  id: '1001100000000001',
   title: '耽墨',
   author: '耽墨',
   binding: 'modern',
@@ -291,11 +303,24 @@ export const BRAND_BOOK: Book = {
   added: '2026-09-26',
 };
 
-/** 按 id 取书；原型数据是静态的，找不到说明调用方传错了 id，直接抛错暴露问题 */
+/** 按书号取书；原型数据是静态的，找不到说明调用方传错了书号，直接抛错暴露问题 */
 export function getBook(id: string): Book {
   const book = BOOKS.find((b) => b.id === id);
-  if (!book) throw new Error(`未知的书籍 id：${id}`);
+  if (!book) throw new Error(`未知的书号：${id}`);
   return book;
+}
+
+/**
+ * 是否是书号的格式：16 位数字、首位不为 0。只校验格式（地址是外部输入），不从中读出任何信息。
+ * 首位不限定为 1：某个分类的号用完时可以另分配其他开头（见 book-number 记忆）。
+ */
+export function isBookNo(s: string): boolean {
+  return /^[1-9]\d{15}$/.test(s);
+}
+
+/** 书号的展示：四位一组，1001100000010001 → 1001 1000 0001 0001（前面由调用方加 DMBN） */
+export function formatBookNo(id: string): string {
+  return id.replace(/\d{4}(?=\d)/g, '$& ');
 }
 
 /** 书架分组 */
@@ -313,15 +338,15 @@ export interface ShelfEntry {
 
 /** 示例书架。第一本"在读"就是首页"继续读"的那本 */
 export const SHELF: ShelfEntry[] = [
-  { bookId: 'yanqishui', group: '在读', chapter: 11, progress: 0.18 },
-  { bookId: 'yanxia', group: '在读', chapter: 61, progress: 0.72 },
-  { bookId: 'wugang', group: '在读', chapter: 13, progress: 0.15 },
-  { bookId: 'diqifengxin', group: '在读', chapter: 22, progress: 0.54 },
-  { bookId: 'xinggui', group: '想读', chapter: 0, progress: 0 },
-  { bookId: 'chaoxi', group: '想读', chapter: 0, progress: 0 },
-  { bookId: 'zhemei', group: '想读', chapter: 0, progress: 0 },
-  { bookId: 'yunxiu', group: '读完', chapter: 187, progress: 1 },
-  { bookId: 'jingtou', group: '读完', chapter: 94, progress: 1 },
+  { bookId: '1002100000010004', group: '在读', chapter: 11, progress: 0.18 }, // 盐汽水与蝉
+  { bookId: '1001100000010002', group: '在读', chapter: 61, progress: 0.72 }, // 檐下听雪
+  { bookId: '1002100000010005', group: '在读', chapter: 13, progress: 0.15 }, // 雾港无灯
+  { bookId: '1002100000010001', group: '在读', chapter: 22, progress: 0.54 }, // 他的第七封信
+  { bookId: '1003100000010001', group: '想读', chapter: 0, progress: 0 }, // 星轨同行
+  { bookId: '1002100000010002', group: '想读', chapter: 0, progress: 0 }, // 潮汐来信
+  { bookId: '1001100000010003', group: '想读', chapter: 0, progress: 0 }, // 折梅寄远
+  { bookId: '1001100000010001', group: '读完', chapter: 187, progress: 1 }, // 云岫不归
+  { bookId: '1002100000010006', group: '读完', chapter: 94, progress: 1 }, // 镜头之外
 ];
 
 /** 发现页"按口味找"的标签，顺序即展示顺序 */

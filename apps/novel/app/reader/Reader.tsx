@@ -34,7 +34,7 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { ALargeSmall, ArrowLeft, Bookmark, BookmarkCheck, List, Moon, Sun } from 'lucide-react';
-import { BOOKS, type Book } from '@danmo/data/books';
+import { BOOKS, isBookNo, type Book } from '@danmo/data/books';
 import { chapterParagraphs, chapterTitle } from '@danmo/data/chapters';
 import { Sheet, useToast } from '@danmo/design/components/overlays';
 import { IconButton, ThreadProgress } from '@danmo/design/components/ui';
@@ -71,6 +71,7 @@ export interface ReaderData {
  * 不能悄悄落到别的章节：那样同一章会出现在无数个地址上，而且读者看到的不是自己要找的那一章。
  */
 export function findReading(bookId: string, chapterParam: string | undefined): ReaderData | null {
+  if (!isBookNo(bookId)) return null;
   const book = BOOKS.find((b) => b.id === bookId);
   if (!book) return null;
   if (chapterParam !== undefined && !/^[1-9]\d*$/.test(chapterParam)) return null;

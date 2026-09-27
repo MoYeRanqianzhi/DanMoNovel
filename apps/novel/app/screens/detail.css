@@ -35,8 +35,11 @@
 [data-theme='changye'] .detail-hero {
   --dye-mix: 24%;
 }
+/* 书所在的舞台也是键盘可聚焦的翻面按钮：鼠标与触摸不显示焦点框，键盘聚焦时才出现一圈红线 */
 .detail-stage {
   padding: 22px 34px 46px;
+  border-radius: var(--radius-l);
+  outline: none;
 }
 .detail-book {
   cursor: grab;
@@ -45,18 +48,8 @@
 .detail-book[data-dragging] {
   cursor: grabbing;
 }
-.detail-flip {
-  padding: 8px 14px;
-  font-size: var(--fs-14);
-  color: var(--ink-2);
-  border-radius: var(--radius-pill);
-  transition:
-    color var(--dur-quick) ease,
-    background-color var(--dur-quick) ease;
-}
-.detail-flip:hover {
-  color: var(--ink);
-  background: color-mix(in srgb, var(--ink) 6%, transparent);
+.detail-stage:focus-visible {
+  box-shadow: inset 0 0 0 1.5px var(--thread);
 }
 
 /* ---- 信息 ---- */

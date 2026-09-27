@@ -2,7 +2,7 @@
  * 书本手势
  *
  * - useTilt：鼠标在书附近移动时，书微微转向指针（只在有悬停能力的精确指针设备上启用）
- * - useSpin：按住书左右拖动可以把书转过来看封底，松手后带惯性、并吸附到正面或背面
+ * - useSpin：点一下书就翻到另一面；按住左右拖动可以亲手把书转过来，松手后带惯性、并吸附到正面或背面
  *
  * 两个钩子都直接写书元素上的 CSS 变量（--tilt-x/--tilt-y、--spin），
  * 不经过 React 状态，避免每帧重渲染整本书。飞行引擎读取计算样式时会把这些附加角算进去，
@@ -76,9 +76,18 @@ export function useTilt(
 
 export type BookSide = 'front' | 'back';
 
+/** 横向移动超过这么多像素才算开始拖动；没超过就松手的是"点一下" */
+const DRAG_SLOP = 6;
+/** 按住超过这么久才松手，就不算"点一下"了（按住不动、犹豫之后松开，不应该翻面） */
+const TAP_MS = 500;
+
 /**
- * 拖拽翻转。返回当前朝向与一个 flip() 方法（给"翻到封底"按钮用，保证键盘可达）。
+ * 点一下翻面、拖拽翻转。返回当前朝向与一个 flip() 方法（给页面上的翻面按钮用，保证键盘可达）。
  * 书元素需要设置 touch-action: pan-y，让竖向滑动仍然用来滚动页面。
+ *
+ * 怎么区分"点一下"和"拖"：按下后横向移动不到 DRAG_SLOP 时书不动（手指的轻微抖动不会让书晃）；
+ * 超过了才开始跟手转。松手时如果从没开始拖、总位移也不到 DRAG_SLOP、按住不到 TAP_MS，就是点一下，翻到另一面。
+ * 竖向滑动时浏览器接管为页面滚动，发来的是 pointercancel，不会被当成点击。
  */
 export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean) {
   const [side, setSide] = useState<BookSide>('front');
@@ -91,7 +100,13 @@ export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean
     let angle = 0; // 当前附加角（度）
     let velocity = 0; // 度/帧
     let target: number | null = null;
+    /** 按下了、还没松手 */
+    let pressed = false;
+    /** 横向移动已超过 DRAG_SLOP，书正在跟手转 */
     let dragging = false;
+    let downX = 0;
+    let downY = 0;
+    let downT = 0;
     let lastX = 0;
     let lastT = 0;
     let raf = 0;
@@ -119,19 +134,40 @@ export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean
 
     const sideOf = (a: number): BookSide => ((Math.round(a / 180) % 2) + 2) % 2 === 0 ? 'front' : 'back';
 
+    /**
+     * 转到指定的一面：顺着同一个方向再转半圈，不倒回去。
+     * 从书正要停下的角度（还在转就用目标角）起算，所以转到一半再点一下，书会接着往前转，而不是掉头
+     */
+    const turnTo = (to: BookSide) => {
+      const base = Math.round((target ?? angle) / 360) * 360;
+      target = to === 'back' ? base + 180 : base;
+      setSide(to);
+      settle();
+    };
+
     const onDown = (e: PointerEvent) => {
       if (e.button !== 0) return;
-      dragging = true;
-      target = null;
-      velocity = 0;
-      lastX = e.clientX;
-      lastT = e.timeStamp;
-      cancelAnimationFrame(raf);
+      pressed = true;
+      dragging = false;
+      downX = lastX = e.clientX;
+      downY = e.clientY;
+      downT = lastT = e.timeStamp;
       book.setPointerCapture(e.pointerId);
-      book.dataset.dragging = '';
     };
     const onMove = (e: PointerEvent) => {
-      if (!dragging) return;
+      if (!pressed) return;
+      if (!dragging) {
+        // 还没超过起拖距离：书不动。超过了才接管，从这一刻起算角度（不补上阈值内的那几像素，避免一跳）
+        if (Math.abs(e.clientX - downX) < DRAG_SLOP) return;
+        dragging = true;
+        target = null;
+        velocity = 0;
+        cancelAnimationFrame(raf);
+        lastX = e.clientX;
+        lastT = e.timeStamp;
+        book.dataset.dragging = '';
+        return;
+      }
       const dx = e.clientX - lastX;
       const dt = Math.max(1, e.timeStamp - lastT);
       angle += dx * 0.6;
@@ -140,8 +176,14 @@ export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean
       lastT = e.timeStamp;
       write();
     };
-    const onUp = () => {
-      if (!dragging) return;
+    const onUp = (e: PointerEvent) => {
+      if (!pressed) return;
+      pressed = false;
+      if (!dragging) {
+        const still = Math.hypot(e.clientX - downX, e.clientY - downY) < DRAG_SLOP;
+        if (e.type === 'pointerup' && still && e.timeStamp - downT < TAP_MS) turnTo(sideOf(target ?? angle) === 'front' ? 'back' : 'front');
+        return;
+      }
       dragging = false;
       delete book.dataset.dragging;
       // 按惯性预测停下的位置，再吸附到最近的正面/背面
@@ -150,12 +192,7 @@ export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean
       settle();
     };
 
-    flipRef.current = (to) => {
-      const base = Math.round(angle / 360) * 360;
-      target = to === 'back' ? base + 180 : base;
-      setSide(to);
-      settle();
-    };
+    flipRef.current = turnTo;
 
     book.addEventListener('pointerdown', onDown);
     book.addEventListener('pointermove', onMove);

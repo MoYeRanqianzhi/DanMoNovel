@@ -16,7 +16,15 @@ import { useTheme } from '@danmo/design/theme/ThemeContext';
 import './discover.css';
 
 /** 书环上的书（顺序即环上的顺序） */
-const RING_IDS = ['yuting', 'xinggui', 'jingtou', 'chaoxi', 'zhemei', 'diqifengxin', 'yunxiu'];
+const RING_IDS = [
+  '1002100000010003', // 雨停之前
+  '1003100000010001', // 星轨同行
+  '1002100000010006', // 镜头之外
+  '1002100000010002', // 潮汐来信
+  '1001100000010003', // 折梅寄远
+  '1002100000010001', // 他的第七封信
+  '1001100000010001', // 云岫不归
+];
 
 export interface DiscoverData {
   /** 全部书目（排行与搜索的范围） */

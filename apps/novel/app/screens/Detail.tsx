@@ -2,8 +2,9 @@
  * 书籍详情
  *
  * 书从来源书位飞进来，落在页面上方的"染色纸"上（纸被封面的颜色洇染）。
- * 这本书可以直接上手：左右拖动把它转过来看封底——封底印着简介；
- * 不方便拖动时用"翻到封底"按钮（键盘也能操作）。
+ * 这本书可以直接上手：点一下就翻到封底（封底印着简介与书号条码），再点一下翻回来；
+ * 也可以按住左右拖动，亲手把它转过来。书下面不放任何说明文字，保持画面安静；
+ * 键盘聚焦到书上按回车或空格同样能翻面。
  * 点"开始阅读/继续读"，书会打开并推进到阅读页。
  *
  * 详情页是搜索引擎最主要的落地页，也是公开页面：服务端渲染出书名、作者、简介、标签、全部章节目录，
@@ -12,7 +13,7 @@
  */
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { ArrowLeft, Check, Plus } from 'lucide-react';
-import { BOOKS, SHELF, formatHeat, formatWords, type Book, type ShelfEntry } from '@danmo/data/books';
+import { BOOKS, SHELF, formatHeat, formatWords, isBookNo, type Book, type ShelfEntry } from '@danmo/data/books';
 import { chapterTitle } from '@danmo/data/chapters';
 import { POSES } from '@danmo/design/book3d/Book3D';
 import { useSpin, useTilt } from '@danmo/design/book3d/gestures';
@@ -31,8 +32,9 @@ export interface BookData {
   toc: string[];
 }
 
-/** 详情页的数据；找不到这本书时返回 null（路由模块据此返回 404） */
+/** 详情页的数据；找不到这本书时返回 null（路由模块据此返回 404）。地址里的书号先校验格式，再按书号查 */
 export function findBook(bookId: string): BookData | null {
+  if (!isBookNo(bookId)) return null;
   const book = BOOKS.find((b) => b.id === bookId);
   if (!book) return null;
   return { book, toc: Array.from({ length: book.chapters }, (_, i) => chapterTitle(book, i)) };
@@ -110,7 +112,19 @@ export function BookScreen({ data, screen }: ScreenProps<BookData>) {
           style={{ '--dye': book.palette.from, '--dye-2': book.palette.to } as CSSProperties}
           aria-label="立体封面"
         >
-          <div ref={stageRef} className="detail-stage">
+          {/* 点击与拖动由 useSpin 处理；这里只补键盘操作（不挂 onClick，否则点一下会翻两次） */}
+          <div
+            ref={stageRef}
+            className="detail-stage"
+            role="button"
+            tabIndex={0}
+            aria-label={`《${book.title}》立体书，${side === 'front' ? '翻到封底看简介' : '翻回封面'}`}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              flip();
+            }}
+          >
             <BookSlot
               slotId={heroSlot}
               bookRef={bookRef}
@@ -121,12 +135,9 @@ export function BookScreen({ data, screen }: ScreenProps<BookData>) {
               state="float"
               ribbon={reading}
               progress={entry?.progress ?? 0}
-              label={`《${book.title}》立体书，左右拖动可以翻看封底`}
+              label={null}
             />
           </div>
-          <button type="button" className="detail-flip" onClick={flip}>
-            {side === 'front' ? '翻到封底看简介' : '翻回封面'}
-          </button>
         </section>
 
         <section className="detail-info">

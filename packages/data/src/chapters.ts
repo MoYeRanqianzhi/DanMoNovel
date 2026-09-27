@@ -25,7 +25,8 @@ export function toChineseNumber(n: number): string {
 
 /** 各书已命名的章节标题；未命名的章节只显示"第 N 章" */
 const NAMED_CHAPTERS: Record<string, string[]> = {
-  yanqishui: [
+  // 《盐汽水与蝉》
+  '1002100000010004': [
     '靠窗的位置',
     '蝉鸣很吵',
     '借一支笔',
@@ -43,7 +44,8 @@ const NAMED_CHAPTERS: Record<string, string[]> = {
     '运动会',
     '草稿纸上的名字',
   ],
-  yanxia: ['初雪', '隔墙梅', '旧宅', '铜铃', '围炉', '故人', '宫宴', '雪夜访客', '旧事', '折枝'],
+  // 《檐下听雪》
+  '1001100000010002': ['初雪', '隔墙梅', '旧宅', '铜铃', '围炉', '故人', '宫宴', '雪夜访客', '旧事', '折枝'],
 };
 
 /** 第 index 章（从 0 开始）的完整标题，例如"第十二章 雷阵雨" */
@@ -55,7 +57,8 @@ export function chapterTitle(book: Book, index: number): string {
 
 /** 试读正文：每章是一组段落 */
 const SAMPLES: Record<string, string[][]> = {
-  yanqishui: [
+  // 《盐汽水与蝉》
+  '1002100000010004': [
     [
       '九月的风从窗缝里挤进来，把试卷的一角吹得哗啦作响。',
       '江小满按住卷子，偏头看了一眼窗外。操场上的香樟树被晒得发亮，蝉声一阵高过一阵，像是要把整个夏天最后的力气都用完。',
@@ -105,7 +108,8 @@ const SAMPLES: Record<string, string[][]> = {
       '他张了张嘴，最后什么也没有说。',
     ],
   ],
-  yanxia: [
+  // 《檐下听雪》
+  '1001100000010002': [
     [
       '京城的第一场雪，落在冬至前三日。',
       '谢听澜推开窗的时候，檐角的铜铃正被风吹得轻响，雪粒子簌簌地打在窗纸上，像有人隔着一层薄纸，一下一下地叩门。',
@@ -135,6 +139,6 @@ const REUSE_NOTE = '（原型示例正文：本章复用了试读章节的内容
 export function chapterParagraphs(book: Book, index: number): string[] {
   const own = SAMPLES[book.id];
   if (own && index < own.length) return own[index];
-  const pool = own ?? SAMPLES.yanqishui;
+  const pool = own ?? SAMPLES['1002100000010004'];
   return [REUSE_NOTE, ...pool[index % pool.length]];
 }

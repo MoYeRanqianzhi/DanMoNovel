@@ -294,22 +294,25 @@
   color: #fff8f0;
   border-radius: 2px;
 }
-/* 装饰用条码：白底 + 粗细交替的竖线 */
-.back__barcode {
-  width: 66px;
-  height: 28px;
-  background:
-    repeating-linear-gradient(
-        90deg,
-        #2a2a2a 0 1px,
-        transparent 1px 3px,
-        #2a2a2a 3px 5px,
-        transparent 5px 6px,
-        #2a2a2a 6px 7px,
-        transparent 7px 10px
-      )
-      4px 4px / 58px 20px no-repeat,
-    #fff;
+/* 书号条码（faces.tsx 的 BookNoBarcode）：白底标签、真的 Code 128 条码，下方一行 DMBN 书号。
+ * 只给宽度，高度按 viewBox 的比例自动得出；颜色固定为白底深色，任何配色的封底上都扫得出来 */
+.back__code {
+  display: block;
+  flex: none;
+  width: 50px;
+  height: auto;
+}
+.back__code-label {
+  fill: #fff;
+}
+.back__code-bars {
+  fill: #232323;
+}
+.back__no {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  fill: #232323;
 }
 
 /* ---------------- 衬页（封面内侧） ---------------- */

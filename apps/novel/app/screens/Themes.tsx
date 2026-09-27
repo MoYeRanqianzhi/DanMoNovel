@@ -18,11 +18,11 @@ import './themes.css';
 /**
  * 色样上的书：纯色封面，颜色直接引用主题变量（var(--blush) 等），
  * 放在哪个 data-theme 下面就显示哪个主题的颜色。
+ * 它们都是品牌书换了一身主题配色，沿用品牌书的书号（书号一致就是同一本书，见 book-number 记忆）。
  */
 function themeBook(t: ThemeMeta): Book {
   return {
     ...BRAND_BOOK,
-    id: `theme-${t.id}`,
     title: t.name,
     motif: 'none',
     tagline: t.note,

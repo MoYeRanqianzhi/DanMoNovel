@@ -12,7 +12,8 @@
  */
 import type { CSSProperties } from 'react';
 import type { Book } from '@danmo/data/books';
-import { thicknessRatio } from '@danmo/data/books';
+import { formatBookNo, thicknessRatio } from '@danmo/data/books';
+import { code128c } from './barcode';
 import { Motif } from './motifs';
 import './faces.css';
 
@@ -112,16 +113,64 @@ export function SpineFace({ book }: { book: Book }) {
   );
 }
 
-/** 封底：印着简介。详情页拖动书本翻到背面就能读到 */
+/** 封底：印着简介，右下角是书号条码。详情页拖动书本翻到背面就能读到 */
 export function BackFace({ book }: { book: Book }) {
   return (
     <div className="face-art back" data-binding={book.binding} style={paletteVars(book)}>
       <p className="back__blurb">{book.blurb}</p>
       <div className="back__foot">
         <span className="back__seal">耽墨</span>
-        <span className="back__barcode" aria-hidden="true" />
+        <BookNoBarcode no={book.id} />
       </div>
     </div>
+  );
+}
+
+/* 书号条码的几何（单位：viewBox 坐标。1 个条码模块 = 2 个单位） */
+const UNIT = 2;
+/** 条码两侧的空白（静区）：Code 128 要求至少 10 个模块，否则扫码时找不到起点 */
+const QUIET = 10 * UNIT;
+const PAD = 6;
+const BAR_H = 56;
+/** 书号文字的名义字号：不低于 12，见 BookNoBarcode 的说明 */
+const NO_SIZE = 15;
+const NO_BASELINE = PAD + BAR_H + 5 + NO_SIZE * 0.75;
+const LABEL_H = NO_BASELINE + PAD;
+
+/**
+ * 书号条码：白底标签上是编码完整书号的 Code 128 条码（见 barcode.ts，扫码枪与手机都能扫出来），
+ * 条码下方一行"DMBN 1001 1000 0001 0001"，像 ISBN 印在条码下面那样（书号规则见 book-number 记忆）。
+ *
+ * 条码与文字画在同一个 SVG 里，按 viewBox 等比缩到 CSS 给定的宽度。文字不用 HTML 写：
+ * 封底按 200px 基准排版（见本文件开头的缩放策略），这行字在基准下只有 5~6px，
+ * 中文区域的浏览器会按"最小字号"把它放大到 12px 而撑破封底；SVG 里的名义字号是 15，
+ * 即使浏览器对 SVG 文字也套用最小字号也不会被放大，看起来的大小则由 viewBox 缩小。
+ * 书号四位一组印出；textLength 让这行字与条码等宽，换了字体也对得齐。
+ *
+ * 全部黑条画成一条 path（每条黑条一个闭合的小矩形），而不是一条黑条一个 <rect>：
+ * 书城一页有几十本书、每本的封底都在 DOM 里，一个条码三十多个元素会让节点数和公开页的 HTML 都膨胀。
+ */
+function BookNoBarcode({ no }: { no: string }) {
+  const widths = code128c(no);
+  const barsW = widths.reduce((sum, w) => sum + w, 0) * UNIT;
+  const labelW = barsW + QUIET * 2;
+  // 宽度数组黑白相间、从黑条开始：偶数下标是黑条，奇数下标是它后面的空白。
+  // 每条黑条画完 z 回到它的左上角，再用相对移动 m 跳过"黑条 + 空白"到下一条
+  let d = `M${QUIET} ${PAD}`;
+  for (let i = 0; i < widths.length; i += 2) {
+    const bar = widths[i] * UNIT;
+    d += `h${bar}v${BAR_H}h${-bar}z`;
+    if (i + 1 < widths.length) d += `m${bar + widths[i + 1] * UNIT} 0`;
+  }
+
+  return (
+    <svg className="back__code" viewBox={`0 0 ${labelW} ${LABEL_H}`} aria-hidden="true">
+      <rect className="back__code-label" width={labelW} height={LABEL_H} />
+      <path className="back__code-bars" d={d} />
+      <text className="back__no" x={QUIET} y={NO_BASELINE} textLength={barsW} lengthAdjust="spacing">
+        {`DMBN ${formatBookNo(no)}`}
+      </text>
+    </svg>
   );
 }
 
