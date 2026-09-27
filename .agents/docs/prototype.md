@@ -40,7 +40,8 @@ packages/design/src/
   shell/        stack.tsx（页面栈，第 4 节）、nav.tsx + nav.css（TabBar、SideRail、RailLink）、not-found.tsx（notFoundHandle）
   components/   ui.tsx（IconButton/ThreadProgress/TagMark/Seal/PairLine/Segmented/Logo）、overlays.tsx（Sheet、Toast）、ErrorPage.tsx
   lib/          util.ts（cls、seededRandom、clamp、lerp）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts
-  fonts/        sfnt.ts（导入字体用：格式识别、读字体名、拆 TTC；尚无调用方）
+  fonts/        catalog.ts（平台字体目录、系统字体、字体 id 与字体栈）、imported.ts（导入字体：IndexedDB 与 FontFace）、
+                client.ts（模拟客户端的字体下载）、FontList.tsx + font-list.css（字体列表）、sfnt.ts（格式识别、读字体名、拆合集）
   scripts/check-contrast.mjs
 apps/novel/app/        小说站（SSR）
   root.tsx      整份 HTML、全局样式、Provider、出错页与出错页标题
@@ -279,6 +280,33 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 - 滚轮一次手势只翻一页（600ms 节流）。
 - 设置面板：翻页方式是 3×2 卡片（带示意图），下面一行是反向翻页开关（滚动模式下禁用）。本地存储里的旧值不兼容，非法时回落到翻书。
 
+### 阅读字体（packages/design/src/fonts/，规则见 reading-fonts 记忆）
+- **字体 id**（存在阅读设置的 `font` 里，`isFontId` 校验，非法时回落到 `DEFAULT_FONT` = `wenkai-screen`）：
+  - 平台字体：`PLATFORM_FONTS` 的 id，7 款，全是 OFL 1.1、按 unicode-range 分片的网页字体。
+  - `system`：正文用 `system-ui, sans-serif`，不检测也不枚举设备上的字体。
+  - `user:<8 位小写字母数字>`：导入的字体。
+  - `fontStack(id)` 换算成 CSS 字体栈，阅读器写进 `--rd-font`。
+- **平台字体的加载**：
+  - 霞鹜文楷屏幕阅读版、思源宋体、马善政楷书随界面字体发布（`bundled`），不用再加载。
+  - 其余四款（霞鹜文楷、思源黑体、朱雀仿宋、站酷小薇）的入口 CSS 各约 100KB，`ensureFont` 用动态 import 按需插入，同一款只插一次。
+  - 分片下载完触发 `loadingdone`，阅读器据此重新分页。
+- **导入**（imported.ts）：
+  - IndexedDB 库 `danmo-fonts`，`meta` 表（keyPath id）存名字、大小、导入时间，`data` 表存字节。列表只读 meta。
+  - 先用 FontFace 试加载，成功才保存；保存失败就撤掉刚注册的字体。首次导入后申请持久化存储。
+  - 注册名 `danmo-user-<id>`，用到时才从 IndexedDB 读出来注册（`registerImported`，返回 false 表示字体已不在）。
+  - 合集（TTC/OTC）先列出成员让读者挑一款，再用 sfnt.ts 拆成单款。
+  - 改名的读与写分两个事务，不依赖事务跨 await 仍然有效。
+  - 阅读器发现设置里的导入字体不在了：换回默认字体，并提示"找不到导入的字体，已换回默认字体"。
+- **模拟客户端**（client.ts，原型演示用）：本地存储 `danmo:client-sim` 与 `danmo:font-downloads`。
+  - 打开后平台字体显示大小、下载按钮、下载进度环；三款 bundled 显示"已内置"。
+  - 下载按每 MB 110ms 计时，限制在 1.2~3.2 秒；下载完自动换上。
+  - 删除正在用的字体会换回默认字体。
+- **字体列表**（FontList.tsx）：分"系统 / 平台字体 / 我的字体"三组。
+  - 每行用这款字体本身写名字与预览句；字体没加载好时整行先淡着（`useFaceReady` 等 `document.fonts.load` 预览句）。
+  - 预览句取读者正在读的那一段（`previewSentence`）；那段太短就往后找，逐句累积到 14 字以上，最多 32 字。
+  - 改名时整行换成输入框（按钮里不能放输入框）；删除要点两下。
+- 界面位置：阅读设置的"字体"一行（用当前字体写出名字）点开，同一个面板切到字体列表，标题变成"选择字体"。
+
 ### 滚动模式（ScrollView）
 - 相邻章节接成一条，最多同时挂 5 章（`MAX_SECTIONS`），超出就丢掉离正在读的那章更远的一端。
 - 接近末尾时接下一章：只要当前最后一章已 ready 就接，还没到的章先放一段"加载中"。
@@ -314,6 +342,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 阅读器全部模式、竖排、订阅流程、滚动接章。
   - 书号地址与封底条码，从 DOM 取出的路径解码正确。
   - 点书翻面的各种手势。
+  - 阅读字体：系统字体、平台字体按需加载、模拟客户端的下载与删除、导入 TTF 与 TTC 合集、改名、两步删除、刷新后导入的字体仍在、字体丢失时回退。
 - **未验收或未完成**：
   - 宽屏阅读器是单栏，对开两页属于电脑端布局待办。
   - Profile、Themes、Lab 迁移后没有逐项验收交互。
