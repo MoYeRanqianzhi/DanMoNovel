@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0-alpha.1",
   "description": "耽墨小说：开源、多平台的原耽小说平台（小说站、作者站、管理站与客户端）",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "packageManager": "pnpm@10.27.0",
   "engines": {

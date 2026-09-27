@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0-alpha.1",
   "description": "耽墨设计系统：设计令牌与 8 套主题、3D 书本、飞行过渡引擎、页面栈、基础组件与字体，三站共用",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",

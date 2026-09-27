@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0-alpha.1",
   "description": "耽墨管理站：审核、作者管理、身份与权限；只给内部工作人员使用，SPA 模式",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "react-router dev",

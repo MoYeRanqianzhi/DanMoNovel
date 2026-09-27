@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0-alpha.1",
   "description": "耽墨作者站：作者写作、管理作品与读者互动；公开页面服务端渲染（SEO 与 CDN 缓存）",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "react-router dev",
