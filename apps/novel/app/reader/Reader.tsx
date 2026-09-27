@@ -42,11 +42,14 @@ import { useElementSize } from '@danmo/design/lib/useElementSize';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { originOf, useTheme } from '@danmo/design/theme/ThemeContext';
 import { getTheme } from '@danmo/design/theme/themes';
+import { DEFAULT_FONT, ensureFont, fontStack, importedIdOf, platformFont } from '@danmo/design/fonts/catalog';
+import { FontList } from '@danmo/design/fonts/FontList';
+import { registerImported } from '@danmo/design/fonts/imported';
 import { chapterState, prefetchAround, useChapterCache } from './chapters';
 import { FailedNotice, LockedNotice, PendingNotice } from './notices';
 import { ChapterContent, Flow, PageFrame, PagedView, countPages, type Geometry, type PageRef, type Turn } from './pages';
 import { SettingsPanel, TocPanel } from './panels';
-import { FONT_STACK, LEADING, useReaderSettings, type PagedMode } from './settings';
+import { LEADING, useReaderSettings, type PagedMode } from './settings';
 import './reader.css';
 
 /** 服务端输出的试读开头有几段 */
@@ -116,6 +119,8 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   const [panel, setPanel] = useState<'toc' | 'settings' | null>(null);
   const [bookmarked, setBookmarked] = useState(false);
   const [fontTick, setFontTick] = useState(0);
+  /** 阅读设置面板里正在看字体列表（每次打开面板都从阅读设置开始） */
+  const [fontsOpen, setFontsOpen] = useState(false);
   /** 首次打开的那一章已经有了结果（正文到了、确定未解锁或出错）；在此之前显示服务端给的试读开头 */
   const [booted, setBooted] = useState(false);
   /** 读者停在"加载中"的那一页时正文到了：这一章的正文淡入一下，而不是生硬地换掉加载动画 */
@@ -152,6 +157,24 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     document.fonts.ready.then(bump);
     return () => document.fonts.removeEventListener('loadingdone', bump);
   }, []);
+
+  // 换了字体：平台字体插入它的分片 CSS（分片下载完会触发上面的 loadingdone，自动重新分页）；
+  // 导入的字体从本机读出来注册。注册时字体已经加载好了，不会再有 loadingdone，所以成功后手动触发一次重新分页。
+  // 导入的字体已经不在了（被浏览器清理、或是在别的设备上选的）：换回默认字体并告诉读者
+  useEffect(() => {
+    const own = importedIdOf(settings.font);
+    if (!own) {
+      const font = platformFont(settings.font);
+      if (font) ensureFont(font.id);
+      return;
+    }
+    const fallback = () => {
+      update({ font: DEFAULT_FONT });
+      toast('找不到导入的字体，已换回默认字体');
+    };
+    registerImported(own).then((ok) => (ok ? setFontTick((t) => t + 1) : fallback()), fallback);
+    // update 与 toast 都是稳定的回调，只随字体变化
+  }, [settings.font]);
 
   // 读到哪一章，就预取它周围几章：换章无感的关键（见 chapters.ts）
   useEffect(() => prefetchAround(book, chapter), [book, chapter]);
@@ -363,12 +386,15 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   const dark = getTheme(theme).dark;
   const count = counts[chapter];
   const chapterFrac = paged ? (count && current?.status === 'ready' ? (Math.max(0, pos.page) + 1) / count : 0) : scrollFrac;
+  // 字体列表的预览句：读者正在读的这一段的第一句；本章正文还没到时用服务端给的试读开头
+  const fontPreview =
+    current?.status === 'ready' ? previewSentence(current.text.paragraphs, chapterFrac) : (data.lead[0] ?? book.blurb);
 
   const vars = {
     '--rd-size': `${settings.fontSize}px`,
     '--rd-leading': leading,
     '--rd-pitch': `${pitch}px`,
-    '--rd-font': FONT_STACK[settings.font],
+    '--rd-font': fontStack(settings.font),
   } as CSSProperties;
 
   /** 某一章的正文或状态页（分页模式的一页、滚动模式的一段共用） */
@@ -569,21 +595,59 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
             {dark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
             <span>{dark ? '日间' : '夜间'}</span>
           </button>
-          <button type="button" className="rd-tool" onClick={() => setPanel('settings')}>
+          <button
+            type="button"
+            className="rd-tool"
+            onClick={() => {
+              setFontsOpen(false);
+              setPanel('settings');
+            }}
+          >
             <ALargeSmall aria-hidden="true" />
             <span>设置</span>
           </button>
         </div>
       </div>
 
-      <Sheet open={panel === 'settings'} title="阅读设置" onClose={() => setPanel(null)}>
-        <SettingsPanel settings={settings} update={update} />
+      <Sheet open={panel === 'settings'} title={fontsOpen ? '选择字体' : '阅读设置'} onClose={() => setPanel(null)}>
+        {fontsOpen ? (
+          <FontList
+            value={settings.font}
+            onChange={(font) => update({ font })}
+            preview={fontPreview}
+            onBack={() => setFontsOpen(false)}
+          />
+        ) : (
+          <SettingsPanel settings={settings} update={update} onOpenFonts={() => setFontsOpen(true)} />
+        )}
       </Sheet>
       <Sheet open={panel === 'toc'} title={`目录（共 ${book.chapters} 章）`} onClose={() => setPanel(null)}>
         <TocPanel book={book} current={chapter} onPick={jumpTo} />
       </Sheet>
     </div>
   );
+}
+
+/** 预览句的长度：至少要看得出字体的样子（"“江小满。”"这样的短对白不够），最多一行 */
+const PREVIEW_MIN = 14;
+const PREVIEW_MAX = 32;
+
+/**
+ * 取一句话给字体列表做预览：按读到的比例找到那一段（跳过"原型示例正文"的说明）；
+ * 这一段太短就往后找一段够长的，再从段首一句一句地取，够长为止，太长就截断。
+ * 预览的意义是"换上这款字体后，正在读的文字会是什么样子"，所以用读者眼前的句子，而不是固定的示例句。
+ */
+function previewSentence(paragraphs: string[], frac: number): string {
+  const body = paragraphs.filter((p) => !p.startsWith('（原型示例'));
+  if (!body.length) return '';
+  const start = Math.min(body.length - 1, Math.max(0, Math.floor(frac * body.length)));
+  const p = body.slice(start).find((s) => s.length >= PREVIEW_MIN) ?? body[start];
+  let text = '';
+  for (const sentence of p.match(/[^。！？…]*[。！？…]+[」”]?|[^。！？…]+$/g) ?? [p]) {
+    text += sentence;
+    if (text.length >= PREVIEW_MIN) break;
+  }
+  return text.length > PREVIEW_MAX ? `${text.slice(0, PREVIEW_MAX)}…` : text;
 }
 
 /** 页脚：全书进度的红线与页码（分页模式每页一份，随书页一起动；滚动模式固定在底部） */

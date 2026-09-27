@@ -620,35 +620,28 @@
   color: color-mix(in srgb, var(--ink-2) 80%, transparent);
 }
 
-/* 开关：一根短红线上的线结，打开时滑到右边、线染红 */
-.rd-switch {
-  position: relative;
+/* 阅读设置里"字体"一行：当前字体的名字用它自己写，右侧一个箭头，点开是字体列表 */
+.rd-font-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px 2px 6px 10px;
+  font-size: var(--fs-16);
+  color: var(--ink);
+  border-radius: var(--radius-m);
+}
+.rd-font-pick span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rd-font-pick svg {
   flex: none;
-  width: 46px;
-  height: 28px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--ink) 12%, transparent);
-  transition: background-color var(--dur-base) ease;
+  width: 18px;
+  height: 18px;
+  color: var(--ink-2);
 }
-.rd-switch::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--sheet);
-  box-shadow: 0 1px 4px rgb(var(--shadow-rgb) / 0.35);
-  transition: transform var(--dur-base) var(--ease-spring);
-}
-.rd-switch[aria-checked='true'] {
-  background: var(--thread);
-}
-.rd-switch[aria-checked='true']::after {
-  transform: translateX(18px);
-}
-.rd-switch:disabled {
-  opacity: 0.4;
-  cursor: default;
+.rd-font-pick:hover {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
 }

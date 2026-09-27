@@ -6,9 +6,9 @@
  * 水合后立即换成本机保存的值，因此不会出现水合不匹配。
  */
 import { useCallback, useSyncExternalStore } from 'react';
+import { DEFAULT_FONT, isFontId } from '@danmo/design/fonts/catalog';
 
 export type Leading = 'tight' | 'normal' | 'loose';
-export type ReaderFont = 'kai' | 'serif' | 'sans';
 /**
  * 翻页方式（名称与效果由用户定下，见 page-turn-modes 记忆）：
  * flip 翻书、slide-x 左右平移、slide-y 上下平移、cover-x 左右覆盖、cover-y 上下覆盖、scroll 滚动。
@@ -21,7 +21,8 @@ export type PagedMode = Exclude<TurnMode, 'scroll'>;
 export interface ReaderSettings {
   fontSize: number;
   leading: Leading;
-  font: ReaderFont;
+  /** 字体 id：平台字体、'system' 或 'user:<id>'（见 @danmo/design/fonts/catalog） */
+  font: string;
   mode: TurnMode;
   /** 反向翻页：横排默认下一页在右边、竖排默认在左边，打开后两者都倒过来 */
   reverse: boolean;
@@ -31,18 +32,12 @@ export interface ReaderSettings {
 /** 行距倍数。中文正文需要比西文更大的行距，默认 1.95 */
 export const LEADING: Record<Leading, number> = { tight: 1.7, normal: 1.95, loose: 2.25 };
 
-export const FONT_STACK: Record<ReaderFont, string> = {
-  kai: 'var(--font-kai)',
-  serif: 'var(--font-serif)',
-  sans: 'var(--font-sans)',
-};
-
 export const FONT_SIZE_RANGE = { min: 14, max: 28 } as const;
 
 const DEFAULTS: ReaderSettings = {
   fontSize: 19,
   leading: 'normal',
-  font: 'kai',
+  font: DEFAULT_FONT,
   mode: 'flip',
   reverse: false,
   vertical: false,
@@ -59,7 +54,7 @@ function parse(raw: string | null): ReaderSettings {
       fontSize:
         Number.isFinite(size) && size >= FONT_SIZE_RANGE.min && size <= FONT_SIZE_RANGE.max ? size : DEFAULTS.fontSize,
       leading: r.leading && r.leading in LEADING ? r.leading : DEFAULTS.leading,
-      font: r.font && r.font in FONT_STACK ? r.font : DEFAULTS.font,
+      font: isFontId(r.font) ? r.font : DEFAULTS.font,
       mode: r.mode && (TURN_MODES as readonly string[]).includes(r.mode) ? r.mode : DEFAULTS.mode,
       reverse: typeof r.reverse === 'boolean' ? r.reverse : DEFAULTS.reverse,
       vertical: typeof r.vertical === 'boolean' ? r.vertical : DEFAULTS.vertical,

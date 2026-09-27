@@ -1,15 +1,17 @@
 /**
  * 阅读器的两个面板内容：阅读设置、章节目录（外层的 Sheet 由 Reader 提供）
  */
-import { AArrowDown, AArrowUp, Lock } from 'lucide-react';
+import { AArrowDown, AArrowUp, ChevronRight, Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { chapterAccess } from '@danmo/data/api';
 import type { Book } from '@danmo/data/books';
 import { chapterTitle } from '@danmo/data/chapters';
 import { IconButton, Segmented } from '@danmo/design/components/ui';
+import { fontStack } from '@danmo/design/fonts/catalog';
+import { useFontName } from '@danmo/design/fonts/FontList';
 import { originOf, useTheme } from '@danmo/design/theme/ThemeContext';
 import { THEMES } from '@danmo/design/theme/themes';
-import { FONT_SIZE_RANGE, type Leading, type ReaderFont, type ReaderSettings, type TurnMode } from './settings';
+import { FONT_SIZE_RANGE, type Leading, type ReaderSettings, type TurnMode } from './settings';
 
 function Row({ label, children, stacked }: { label: string; children: ReactNode; stacked?: boolean }) {
   return (
@@ -102,11 +104,15 @@ function ModeGlyph({ mode }: { mode: TurnMode }) {
 export function SettingsPanel({
   settings,
   update,
+  onOpenFonts,
 }: {
   settings: ReaderSettings;
   update: (patch: Partial<ReaderSettings>) => void;
+  /** 点"字体"一行：面板切到字体列表（FontList，由 Reader 渲染） */
+  onOpenFonts: () => void;
 }) {
   const { theme, setTheme } = useTheme();
+  const fontName = useFontName(settings.font);
   const { min, max } = FONT_SIZE_RANGE;
   const paged = settings.mode !== 'scroll';
   /** 下一页当前在哪一边：竖排默认在左，反向翻页把它倒过来 */
@@ -146,16 +152,11 @@ export function SettingsPanel({
         />
       </Row>
       <Row label="字体">
-        <Segmented<ReaderFont>
-          label="字体"
-          value={settings.font}
-          options={[
-            { value: 'kai', label: '文楷' },
-            { value: 'serif', label: '宋体' },
-            { value: 'sans', label: '黑体' },
-          ]}
-          onChange={(font) => update({ font })}
-        />
+        {/* 当前字体的名字用它自己写出来；点开是可滚动的字体列表 */}
+        <button type="button" className="rd-font-pick" onClick={onOpenFonts} aria-label={`字体：${fontName}，点开换字体`}>
+          <span style={{ fontFamily: fontStack(settings.font) }}>{fontName}</span>
+          <ChevronRight aria-hidden="true" />
+        </button>
       </Row>
       <Row label="排版">
         <Segmented<'h' | 'v'>
@@ -196,7 +197,7 @@ export function SettingsPanel({
         <button
           type="button"
           role="switch"
-          className="rd-switch"
+          className="switch"
           aria-label="反向翻页"
           aria-checked={settings.reverse}
           disabled={!paged}

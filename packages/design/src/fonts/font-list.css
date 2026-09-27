@@ -1,0 +1,219 @@
+/* ============================================================
+ * 字体列表（FontList.tsx）：放在 Sheet 面板里，面板自己负责滚动
+ * 每一行：左边是名字与预览（都用这款字体本身写），右边是下载、删除等操作；
+ * 选中的那一行左侧有一道红线（红线表示"正在用这一款"，是信息，不是装饰）
+ * ============================================================ */
+
+.font-list__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: -4px 0 8px -6px;
+  padding: 6px 8px 6px 2px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+  border-radius: var(--radius-m);
+}
+.font-list__back:hover {
+  color: var(--ink);
+}
+.font-list__back svg {
+  width: 18px;
+  height: 18px;
+}
+
+.font-group + .font-group {
+  margin-top: 18px;
+}
+.font-group__title {
+  margin-bottom: 2px;
+  font-size: var(--fs-12);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+}
+.font-group__fine {
+  margin-top: 8px;
+  font-size: var(--fs-12);
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--ink-2) 80%, transparent);
+}
+
+/* ---- 一行字体 ---- */
+.font-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.font-row::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--thread);
+  opacity: 0;
+  transform: scaleY(0.4);
+  transition:
+    opacity var(--dur-quick) ease,
+    transform var(--dur-base) var(--ease-soft);
+}
+.font-row[data-selected]::before {
+  opacity: 1;
+  transform: none;
+}
+.font-row__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 0;
+  text-align: left;
+}
+.font-row__top {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+.font-row__name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-18);
+  line-height: 1.4;
+  color: var(--ink);
+}
+.font-row__meta {
+  flex: none;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.font-row__preview {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-16);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+/* 字体还没加载好：名字与预览先淡着，加载好了再显出来 */
+.font-row__name,
+.font-row__preview {
+  transition: opacity 240ms ease;
+}
+.font-row[data-loading] .font-row__name,
+.font-row[data-loading] .font-row__preview {
+  opacity: 0.35;
+}
+.font-row__action {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+.font-row__action .icon-btn svg {
+  width: 18px;
+  height: 18px;
+  color: var(--ink-2);
+}
+/* 删除要点两下：第一下之后图标染成红线色，提示"再点一下就删了" */
+.font-row__delete[data-confirming] svg {
+  color: var(--thread-ink);
+}
+.font-row--editing {
+  padding: 8px 0;
+}
+.font-row__rename {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: var(--fs-18);
+  color: var(--ink);
+  background: var(--paper);
+  border: 0;
+  border-radius: var(--radius-m);
+  box-shadow: 0 0 0 1.5px var(--thread);
+  outline: none;
+}
+
+/* 下载进度环 */
+.font-ring {
+  width: 26px;
+  height: 26px;
+  margin: 0 9px;
+  transform: rotate(-90deg);
+}
+.font-ring circle {
+  fill: none;
+  stroke-width: 2;
+}
+.font-ring__rest {
+  stroke: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+.font-ring__done {
+  stroke: var(--thread);
+  stroke-linecap: round;
+  transition: stroke-dasharray 60ms linear;
+}
+
+/* ---- 导入 ---- */
+.font-import {
+  width: 100%;
+  margin-top: 12px;
+}
+.font-choose {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.font-choose__title {
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.font-choose__item {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: var(--fs-16);
+  border-radius: var(--radius-m);
+  background: var(--sheet);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.font-choose__item:hover {
+  box-shadow: 0 0 0 1.5px var(--thread);
+}
+.font-choose__cancel {
+  align-self: flex-end;
+  padding: 6px 10px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+
+/* ---- 模拟客户端开关（原型演示） ---- */
+.font-sim {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+.font-sim__label {
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.font-sim__label small {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--fs-12);
+  color: color-mix(in srgb, var(--ink-2) 80%, transparent);
+}
