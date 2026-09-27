@@ -6,6 +6,7 @@
  * 返回时书页拉远、合上、飞回原书位（handle.back = 'surface'）。页面组件见 reader/Reader.tsx。
  */
 import { data } from 'react-router';
+import { FREE_CHAPTERS } from '@danmo/data/api';
 import { MISSING, type ScreenHandle } from '@danmo/design/shell/stack';
 import { NOT_FOUND_META, PUBLIC_CACHE, SITE_NAME } from '../http';
 import { ReaderScreen, findReading, type ReaderData } from '../reader/Reader';
@@ -46,8 +47,9 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
         position: chapter + 1,
         isPartOf: { '@type': 'Book', name: book.title, url: `${NOVEL_ORIGIN}/book/${book.id}` },
         url: `${NOVEL_ORIGIN}${path}`,
-        // 服务端只给出开头，完整正文不随 HTML 下发，所以这里不需要用 hasPart 圈出"隐藏的付费部分"
-        isAccessibleForFree: false,
+        // 前 FREE_CHAPTERS 章免费，之后是订阅章节。服务端只给出开头，完整正文不随 HTML 下发，
+        // 所以不需要用 hasPart 圈出"隐藏的付费部分"
+        isAccessibleForFree: chapter < FREE_CHAPTERS,
       },
     },
   ];

@@ -248,8 +248,10 @@ export function PageStack({ missing, children }: PageStackProps) {
     [sid, leaf, reduced],
   );
 
-  // 首次渲染（含服务端渲染）：栈里只有当前这一页，直接处于静止阶段
-  const [entries, setEntries] = useState<Entry[]>(() => [makeEntry('idle')]);
+  // 首次渲染（含服务端渲染）：栈里只有当前这一页，直接处于静止阶段。
+  // 进场方式一律按普通淡入：刷新页面时浏览器会保留这条历史记录的 state（例如上次开书推进写进去的
+  // enter: 'dive'），但这一页不需要进场动画，而且服务端拿不到 state，必须与服务端的输出一致才能水合
+  const [entries, setEntries] = useState<Entry[]>(() => [{ ...makeEntry('idle'), enter: 'fade' }]);
   // 事件回调里需要读到最新的栈，用 ref 镜像一份
   const entriesRef = useRef(entries);
   entriesRef.current = entries;

@@ -12,18 +12,25 @@
  * 这是 Web 阅读器（如 Readium）的成熟做法：排版、断行、标点挤压全部交给浏览器，
  * 中文排版质量远好于自己逐字测量。
  *
- * 翻页时同时渲染两层页面（下层 + 动的那层），用 Web Animations API 驱动：
- * - flip：动的那页以书脊一侧为轴掀起（横排轴在左，竖排轴在右），带明暗变化
- * - slide：两页并排平移
- * 页面层以"页码"为 key，翻完后下层页面原地变成当前页，不需要重新排版。
+ * 每层页面都是完整的一页：页眉（这页所在章的章名）、正文窗口、页脚（全书进度与页码）。
+ * 翻页时三者一起动，像真的纸页，不会出现"字在翻、页眉页脚不动"的断裂（page-turn-modes 记忆）。
+ *
+ * 翻页时同时渲染两层页面，用 Web Animations API 驱动：
+ * - flip   翻书：上层那页以书脊为轴掀起（往后翻）或落下（往回翻），带明暗变化
+ * - slide  平移：两页并排移动，左右或上下
+ * - cover  覆盖：上层那页移开、露出下层不动的页；往回翻时上一页从移走的那一侧盖回来
+ * 页面层以"章:页"为 key，翻完后下层页面原地变成当前页，不需要重新排版。
+ * 下一章的第一页、上一章的最后一页也是同样的页面层，所以跨章翻页与章内翻页是同一个动画。
+ *
+ * 方向：rtl 为真时下一页在左边（竖排的默认方向，或横排打开了反向翻页），书脊在右侧，
+ * 左右平移、左右覆盖随之反向；上下两种模式不受影响，下一页总从下方来。
  */
 import { memo, useLayoutEffect, useRef, type CSSProperties, type ReactNode, type Ref } from 'react';
-import type { Book } from '@danmo/data/books';
-import { chapterParagraphs, chapterTitle } from '@danmo/data/chapters';
+import type { ChapterText } from '@danmo/data/api';
 import { cls } from '@danmo/design/lib/util';
-import type { TurnMode } from './settings';
+import type { PagedMode } from './settings';
 
-/** 一页的几何信息 */
+/** 一页正文窗口的几何信息 */
 export interface Geometry {
   /** 窗口（一页正文区域）的宽高 */
   winW: number;
@@ -33,9 +40,16 @@ export interface Geometry {
   vertical: boolean;
 }
 
-/** 一次翻页：方向 1 = 下一页，-1 = 上一页 */
+/** 一页的位置：第几章第几页（页码 -1 表示"这一章的最后一页"，是页数量出来之前的占位） */
+export interface PageRef {
+  chapter: number;
+  page: number;
+}
+
+/** 一次翻页：方向（1 = 下一页，-1 = 上一页）与翻到哪一页（可以在相邻的章里） */
 export interface Turn {
   dir: 1 | -1;
+  to: PageRef;
 }
 
 /** 竖排时把弯引号换成直角引号：弯引号在很多字体里没有竖排字形，会横躺着 */
@@ -43,21 +57,13 @@ function toVerticalPunctuation(s: string): string {
   return s.replace(/“/g, '「').replace(/”/g, '」').replace(/‘/g, '『').replace(/’/g, '』');
 }
 
-/** 一章的正文：标题 + 段落。同一份元素会被渲染到多层页面里，所以要 memo */
-export const ChapterContent = memo(function ChapterContent({
-  book,
-  chapter,
-  vertical,
-}: {
-  book: Book;
-  chapter: number;
-  vertical: boolean;
-}) {
+/** 一章的正文：标题 + 段落。同一份元素会被渲染到多层页面与测量层里，所以要 memo */
+export const ChapterContent = memo(function ChapterContent({ text, vertical }: { text: ChapterText; vertical: boolean }) {
   const fix = vertical ? toVerticalPunctuation : (s: string) => s;
   return (
     <>
-      <h2 className="rd-title">{chapterTitle(book, chapter)}</h2>
-      {chapterParagraphs(book, chapter).map((p, i) => (
+      <h2 className="rd-title">{text.title}</h2>
+      {text.paragraphs.map((p, i) => (
         <p key={i} className={p.startsWith('（原型示例') ? 'rd-note' : undefined}>
           {fix(p)}
         </p>
@@ -100,39 +106,70 @@ export function countPages(flow: HTMLElement, g: Geometry): number {
   return Math.max(1, Math.round((flow.scrollWidth + g.gap) / (g.winW + g.gap)));
 }
 
+/**
+ * 一整页的框架：页眉、正文区、页脚。
+ * 分页模式下每层页面都是一个 PageFrame；阅读器另有一个不可见的 PageFrame，用它的正文区量出窗口的可用尺寸。
+ */
+export function PageFrame({
+  title,
+  foot,
+  bodyRef,
+  children,
+}: {
+  title: ReactNode;
+  foot?: ReactNode;
+  bodyRef?: Ref<HTMLDivElement>;
+  children?: ReactNode;
+}) {
+  return (
+    <>
+      <header className="rd-page__head">
+        <span>{title}</span>
+      </header>
+      <div ref={bodyRef} className="rd-page__body">
+        {children}
+      </div>
+      <footer className="rd-page__foot">{foot}</footer>
+    </>
+  );
+}
+
 type Role = 'current' | 'under' | 'leaf' | 'outgoing' | 'incoming';
 
 /** 当前需要渲染哪几层页面（后面的层在上面） */
-function layersFor(page: number, turn: Turn | null, mode: TurnMode): { index: number; role: Role }[] {
-  if (!turn) return [{ index: page, role: 'current' }];
-  if (mode === 'flip') {
-    return turn.dir === 1
-      ? [
-          { index: page + 1, role: 'under' },
-          { index: page, role: 'leaf' },
-        ]
-      : [
-          { index: page, role: 'under' },
-          { index: page - 1, role: 'leaf' },
-        ];
+function layersFor(current: PageRef, turn: Turn | null, mode: PagedMode): { ref: PageRef; role: Role }[] {
+  if (!turn) return [{ ref: current, role: 'current' }];
+  if (mode === 'slide-x' || mode === 'slide-y') {
+    return [
+      { ref: current, role: 'outgoing' },
+      { ref: turn.to, role: 'incoming' },
+    ];
   }
-  return [
-    { index: page, role: 'outgoing' },
-    { index: page + turn.dir, role: 'incoming' },
-  ];
+  // 翻书与覆盖：动的那页在上。往后翻时上层是当前页（掀起、移开），往回翻时上层是上一页（落下、盖回）
+  return turn.dir === 1
+    ? [
+        { ref: turn.to, role: 'under' },
+        { ref: current, role: 'leaf' },
+      ]
+    : [
+        { ref: current, role: 'under' },
+        { ref: turn.to, role: 'leaf' },
+      ];
 }
 
 interface PagedViewProps {
-  page: number;
-  g: Geometry;
-  mode: Exclude<TurnMode, 'scroll'>;
+  current: PageRef;
   turn: Turn | null;
-  content: ReactNode;
-  /** 翻页动画播完时调用；调用方在这里更新页码并清除 turn */
+  mode: PagedMode;
+  /** 下一页在左边：书脊在右侧，左右平移、左右覆盖反向 */
+  rtl: boolean;
+  /** 渲染一整页（PageFrame：页眉、正文或状态页、页脚） */
+  renderPage: (ref: PageRef) => ReactNode;
+  /** 翻页动画播完时调用；调用方在这里更新当前页并清除 turn */
   onTurnEnd: () => void;
 }
 
-export function PagedView({ page, g, mode, turn, content, onTurnEnd }: PagedViewProps) {
+export function PagedView({ current, turn, mode, rtl, renderPage, onTurnEnd }: PagedViewProps) {
   const layerRefs = useRef(new Map<Role, HTMLDivElement>());
   const onEndRef = useRef(onTurnEnd);
   onEndRef.current = onTurnEnd;
@@ -141,31 +178,42 @@ export function PagedView({ page, g, mode, turn, content, onTurnEnd }: PagedView
   useLayoutEffect(() => {
     if (!turn) return;
     const get = (r: Role) => layerRefs.current.get(r);
+    const forward = turn.dir === 1;
     const anims: Animation[] = [];
 
     if (mode === 'flip') {
-      // 横排：轴在左侧，页面向左掀起（负角度）；竖排：轴在右侧，向右掀起（正角度）
-      const edge = g.vertical ? 94 : -94;
+      // 书脊在左：页面向左掀起（负角度）；书脊在右：向右掀起（正角度）
+      const edge = rtl ? 94 : -94;
       const lift = [`perspective(2000px) rotateY(0deg)`, `perspective(2000px) rotateY(${edge}deg)`];
       const opts: KeyframeAnimationOptions = { duration: 480, easing: 'cubic-bezier(.45,.05,.3,1)', fill: 'both' };
       const leaf = get('leaf');
-      const under = get('under');
       if (leaf) {
-        anims.push(leaf.animate({ transform: turn.dir === 1 ? lift : [...lift].reverse() }, opts));
+        anims.push(leaf.animate({ transform: forward ? lift : [...lift].reverse() }, opts));
         const shade = leaf.querySelector('.rd-page__shade');
-        if (shade) anims.push(shade.animate({ opacity: turn.dir === 1 ? [0, 0.34] : [0.34, 0] }, opts));
+        if (shade) anims.push(shade.animate({ opacity: forward ? [0, 0.34] : [0.34, 0] }, opts));
       }
       // 被掀开的那页落在下层页面上的阴影：掀得越高，阴影越淡
-      const underShade = under?.querySelector('.rd-page__shade');
-      if (underShade) anims.push(underShade.animate({ opacity: turn.dir === 1 ? [0.2, 0] : [0, 0.2] }, opts));
+      const underShade = get('under')?.querySelector('.rd-page__shade');
+      if (underShade) anims.push(underShade.animate({ opacity: forward ? [0.2, 0] : [0, 0.2] }, opts));
+    } else if (mode === 'cover-x' || mode === 'cover-y') {
+      // 上层那页往"下一页的反方向"移开：横排往左、rtl 往右、上下覆盖往上；往回翻时从那一侧盖回来
+      const gone = mode === 'cover-y' ? 'translateY(-100%)' : `translateX(${rtl ? 100 : -100}%)`;
+      const rest = mode === 'cover-y' ? 'translateY(0)' : 'translateX(0)';
+      const opts: KeyframeAnimationOptions = { duration: 420, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' };
+      const leaf = get('leaf');
+      if (leaf) anims.push(leaf.animate({ transform: forward ? [rest, gone] : [gone, rest] }, opts));
+      // 下层页被上层遮着时略暗，上层移开时渐亮
+      const underShade = get('under')?.querySelector('.rd-page__shade');
+      if (underShade) anims.push(underShade.animate({ opacity: forward ? [0.14, 0] : [0, 0.14] }, opts));
     } else {
-      // 平移：横排下一页从右边进来；竖排下一页从左边进来
-      const sign = (g.vertical ? 1 : -1) * turn.dir;
+      // 平移：左右平移时下一页从右边进来（rtl 从左边）；上下平移时下一页从下方进来
+      const axis = mode === 'slide-y' ? 'Y' : 'X';
+      const sign = (axis === 'Y' || !rtl ? -1 : 1) * turn.dir;
       const opts: KeyframeAnimationOptions = { duration: 380, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' };
       const out = get('outgoing');
       const inc = get('incoming');
-      if (out) anims.push(out.animate({ transform: ['translateX(0)', `translateX(${sign * 100}%)`] }, opts));
-      if (inc) anims.push(inc.animate({ transform: [`translateX(${-sign * 100}%)`, 'translateX(0)'] }, opts));
+      if (out) anims.push(out.animate({ transform: [`translate${axis}(0)`, `translate${axis}(${sign * 100}%)`] }, opts));
+      if (inc) anims.push(inc.animate({ transform: [`translate${axis}(${-sign * 100}%)`, `translate${axis}(0)`] }, opts));
     }
 
     let cancelled = false;
@@ -178,13 +226,13 @@ export function PagedView({ page, g, mode, turn, content, onTurnEnd }: PagedView
       cancelled = true;
       anims.forEach((a) => a.cancel());
     };
-  }, [turn, mode, g.vertical]);
+  }, [turn, mode, rtl]);
 
   return (
     <div className="rd-paged" data-mode={mode}>
-      {layersFor(page, turn, mode).map(({ index, role }) => (
+      {layersFor(current, turn, mode).map(({ ref, role }) => (
         <div
-          key={`p${index}`}
+          key={`${ref.chapter}:${ref.page}`}
           ref={(el) => {
             // React 19 的 ref 清理函数：同一页面层换了角色（下层 → 当前）时，先注销旧角色再登记新角色
             if (!el) return;
@@ -194,14 +242,10 @@ export function PagedView({ page, g, mode, turn, content, onTurnEnd }: PagedView
             };
           }}
           className={cls('rd-page', `rd-page--${role}`)}
-          data-hinge={g.vertical ? 'right' : 'left'}
+          data-hinge={rtl ? 'right' : 'left'}
           aria-hidden={role !== 'current' && role !== 'incoming' ? true : undefined}
         >
-          <div className="rd-window" style={{ width: g.winW, height: g.winH }}>
-            <Flow g={g} index={index}>
-              {content}
-            </Flow>
-          </div>
+          {renderPage(ref)}
           <div className="rd-page__shade" />
         </div>
       ))}

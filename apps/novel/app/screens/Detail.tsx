@@ -10,7 +10,7 @@
  * HTML 可被 CDN 缓存。读者个人的状态（是否在书架上、读到第几章）不写进 HTML，
  * 在浏览器里补上；操作栏等它就绪后再淡入，避免按钮文字先显示默认值再跳变。
  */
-import { useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { ArrowLeft, Check, Plus } from 'lucide-react';
 import { BOOKS, SHELF, formatHeat, formatWords, type Book, type ShelfEntry } from '@danmo/data/books';
 import { chapterTitle } from '@danmo/data/chapters';
@@ -22,6 +22,7 @@ import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { useClientValue, useMounted } from '@danmo/design/lib/useClientValue';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
+import { ensureChapter } from '../reader/chapters';
 import './detail.css';
 
 export interface BookData {
@@ -54,6 +55,14 @@ export function BookScreen({ data, screen }: ScreenProps<BookData>) {
   const entry = useShelfEntry(book.id);
   const ready = useMounted();
   const reading = !!entry && entry.progress > 0 && entry.progress < 1;
+  /** "开始阅读 / 继续读"会打开的那一章 */
+  const startChapter = reading ? entry.chapter : 0;
+
+  // 读者多半会点开来读：先把那一章取好，开书推进结束时正文已经就绪（seamless-reading 记忆）。
+  // 等挂载后再取，书架数据这时才知道，不会先白取一次第一章
+  useEffect(() => {
+    if (ready) ensureChapter(book, startChapter);
+  }, [ready, book, startChapter]);
 
   // 用户点过"加入书架"之后以点击为准；在此之前跟随书架数据（浏览器里就绪后才知道）
   const [added, setAdded] = useState(false);
@@ -67,7 +76,7 @@ export function BookScreen({ data, screen }: ScreenProps<BookData>) {
   const { side, flip } = useSpin(bookRef, true);
 
   // 在读才从上次的章节继续（按钮写"继续读"）；没读过或已读完都从第一章开始（按钮写"开始阅读"）
-  const read = (chapter = reading ? entry!.chapter : 0) =>
+  const read = (chapter = startChapter) =>
     push(`/read/${book.id}/${chapter + 1}`, { flightFrom: heroSlot, book, dive: true });
 
   const addToShelf = () => {

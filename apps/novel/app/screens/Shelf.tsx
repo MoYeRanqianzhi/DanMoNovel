@@ -26,6 +26,7 @@ import { seasonLine } from '@danmo/design/lib/season';
 import { seededRandom } from '@danmo/design/lib/util';
 import { useStack, type ScreenHero, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
+import { ensureChapter } from '../reader/chapters';
 import './shelf.css';
 
 /** 书架上的一本书：用户与书的关系，连同书本身 */
@@ -68,6 +69,9 @@ export function ShelfScreen({ data, screen }: ScreenProps<ShelfData>) {
   const heroSlot = screen.slot('hero');
 
   const openDetail = (book: Book, slotId: string) => push(`/book/${book.id}`, { flightFrom: slotId, book });
+  // "继续读"多半会被点开：挂载后就先取好那一章，开书推进结束时正文已经就绪（seamless-reading 记忆）
+  useEffect(() => ensureChapter(resumeBook, resume.chapter), [resumeBook, resume.chapter]);
+
   const continueReading = () =>
     push(`/read/${resumeBook.id}/${resume.chapter + 1}`, { flightFrom: heroSlot, book: resumeBook, dive: true });
 

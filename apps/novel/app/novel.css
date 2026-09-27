@@ -29,3 +29,16 @@
   border-radius: 1px;
   background: var(--thread);
 }
+/* 未解锁的章节：右侧一把淡淡的小锁（当前章的红线短横仍在最右） */
+.toc-lock {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-left: auto;
+  stroke-width: 1.8;
+  color: color-mix(in srgb, var(--ink-2) 70%, transparent);
+}
+/* 当前章同时带锁（停在订阅页时）：红线短横紧跟在锁后面，而不是和锁平分剩余的空间 */
+.toc-list button[aria-current]:has(.toc-lock)::after {
+  margin-left: 8px;
+}

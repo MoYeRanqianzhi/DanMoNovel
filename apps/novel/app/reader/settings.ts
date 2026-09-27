@@ -1,5 +1,5 @@
 /**
- * 阅读设置：字号、行距、字体、翻页方式、横排/竖排
+ * 阅读设置：字号、行距、字体、翻页方式、反向翻页、横排/竖排
  *
  * 原型阶段保存在浏览器本地存储；正式版迁移到存储层并随账号同步。
  * 服务端渲染时不知道读者的设置：服务端与水合时一律用默认值（useSyncExternalStore 的服务端快照），
@@ -9,14 +9,22 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 export type Leading = 'tight' | 'normal' | 'loose';
 export type ReaderFont = 'kai' | 'serif' | 'sans';
-/** flip：3D 翻书；slide：左右平移；scroll：连续滚动 */
-export type TurnMode = 'flip' | 'slide' | 'scroll';
+/**
+ * 翻页方式（名称与效果由用户定下，见 page-turn-modes 记忆）：
+ * flip 翻书、slide-x 左右平移、slide-y 上下平移、cover-x 左右覆盖、cover-y 上下覆盖、scroll 滚动。
+ * 前五种是分页模式，每页自带页眉页脚、随书页一起动；滚动模式章与章连成一条，页眉页脚固定。
+ */
+export const TURN_MODES = ['flip', 'slide-x', 'slide-y', 'cover-x', 'cover-y', 'scroll'] as const;
+export type TurnMode = (typeof TURN_MODES)[number];
+export type PagedMode = Exclude<TurnMode, 'scroll'>;
 
 export interface ReaderSettings {
   fontSize: number;
   leading: Leading;
   font: ReaderFont;
   mode: TurnMode;
+  /** 反向翻页：横排默认下一页在右边、竖排默认在左边，打开后两者都倒过来 */
+  reverse: boolean;
   vertical: boolean;
 }
 
@@ -31,7 +39,14 @@ export const FONT_STACK: Record<ReaderFont, string> = {
 
 export const FONT_SIZE_RANGE = { min: 14, max: 28 } as const;
 
-const DEFAULTS: ReaderSettings = { fontSize: 19, leading: 'normal', font: 'kai', mode: 'flip', vertical: false };
+const DEFAULTS: ReaderSettings = {
+  fontSize: 19,
+  leading: 'normal',
+  font: 'kai',
+  mode: 'flip',
+  reverse: false,
+  vertical: false,
+};
 const STORAGE_KEY = 'danmo:reader';
 
 /** 解析保存的设置；字段缺失或非法时逐项回落到默认值（这是外部输入，需要校验） */
@@ -45,7 +60,8 @@ function parse(raw: string | null): ReaderSettings {
         Number.isFinite(size) && size >= FONT_SIZE_RANGE.min && size <= FONT_SIZE_RANGE.max ? size : DEFAULTS.fontSize,
       leading: r.leading && r.leading in LEADING ? r.leading : DEFAULTS.leading,
       font: r.font && r.font in FONT_STACK ? r.font : DEFAULTS.font,
-      mode: r.mode === 'flip' || r.mode === 'slide' || r.mode === 'scroll' ? r.mode : DEFAULTS.mode,
+      mode: r.mode && (TURN_MODES as readonly string[]).includes(r.mode) ? r.mode : DEFAULTS.mode,
+      reverse: typeof r.reverse === 'boolean' ? r.reverse : DEFAULTS.reverse,
       vertical: typeof r.vertical === 'boolean' ? r.vertical : DEFAULTS.vertical,
     };
   } catch {

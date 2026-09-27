@@ -1,11 +1,12 @@
 /**
  * 阅读器的两个面板内容：阅读设置、章节目录（外层的 Sheet 由 Reader 提供）
  */
-import { AArrowDown, AArrowUp } from 'lucide-react';
+import { AArrowDown, AArrowUp, Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { IconButton, Segmented } from '@danmo/design/components/ui';
+import { chapterAccess } from '@danmo/data/api';
 import type { Book } from '@danmo/data/books';
 import { chapterTitle } from '@danmo/data/chapters';
+import { IconButton, Segmented } from '@danmo/design/components/ui';
 import { originOf, useTheme } from '@danmo/design/theme/ThemeContext';
 import { THEMES } from '@danmo/design/theme/themes';
 import { FONT_SIZE_RANGE, type Leading, type ReaderFont, type ReaderSettings, type TurnMode } from './settings';
@@ -19,6 +20,85 @@ function Row({ label, children, stacked }: { label: string; children: ReactNode;
   );
 }
 
+/** 六种翻页方式：名称由用户定下（page-turn-modes 记忆），下面一行小字说明翻页时看到什么 */
+const MODES: { value: TurnMode; name: string; note: string }[] = [
+  { value: 'flip', name: '翻书', note: '像纸页一样掀起' },
+  { value: 'slide-x', name: '左右平移', note: '整页左右移动' },
+  { value: 'slide-y', name: '上下平移', note: '整页上下移动' },
+  { value: 'cover-x', name: '左右覆盖', note: '上面一页左右移开' },
+  { value: 'cover-y', name: '上下覆盖', note: '上面一页往上移开' },
+  { value: 'scroll', name: '滚动', note: '章与章连成一条' },
+];
+
+/**
+ * 翻页方式的示意图：两张纸与一个表示动向的箭头，画在 40×28 的格子里。
+ * 线条用 currentColor，选中时跟着卡片一起变成红线色。
+ */
+function ModeGlyph({ mode }: { mode: TurnMode }) {
+  const page = (x: number, y: number, w = 14, h = 20) => <rect x={x} y={y} width={w} height={h} rx={1.5} />;
+  let art: ReactNode;
+  switch (mode) {
+    case 'flip':
+      art = (
+        <>
+          {page(20, 4)}
+          <path d="M20 4 Q12 6 8 12 L8 26 Q12 21 20 24 Z" />
+        </>
+      );
+      break;
+    case 'slide-x':
+      art = (
+        <>
+          {page(4, 4)}
+          {page(22, 4)}
+          <path d="M16 14 h6 m-2 -2 l2 2 l-2 2" />
+        </>
+      );
+      break;
+    case 'slide-y':
+      art = (
+        <>
+          {page(13, 1, 14, 12)}
+          {page(13, 15, 14, 12)}
+          <path d="M31 17 v-6 m-2 2 l2 -2 l2 2" />
+        </>
+      );
+      break;
+    case 'cover-x':
+      art = (
+        <>
+          {page(16, 4)}
+          <rect x={8} y={4} width={14} height={20} rx={1.5} className="glyph-top" />
+          <path d="M6 14 h-4 m2 -2 l-2 2 l2 2" />
+        </>
+      );
+      break;
+    case 'cover-y':
+      art = (
+        <>
+          {page(13, 6)}
+          <rect x={13} y={1} width={14} height={16} rx={1.5} className="glyph-top" />
+          <path d="M33 10 v-6 m-2 2 l2 -2 l2 2" />
+        </>
+      );
+      break;
+    case 'scroll':
+      art = (
+        <>
+          <rect x={13} y={1} width={14} height={26} rx={1.5} />
+          <path d="M16 7 h8 M16 11 h8 M16 15 h8 M16 19 h6" />
+          <path d="M32 9 v10" />
+        </>
+      );
+      break;
+  }
+  return (
+    <svg className="rd-mode__glyph" viewBox="0 0 40 28" aria-hidden="true">
+      {art}
+    </svg>
+  );
+}
+
 export function SettingsPanel({
   settings,
   update,
@@ -28,6 +108,9 @@ export function SettingsPanel({
 }) {
   const { theme, setTheme } = useTheme();
   const { min, max } = FONT_SIZE_RANGE;
+  const paged = settings.mode !== 'scroll';
+  /** 下一页当前在哪一边：竖排默认在左，反向翻页把它倒过来 */
+  const nextOnLeft = settings.vertical !== settings.reverse;
 
   return (
     <div className="rd-settings">
@@ -74,18 +157,6 @@ export function SettingsPanel({
           onChange={(font) => update({ font })}
         />
       </Row>
-      <Row label="翻页">
-        <Segmented<TurnMode>
-          label="翻页方式"
-          value={settings.mode}
-          options={[
-            { value: 'flip', label: '翻书' },
-            { value: 'slide', label: '平移' },
-            { value: 'scroll', label: '滚动' },
-          ]}
-          onChange={(mode) => update({ mode })}
-        />
-      </Row>
       <Row label="排版">
         <Segmented<'h' | 'v'>
           label="排版方向"
@@ -97,6 +168,41 @@ export function SettingsPanel({
           onChange={(v) => update({ vertical: v === 'v' })}
         />
       </Row>
+      <Row label="翻页" stacked>
+        <div className="rd-modes" role="radiogroup" aria-label="翻页方式">
+          {MODES.map((m) => (
+            <button
+              key={m.value}
+              type="button"
+              role="radio"
+              aria-checked={settings.mode === m.value}
+              className="rd-mode"
+              onClick={() => update({ mode: m.value })}
+            >
+              <ModeGlyph mode={m.value} />
+              <span className="rd-mode__name">{m.name}</span>
+              <span className="rd-mode__note">{m.note}</span>
+            </button>
+          ))}
+        </div>
+      </Row>
+      <div className="rd-setting">
+        <span className="rd-setting__label">
+          反向翻页
+          <small className="rd-setting__hint">
+            {paged ? `下一页在${nextOnLeft ? '左' : '右'}边` : '滚动时不区分方向'}
+          </small>
+        </span>
+        <button
+          type="button"
+          role="switch"
+          className="rd-switch"
+          aria-label="反向翻页"
+          aria-checked={settings.reverse}
+          disabled={!paged}
+          onClick={() => update({ reverse: !settings.reverse })}
+        />
+      </div>
       <Row label="配色" stacked>
         <div className="rd-swatches">
           {THEMES.map((t) => (
@@ -120,6 +226,7 @@ export function SettingsPanel({
   );
 }
 
+/** 目录：当前章染成红线色；未解锁的章节右侧带一把小锁（目录只在浏览器里打开，可以直接读订阅记录） */
 export function TocPanel({ book, current, onPick }: { book: Book; current: number; onPick: (i: number) => void }) {
   return (
     <ol className="toc-list">
@@ -127,6 +234,7 @@ export function TocPanel({ book, current, onPick }: { book: Book; current: numbe
         <li key={i}>
           <button type="button" aria-current={i === current ? 'true' : undefined} onClick={() => onPick(i)}>
             {chapterTitle(book, i)}
+            {chapterAccess(book.id, i) === 'locked' && <Lock className="toc-lock" aria-label="订阅章节" />}
           </button>
         </li>
       ))}
