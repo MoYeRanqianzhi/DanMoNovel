@@ -1,5 +1,6 @@
 /* ============================================================
- * 书城
+ * 书城：标题与搜索 → 口味标签 → 书环 → 榜单 → 新书上架 → 馆藏目录；
+ * 找书时书环以下换成结果列表（Store.tsx）。书环本身的样式在 book-ring.css
  * ============================================================ */
 
 .store {
@@ -10,16 +11,130 @@
     padding-top: var(--sp-10);
   }
 }
+.store-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
 .store-sub {
   margin-top: 4px;
   font-size: var(--fs-14);
   color: var(--ink-2);
 }
 
+/* 搜索框：凹下去的一块纸 */
+.store-search {
+  flex: 1 1 260px;
+  max-width: 420px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  background: var(--sheet-2);
+  color: var(--ink-2);
+  box-shadow: inset 0 1px 2px rgb(var(--shadow-rgb) / 0.14);
+}
+.store-search:focus-within {
+  box-shadow: inset 0 0 0 2px var(--thread);
+}
+.store-search svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+.store-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  font-size: var(--fs-16);
+  color: var(--ink);
+}
+.store-search input::placeholder {
+  color: var(--ink-2);
+}
+/* 浏览器自带的清除按钮默认是蓝色的，换成次要文字色的一个细 × */
+.store-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-left: 6px;
+  cursor: pointer;
+  background: var(--ink-2);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 4l8 8M12 4l-8 8' stroke='%23000' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")
+    center / 16px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 4l8 8M12 4l-8 8' stroke='%23000' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")
+    center / 16px no-repeat;
+}
+
+/* 口味标签：移动端一行左右滑，宽屏换行铺开 */
+.store-tags {
+  gap: 10px;
+  margin: var(--sp-4) calc(var(--sp-5) * -1) 0;
+  padding: 4px var(--sp-5);
+}
+@media (min-width: 900px) {
+  .store-tags {
+    flex-wrap: wrap;
+    overflow: visible;
+    margin: var(--sp-4) 0 0;
+    padding: 0;
+  }
+}
+
+/* ---- 书环（编辑推荐）与书名说明 ---- */
+.store-ring {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: var(--sp-4) calc(var(--sp-5) * -1) 0;
+}
+@media (min-width: 900px) {
+  .store-ring {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+.ring-caption {
+  width: min(100%, 520px);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-5);
+}
+.ring-caption__text {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+.ring-caption__title {
+  font-family: var(--font-kai);
+  font-weight: 400;
+  font-size: var(--fs-24);
+  line-height: 1.3;
+}
+.ring-caption__line {
+  margin-top: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.ring-open {
+  margin-top: var(--sp-4);
+}
+
 /* ---- 榜单：移动端一叠可以左右滑动的纸笺，露出下一张的边缘提示还有更多 ---- */
 .boards {
   gap: 14px;
-  margin: var(--sp-5) calc(var(--sp-5) * -1) 0;
+  margin: var(--sp-8) calc(var(--sp-5) * -1) 0;
   padding: 6px var(--sp-5) 22px;
   scroll-snap-type: x mandatory;
   scroll-padding-inline: var(--sp-5);
@@ -42,7 +157,7 @@
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: var(--sp-6);
     overflow: visible;
-    margin: var(--sp-6) 0 0;
+    margin: var(--sp-10) 0 0;
     padding: 0;
   }
   .board {
@@ -285,5 +400,99 @@
   flex-wrap: wrap;
   gap: 0 8px;
   font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+
+/* ---- 找书结果：名次、立体小书、书名与简介、收藏数 ---- */
+.store-found {
+  margin-top: var(--sp-6);
+  animation: store-found-in 240ms ease both;
+}
+@keyframes store-found-in {
+  from {
+    opacity: 0;
+  }
+}
+.rank {
+  margin-top: var(--sp-3);
+}
+@media (min-width: 900px) {
+  .rank {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: var(--sp-10);
+  }
+}
+.rank__item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  transition: background-color var(--dur-quick) ease;
+}
+.rank__item:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.rank__item .book3d {
+  margin: 2px 6px 8px 0;
+}
+/* 结果按收藏排序，所以序号是信息而不是装饰；前三名用红线色 */
+.rank__no {
+  font-family: var(--font-kai);
+  font-size: var(--fs-24);
+  text-align: center;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.rank__no[data-top] {
+  color: var(--thread-ink);
+}
+.rank__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.rank__title {
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+}
+.rank__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.rank__blurb {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.rank__heat {
+  align-self: start;
+  margin-top: 4px;
+  white-space: nowrap;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+@media (max-width: 520px) {
+  .rank__heat {
+    display: none;
+  }
+}
+.rank-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  padding: var(--sp-8) 0;
   color: var(--ink-2);
 }

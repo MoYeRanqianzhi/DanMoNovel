@@ -349,7 +349,7 @@ export const SHELF: ShelfEntry[] = [
   { bookId: '1002100000010006', group: '读完', chapter: 94, progress: 1 }, // 镜头之外
 ];
 
-/** 发现页"按口味找"的标签，顺序即展示顺序 */
+/** 书城"按口味找"的标签，顺序即展示顺序 */
 export const TASTE_TAGS = [
   '校园',
   '古代',

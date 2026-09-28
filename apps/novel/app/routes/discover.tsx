@@ -1,6 +1,6 @@
 /**
- * 路由：/discover 发现
- * 公开页面（原型的推荐是固定的；正式版按口味推荐时，个性化部分改在浏览器里补上，HTML 仍可缓存）。
+ * 路由：/discover 发现（书友交流的社区）
+ * 公开页面：帖子随 HTML 服务端渲染，可被 CDN 缓存；收藏状态等个人数据在浏览器里补上。
  * 页面组件见 screens/Discover.tsx。
  */
 import type { ScreenHandle } from '@danmo/design/shell/stack';
@@ -21,8 +21,8 @@ export const loader = () => loadDiscover();
 export const headers = () => PUBLIC_CACHE;
 
 export const meta: Route.MetaFunction = () => [
-  { title: pageTitle('发现好书') },
-  { name: 'description', content: '按口味找书：校园、古代、仙侠、破镜重圆、双向暗恋、强强……还有本周热读排行。' },
+  { title: pageTitle('发现') },
+  { name: 'description', content: '书友们在聊的书：长评、摘句、求文与闲聊，还有正在热议的作品。' },
   canonical('/discover'),
 ];
 

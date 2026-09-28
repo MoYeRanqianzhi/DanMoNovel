@@ -1,0 +1,48 @@
+/* ============================================================
+ * 书环（BookRing.tsx）
+ * 书的宽度随断点变化（窄屏 --book-w-base、宽屏 --book-w-wide，由 BookRing.tsx 写入），
+ * 环的半径与舞台高度都从当前生效的 --book-w 推导，JS 里不需要知道屏幕宽度
+ * ============================================================ */
+
+.ring-stage {
+  --book-w: var(--book-w-base);
+  --ring-r: calc(var(--book-w) * 1.75);
+  position: relative;
+  width: 100%;
+  height: calc(var(--book-w) * 1.42 + 70px);
+  perspective: 1100px;
+  perspective-origin: 50% 35%;
+  overflow: hidden;
+  touch-action: pan-y;
+  cursor: grab;
+}
+@media (min-width: 900px) {
+  .ring-stage {
+    --book-w: var(--book-w-wide);
+    perspective: 1500px;
+  }
+}
+/* 环本身是一个没有尺寸的点，书围绕它排布 */
+.ring {
+  position: absolute;
+  left: 50%;
+  top: 26px;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  transition: transform 760ms var(--ease-spring);
+}
+.ring[data-dragging] {
+  transition: none;
+}
+.ring__item {
+  position: absolute;
+  left: calc(var(--book-w) / -2);
+  top: 0;
+  transform-style: preserve-3d;
+}
+.ring__book {
+  display: block;
+  transform-style: preserve-3d;
+  border-radius: 4px;
+}

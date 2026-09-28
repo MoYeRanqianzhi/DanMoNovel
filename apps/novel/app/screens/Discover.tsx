@@ -1,296 +1,227 @@
 /**
- * 发现
+ * 发现：书友交流的社区
  *
- * 顶部是一个书环：七本书围成一圈立在 3D 空间里，左右拖动（或点两侧箭头）转动书环，
- * 正对你的那本会漂浮起来，点它就飞进详情页；转到背面的书露出的是封底简介。
- * 下面是"按口味找"的书签标签、搜索与本周热读排行（标签与搜索会筛选排行）。
+ * 用户 2026-09-27 纠正：发现不是书城，而是读者之间交流的地方（原先的书环、搜索、口味标签已并进书城，见 tab-roles 记忆）。
+ * 版面：标题与"写点什么" → 正在热议的书（帖子里聊得最多的几本）→ 类别标签 → 帖子。
+ * 宽屏上帖子在左、正在热议在右侧一栏。
+ *
+ * 帖子分长评、摘句、求文、闲聊四类。每帖：发帖人（一枚淡色的闲章作头像）、正文、摘的那一句、提到的书、时间、收藏与回复。
+ * 书仍是主角：正在热议与帖子里提到的书都是书位，点了飞进详情页。
+ *
+ * 原型：帖子是固定的示例数据（packages/data/src/posts.ts）；收藏只在本机切换（本地存储 danmo:liked）；
+ * 发帖与回复要登录，原型里给出提示。
+ * 公开页面：帖子随 HTML 服务端渲染（长评、摘句也是搜索引擎的落地内容），HTML 可被 CDN 缓存；
+ * 收藏状态是个人数据，只在浏览器里补上（服务端快照是"一条都没收藏"）。
  */
-import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import { BOOKS, TASTE_TAGS, formatHeat, formatWords, getBook, type Book } from '@danmo/data/books';
+import { useState, useSyncExternalStore } from 'react';
+import { ChevronRight, Heart, MessageCircle, PenLine } from 'lucide-react';
+import { getBook, type Book } from '@danmo/data/books';
+import { POSTS, POST_KINDS, formatPostTime, type Post, type PostKind } from '@danmo/data/posts';
 import { POSES } from '@danmo/design/book3d/Book3D';
-import { IconButton, TagMark } from '@danmo/design/components/ui';
+import { useToast } from '@danmo/design/components/overlays';
+import { TagMark } from '@danmo/design/components/ui';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { useStack, type ScreenHero, type ScreenProps } from '@danmo/design/shell/stack';
-import { useTheme } from '@danmo/design/theme/ThemeContext';
 import './discover.css';
 
-/** 书环上的书（顺序即环上的顺序） */
-const RING_IDS = [
-  '1002100000010003', // 雨停之前
-  '1003100000010001', // 星轨同行
-  '1002100000010006', // 镜头之外
-  '1002100000010002', // 潮汐来信
-  '1001100000010003', // 折梅寄远
-  '1002100000010001', // 他的第七封信
-  '1001100000010001', // 云岫不归
-];
-
 export interface DiscoverData {
-  /** 全部书目（排行与搜索的范围） */
-  books: Book[];
-  /** 书环上的推荐（正式版按读者口味推荐；原型固定七本） */
-  ring: Book[];
-  /** "按口味找"的标签 */
-  tags: string[];
+  posts: Post[];
+  /** 正在热议：帖子里提到的书，talk 是提到它的帖子数加这些帖子的回复数，按它排序（显示的数字就是排序的依据） */
+  hot: { book: Book; talk: number }[];
 }
 
-/** 发现页的 loader：原型取示例数据；正式版改为调用 Go 接口 */
+/** 发现页的 loader：原型取示例帖子；正式版改为调用 Go 接口 */
 export function loadDiscover(): DiscoverData {
-  return { books: BOOKS, ring: RING_IDS.map(getBook), tags: TASTE_TAGS };
+  const talk = new Map<string, number>();
+  for (const p of POSTS) if (p.bookId) talk.set(p.bookId, (talk.get(p.bookId) ?? 0) + 1 + p.replies);
+  const hot = [...talk]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([id, n]) => ({ book: getBook(id), talk: n }));
+  return { posts: POSTS, hot };
 }
 
-/** 发现页的主角：书环正对读者的那本（打开时书环停在第一本）。书位名与 Ring 里的写法一致 */
-export function discoverHero({ ring }: DiscoverData): ScreenHero {
-  return { book: ring[0], slot: `ring:${ring[0].id}` };
+/** 正在热议的书位名（不含页面 id），discoverHero 与 HotBooks 共用 */
+const hotSlot = (book: Book) => `hot:${book.id}`;
+
+/** 发现页的主角：正在热议的第一本（公开数据，可以随 HTML 进 CDN） */
+export function discoverHero({ hot }: DiscoverData): ScreenHero {
+  return { book: hot[0].book, slot: hotSlot(hot[0].book) };
 }
+
+/* ---------------- 收藏过的帖子：本机的一小份记录 ---------------- */
+
+const LIKED_KEY = 'danmo:liked';
+const NONE: ReadonlySet<string> = new Set();
+let liked: ReadonlySet<string> | null = null;
+const likedListeners = new Set<() => void>();
+
+function readLiked(): ReadonlySet<string> {
+  if (liked) return liked;
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(LIKED_KEY) ?? '[]');
+    // 本地存储是外部输入：只收字符串
+    liked = new Set(Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : []);
+  } catch {
+    liked = NONE;
+  }
+  return liked;
+}
+
+function toggleLiked(id: string) {
+  const next = new Set(readLiked());
+  if (!next.delete(id)) next.add(id);
+  liked = next;
+  try {
+    localStorage.setItem(LIKED_KEY, JSON.stringify([...next]));
+  } catch {
+    /* 写不进本地存储：只在本次会话里有效 */
+  }
+  likedListeners.forEach((l) => l());
+}
+
+function useLiked(): ReadonlySet<string> {
+  return useSyncExternalStore(
+    (l) => {
+      likedListeners.add(l);
+      return () => likedListeners.delete(l);
+    },
+    readLiked,
+    () => NONE,
+  );
+}
+
+/* ---------------- 页面 ---------------- */
 
 export function DiscoverScreen({ data, screen }: ScreenProps<DiscoverData>) {
   const { push } = useStack();
-  const { books, ring: RING } = data;
-  // 书环位置：不取模的累计值（可以是负数或超过书的数量），这样从最后一本转到第一本时
-  // 书环继续朝同一个方向转一格，而不是倒转一整圈
-  const [pos, setPos] = useState(0);
-  const front = ((pos % RING.length) + RING.length) % RING.length;
-  const [query, setQuery] = useState('');
-  const [tag, setTag] = useState<string | null>(null);
+  const toast = useToast();
+  const [kind, setKind] = useState<PostKind | null>(null);
+  const likedIds = useLiked();
 
   const open = (book: Book, slotId: string) => push(`/book/${book.id}`, { flightFrom: slotId, book });
-  const frontBook = RING[front];
-  const frontSlot = screen.slot(`ring:${frontBook.id}`);
-
-  // 搜索匹配书名、作者、CP 与标签；标签筛选按"题材/标签包含"判断（"古代"是题材，其余是标签）
-  const q = query.trim();
-  const ranked = books.filter((b) => {
-    const hitTag = !tag || b.tags.includes(tag) || b.era === tag;
-    const hitQuery = !q || [b.title, b.author, ...b.pair, ...b.tags].some((s) => s.includes(q));
-    return hitTag && hitQuery;
-  }).sort((a, b) => b.heat - a.heat);
+  const posts = data.posts.filter((p) => !kind || p.kind === kind);
 
   return (
     <div className="page discover">
       <header className="discover-head">
         <h1 className="page-title">发现</h1>
-        <label className="discover-search">
-          <Search aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜书名、作者或标签"
-            aria-label="搜索书籍"
-          />
-        </label>
+        <button type="button" className="btn btn--primary discover-write" onClick={() => toast('发帖要先登录，原型里还没有接入')}>
+          <PenLine aria-hidden="true" />
+          写点什么
+        </button>
       </header>
 
-      <section className="discover-ring" aria-label="推荐书环">
-        <BookRing
-          books={RING}
-          pos={pos}
-          onPos={setPos}
-          onOpen={open}
-          sid={screen.sid}
-        />
-        <div className="ring-caption">
-          <IconButton label="上一本" onClick={() => setPos(pos - 1)}>
-            <ChevronLeft aria-hidden="true" />
-          </IconButton>
-          <div className="ring-caption__text" aria-live="polite">
-            <h2 className="ring-caption__title">{frontBook.title}</h2>
-            <p className="ring-caption__line">{frontBook.tagline ?? frontBook.blurb}</p>
+      <div className="discover-body">
+        <aside className="discover-hot" aria-label="正在热议">
+          <h2 className="section-title">正在热议</h2>
+          <div className="discover-hot__list scroll-x">
+            {data.hot.map(({ book, talk }) => {
+              const slotId = screen.slot(hotSlot(book));
+              return (
+                <button key={book.id} type="button" className="hot" onClick={() => open(book, slotId)}>
+                  <BookSlot slotId={slotId} book={book} width={{ base: 64, wide: 46 }} {...POSES.hero} label={null} />
+                  <span className="hot__text">
+                    <span className="hot__title">{book.title}</span>
+                    <span className="hot__talk">{talk} 条讨论</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
-          <IconButton label="下一本" onClick={() => setPos(pos + 1)}>
-            <ChevronRight aria-hidden="true" />
-          </IconButton>
-        </div>
-        <button type="button" className="btn btn--primary ring-open" onClick={() => open(frontBook, frontSlot)}>
-          看看这本
-        </button>
-      </section>
+        </aside>
 
-      <section className="discover-tags" aria-label="按口味找">
-        <h2 className="section-title">按口味找</h2>
-        <div className="discover-tags__row scroll-x">
-          {data.tags.map((t) => (
-            <TagMark key={t} active={tag === t} onClick={() => setTag(tag === t ? null : t)}>
-              {t}
+        <section className="discover-feed" aria-label="帖子">
+          <div className="discover-kinds scroll-x" role="group" aria-label="帖子类别">
+            <TagMark active={!kind} onClick={() => setKind(null)}>
+              全部
             </TagMark>
-          ))}
-        </div>
-      </section>
-
-      <section className="discover-rank" aria-label="本周热读">
-        <h2 className="section-title">
-          {tag || q ? '筛选结果' : '本周热读'}
-          <small>{ranked.length} 本</small>
-        </h2>
-        {ranked.length === 0 ? (
-          <div className="rank-empty">
-            <p>没有找到相关的书。换个关键词，或者清除筛选再试。</p>
-            <button
-              type="button"
-              className="btn btn--ghost"
-              onClick={() => {
-                setQuery('');
-                setTag(null);
-              }}
-            >
-              清除筛选
-            </button>
+            {POST_KINDS.map((k) => (
+              <TagMark key={k} active={kind === k} onClick={() => setKind(kind === k ? null : k)}>
+                {k}
+              </TagMark>
+            ))}
           </div>
-        ) : (
-          <ol className="rank">
-            {ranked.map((b, i) => (
-              <RankItem key={b.id} book={b} rank={i + 1} slotId={screen.slot(`rank:${b.id}`)} onOpen={open} />
+          <ol className="feed">
+            {posts.map((p) => (
+              <PostCard
+                key={p.id}
+                post={p}
+                liked={likedIds.has(p.id)}
+                slotId={screen.slot(`post:${p.id}`)}
+                onOpen={open}
+                onLike={() => toggleLiked(p.id)}
+                onReply={() => toast('回复要先登录，原型里还没有接入')}
+              />
             ))}
           </ol>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function RankItem({
-  book,
-  rank,
-  slotId,
-  onOpen,
-}: {
-  book: Book;
-  rank: number;
-  slotId: string;
-  onOpen: (book: Book, slotId: string) => void;
-}) {
-  return (
-    <li>
-      <button type="button" className="rank__item" onClick={() => onOpen(book, slotId)}>
-        <span className="rank__no" data-top={rank <= 3 || undefined}>
-          {rank}
-        </span>
-        <BookSlot slotId={slotId} book={book} width={52} {...POSES.shelf} label={null} />
-        <span className="rank__text">
-          <span className="rank__title">{book.title}</span>
-          <span className="rank__meta">
-            <span>{book.author}</span>
-            <span>{book.era}</span>
-            <span>{book.status}</span>
-            <span>{formatWords(book.words)}</span>
-          </span>
-          <span className="rank__blurb">{book.blurb}</span>
-        </span>
-        <span className="rank__heat">{formatHeat(book.heat)} 收藏</span>
-      </button>
-    </li>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* 书环                                                                */
-/* ------------------------------------------------------------------ */
-
-interface BookRingProps {
-  books: Book[];
-  /** 累计位置，正对观察者的是第 pos mod n 本 */
-  pos: number;
-  onPos: (pos: number) => void;
-  onOpen: (book: Book, slotId: string) => void;
-  /** 所在页面的 id，书位 id 的前缀 */
-  sid: string;
-}
-
-/** 书环上每本书的宽度（窄屏 / 宽屏）；环的半径与舞台高度在 discover.css 里由它推导 */
-const RING_BOOK = { base: 92, wide: 120 };
-
-/**
- * 书围成一圈：每本书先绕 Y 轴转到自己的角度，再沿 Z 轴推到半径处；
- * 整个环向后退一个半径，让正对观察者的那本书落在 z = 0 的平面上（尺寸不被透视放大，
- * 飞行引擎量到的矩形与真实大小一致）。半径 --ring-r 随断点变化，所以变换里直接引用 CSS 变量。
- * 拖动时直接改环的 transform（不经过 React 渲染），松手后吸附到最近的一本。
- */
-function BookRing({ books, pos, onPos, onOpen, sid }: BookRingProps) {
-  const { reduced } = useTheme();
-  const n = books.length;
-  const front = ((pos % n) + n) % n;
-  const step = 360 / n;
-  const ringRef = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ x: number; started: boolean; id: number } | null>(null);
-
-  const baseTransform = (deg: number) => `translateZ(calc(var(--ring-r) * -1)) rotateY(${deg}deg)`;
-
-  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
-    drag.current = { x: e.clientX, started: false, id: e.pointerId };
-  };
-  const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    const d = drag.current;
-    const ring = ringRef.current;
-    if (!d || !ring) return;
-    const dx = e.clientX - d.x;
-    // 超过 6px 才算拖动：此时才捕获指针，否则会吞掉书本按钮的点击
-    if (!d.started && Math.abs(dx) > 6) {
-      d.started = true;
-      e.currentTarget.setPointerCapture(d.id);
-      ring.dataset.dragging = '';
-    }
-    if (d.started) ring.style.transform = baseTransform(-pos * step + dx * 0.4);
-  };
-  const onPointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
-    const d = drag.current;
-    const ring = ringRef.current;
-    drag.current = null;
-    if (!d?.started || !ring) return;
-    delete ring.dataset.dragging;
-    const dx = e.clientX - d.x;
-    const next = pos - Math.round((dx * 0.4) / step);
-    // 吸附到最近的一本：显式写入吸附后的角度（移除 data-dragging 后带过渡），
-    // 再同步给 React；若位置没变，React 不会重写 transform，这里写的值就是最终值
-    ring.style.transform = baseTransform(-next * step);
-    onPos(next);
-  };
-
-  /** 点击侧面的书：沿最短方向把它转到正前方 */
-  const bringToFront = (i: number) => {
-    const delta = ((((i - front) % n) + n + Math.floor(n / 2)) % n) - Math.floor(n / 2);
-    onPos(pos + delta);
-  };
-
-  return (
-    <div
-      className="ring-stage"
-      style={{ '--book-w-base': `${RING_BOOK.base}px`, '--book-w-wide': `${RING_BOOK.wide}px` } as CSSProperties}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-    >
-      <div ref={ringRef} className="ring" style={{ transform: baseTransform(-pos * step) }}>
-        {books.map((b, i) => {
-          const isFront = i === front;
-          const slotId = `${sid}:ring:${b.id}`;
-          return (
-            <div key={b.id} className="ring__item" style={{ transform: `rotateY(${i * step}deg) translateZ(var(--ring-r))` }}>
-              <button
-                type="button"
-                className="ring__book"
-                tabIndex={isFront ? 0 : -1}
-                aria-label={isFront ? `打开《${b.title}》` : `转到《${b.title}》`}
-                onClick={() => (isFront ? onOpen(b, slotId) : bringToFront(i))}
-              >
-                <BookSlot
-                  slotId={slotId}
-                  book={b}
-                  width={RING_BOOK}
-                  rx={-4}
-                  ry={0}
-                  perspective="none"
-                  state={isFront && !reduced ? 'float' : 'rest'}
-                  label={null}
-                />
-              </button>
-            </div>
-          );
-        })}
+        </section>
       </div>
     </div>
+  );
+}
+
+interface PostCardProps {
+  post: Post;
+  liked: boolean;
+  /** 帖子里提到的那本书的书位 */
+  slotId: string;
+  onOpen: (book: Book, slotId: string) => void;
+  onLike: () => void;
+  onReply: () => void;
+}
+
+/**
+ * 一张帖子：浮起的一张纸。摘句帖先放摘的那一句再放感想，其他帖子先正文、后摘句。
+ * 收藏过的心染成红线色（红线表示"你收藏过"这个状态，是信息）；数字是这帖的收藏数，收藏后加上自己这一个。
+ */
+function PostCard({ post: p, liked, slotId, onOpen, onLike, onReply }: PostCardProps) {
+  const book = p.bookId ? getBook(p.bookId) : null;
+  const quote = p.quote && <blockquote className="post__quote">{p.quote}</blockquote>;
+  return (
+    <li>
+      <article className="post sheet" aria-label={`${p.author}的${p.kind}`}>
+        <header className="post__head">
+          <span className="post__avatar" aria-hidden="true">
+            {p.author[0]}
+          </span>
+          <span className="post__who">
+            <span className="post__name">{p.author}</span>
+            <span className="post__note">{p.authorNote}</span>
+          </span>
+          <span className="post__kind">{p.kind}</span>
+        </header>
+        {p.kind === '摘句' && quote}
+        <p className="post__body">{p.body}</p>
+        {p.kind !== '摘句' && quote}
+        {book && (
+          <button type="button" className="post__book" onClick={() => onOpen(book, slotId)}>
+            <BookSlot slotId={slotId} book={book} width={34} {...POSES.thumb} shadow={false} label={null} />
+            <span className="post__book-text">
+              <span className="post__book-title">{book.title}</span>
+              <span className="post__book-author">{book.author}</span>
+            </span>
+            <ChevronRight aria-hidden="true" />
+          </button>
+        )}
+        <footer className="post__foot">
+          <time dateTime={p.at}>{formatPostTime(p.at)}</time>
+          <button
+            type="button"
+            className="post__act"
+            aria-pressed={liked}
+            aria-label={liked ? '取消收藏' : '收藏'}
+            onClick={onLike}
+          >
+            <Heart aria-hidden="true" />
+            <span>{p.likes + (liked ? 1 : 0)}</span>
+          </button>
+          <button type="button" className="post__act" aria-label={`回复（${p.replies} 条）`} onClick={onReply}>
+            <MessageCircle aria-hidden="true" />
+            <span>{p.replies}</span>
+          </button>
+        </footer>
+      </article>
+    </li>
   );
 }
