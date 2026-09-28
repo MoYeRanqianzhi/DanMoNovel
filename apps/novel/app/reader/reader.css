@@ -284,6 +284,186 @@
   color: color-mix(in srgb, var(--ink-2) 75%, transparent);
 }
 
+/* ---- 订阅页（notices.tsx 的 LockedNotice）：上面是章名与预览，往下渐隐；下面是一张订阅笺 ----
+ * 预览用正文的字体、字号与行距，看起来就是这一章本身，只是读到一半淡去了。
+ * 预览按内容的高度排，渐隐只盖最后三行左右（按 em 算，和预览多长无关）；字大到放不下时，预览被压短，放不下的部分藏在渐隐里。
+ * 分页时订阅笺贴在页底，每一章都在同一个位置；滚动时紧跟在预览后面。
+ * 竖排时预览也竖着写，从右往左，往左渐隐；订阅笺始终横排。 */
+.rd-lock {
+  position: absolute;
+  inset: 0;
+  writing-mode: horizontal-tb;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(100%, calc(34 * var(--rd-size) + 52px));
+  margin: 0 auto;
+  padding: 6px 26px 14px;
+}
+/* 分页时页脚上方浮着"回到第 N 章"（跳回）：订阅笺往上让出它的高度，免得小签压住笺上的字 */
+.reader[data-returning] .rd-page .rd-lock {
+  padding-bottom: 54px;
+}
+.rd-lock__lead {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  font-family: var(--rd-font);
+  font-size: var(--rd-size);
+  line-height: var(--rd-leading);
+  color: var(--reader-ink);
+  text-align: justify;
+  text-autospace: normal;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 6em), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 6em), transparent);
+}
+.rd-lock__lead p {
+  margin: 0;
+  text-indent: 2em;
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+.rd-lock__lead p + p {
+  margin-top: 0.4em;
+}
+/* 预览到了再淡入（章名先在） */
+.rd-lock__lead[data-ready] p {
+  opacity: 1;
+}
+.rd-lock__lead .rd-title {
+  margin-top: 0.2em;
+}
+/* 竖排：高度占满订阅笺以上的空间，宽度按实际写了几列（贴右），渐隐盖住最左边三列左右 */
+.rd-lock__lead[data-vertical] {
+  flex: 1 1 0;
+  align-self: flex-end;
+  width: max-content;
+  max-width: 100%;
+  writing-mode: vertical-rl;
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 6em), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 6em), transparent);
+}
+.rd-lock__lead[data-vertical] p + p {
+  margin-top: 0;
+}
+.rd-lock__lead[data-vertical] .rd-title {
+  margin: 0 0 0 0.9em;
+  font-size: 1.3em;
+}
+
+.rd-lock__card {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(100%, 420px);
+  margin: auto auto 0;
+  padding: 16px 16px 12px;
+  border-radius: var(--radius-l);
+  font-size: var(--fs-14);
+  color: var(--ink);
+  text-align: left;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 18px 40px -26px rgb(var(--shadow-rgb) / 0.6);
+}
+.rd-lock__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rd-lock__head .seal {
+  flex: none;
+  transform: rotate(-4deg);
+}
+.rd-lock__title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  line-height: 1.35;
+}
+.rd-lock__title small {
+  font-family: var(--font-sans);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.rd-lock__balance {
+  flex: none;
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+/* 订阅范围：与翻页方式卡片同一种选中样式（红线色的圈表示"选的是这一项"） */
+.rd-plans {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 8px;
+}
+.rd-plan {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 9px 4px 8px;
+  border-radius: var(--radius-m);
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  box-shadow: 0 0 0 1px var(--line);
+  transition:
+    color var(--dur-quick) ease,
+    box-shadow var(--dur-quick) ease,
+    background-color var(--dur-quick) ease;
+}
+.rd-plan:hover {
+  color: var(--ink);
+}
+.rd-plan[aria-checked='true'] {
+  color: var(--thread-ink);
+  background: color-mix(in srgb, var(--thread) 7%, transparent);
+  box-shadow: 0 0 0 1.5px var(--thread);
+}
+.rd-plan__name {
+  font-size: var(--fs-14);
+  color: var(--ink);
+}
+.rd-plan__price {
+  font-size: var(--fs-12);
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.rd-lock__go {
+  width: 100%;
+}
+.rd-lock__auto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 2px;
+}
+.rd-lock__auto-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.4;
+}
+.rd-lock__auto-text small {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.rd-lock__fine {
+  font-size: var(--fs-12);
+  line-height: 1.6;
+  text-align: center;
+  color: color-mix(in srgb, var(--ink-2) 80%, transparent);
+}
+
 /* ---- 滚动模式：相邻章节接成一条 ---- */
 .rd-scroll {
   position: absolute;
@@ -328,6 +508,18 @@
 .rd-sec .rd-notice {
   position: absolute;
   writing-mode: horizontal-tb;
+}
+/* 横排滚动时订阅页排在正文流里，预览按自然高度；竖排滚动时占住这一段，和分页时一样 */
+.rd-scroll[data-writing='horizontal'] .rd-lock {
+  position: relative;
+  inset: auto;
+  padding-inline: 0;
+}
+.rd-scroll[data-writing='horizontal'] .rd-lock__lead {
+  flex: none;
+}
+.rd-scroll[data-writing='vertical'] .rd-sec[data-state='locked'] {
+  min-width: min(92vw, 440px);
 }
 
 /* ---- 亮度：最上面一层黑色遮罩 ----

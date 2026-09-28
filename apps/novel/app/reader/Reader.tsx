@@ -12,7 +12,8 @@
  * 换章无感（seamless-reading 记忆）：正文来自 chapters.ts 的缓存，读到哪章就预取后面几章；
  * 翻过章末直接翻进下一章的第一页（与章内翻页是同一个动画），滚动模式滚到章尾自然接上下一章。
  * 只有内容确实还没到（远距离跳章、网速慢）时，那一页才显示加载动画，而且延迟一小会儿才出现。
- * 需要订阅的章节显示订阅页，订阅后原地换成正文。
+ * 需要订阅的章节显示订阅页（预览开头、订阅范围、自动订阅开关，见 notices.tsx），订阅后原地换成正文。
+ * 开了自动订阅时，往后读会顺带订好正在读的那章之后几章（chapters.ts 的 autoSubscribeAhead，只在 readOn 里触发）。
  *
  * 工具栏下栏：上面一行是上一章、全书进度条（按章拖动，见 Scrubber）、下一章；
  * 下面三个入口：目录、背景（亮度、配色、纸张）、设置（字号、行距、字体、排版、翻页）。设置不拆分（reader-menu 记忆）。
@@ -22,7 +23,8 @@
  * 亮度用最上面一层黑色遮罩压暗（.rd-dim，不透明度取自 <html> 上的 --rd-dim，见 settings.ts）。
  *
  * 服务端渲染：阅读页也是公开页面（可被 CDN 缓存），但服务端只输出本章的试读开头
- * （标题与前几段），供搜索引擎收录与读屏器读取；完整正文在浏览器里另行获取并分页。
+ * （标题与开头的一小段，按字数封顶，见 api.ts 的 chapterLead；订阅页的预览也是这一段），
+ * 供搜索引擎收录与读屏器读取；完整正文在浏览器里另行获取并分页。
  * 深链接打开时，试读开头一直显示到本章正文取到为止，不先闪一下加载动画。
  * 这对应 Google 灵活采样中的"只展示开头"（lead-in），也符合内容保护的边界：
  * 不能让批量抓取直接从 HTML 拿到整章（见 content-protection-goal 记忆）。
@@ -41,9 +43,9 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { ALargeSmall, ArrowLeft, Bookmark, BookmarkCheck, List, Lock, Sun, Undo2 } from 'lucide-react';
-import { chapterAccess } from '@danmo/data/api';
+import { chapterAccess, chapterLead } from '@danmo/data/api';
 import { BOOKS, isBookNo, type Book } from '@danmo/data/books';
-import { chapterParagraphs, chapterTitle } from '@danmo/data/chapters';
+import { chapterTitle } from '@danmo/data/chapters';
 import { Sheet, useToast } from '@danmo/design/components/overlays';
 import { IconButton, ThreadProgress } from '@danmo/design/components/ui';
 import { useElementSize } from '@danmo/design/lib/useElementSize';
@@ -53,15 +55,12 @@ import { DEFAULT_FONT, ensureFont, fontStack, importedIdOf, platformFont } from 
 import { FontList } from '@danmo/design/fonts/FontList';
 import { registerImported } from '@danmo/design/fonts/imported';
 import { PaperTexture } from '@danmo/design/paper/PaperTexture';
-import { chapterState, prefetchAround, useChapterCache } from './chapters';
+import { autoSubscribeAhead, chapterState, prefetchAround, useChapterCache } from './chapters';
 import { FailedNotice, LockedNotice, PendingNotice } from './notices';
 import { ChapterContent, Flow, PageFrame, PagedView, countPages, type Geometry, type PageRef, type Turn } from './pages';
 import { BackgroundPanel, SettingsPanel, TocPanel } from './panels';
 import { LEADING, useReaderSettings, type PagedMode } from './settings';
 import './reader.css';
-
-/** 服务端输出的试读开头有几段 */
-const LEAD_PARAGRAPHS = 3;
 
 /** 滚动模式同时挂着的章数上限 */
 const MAX_SECTIONS = 5;
@@ -121,7 +120,7 @@ export interface ReaderData {
   chapter: number;
   /** 本章标题 */
   title: string;
-  /** 本章开头几段，服务端渲染进 HTML */
+  /** 本章的试读开头（服务端按字数截好的几段，与订阅页的预览是同一段），服务端渲染进 HTML */
   lead: string[];
 }
 
@@ -141,7 +140,7 @@ export function findReading(bookId: string, chapterParam: string | undefined): R
     book,
     chapter,
     title: chapterTitle(book, chapter),
-    lead: chapterParagraphs(book, chapter).slice(0, LEAD_PARAGRAPHS),
+    lead: chapterLead(book.id, chapter).paragraphs,
   };
 }
 
@@ -289,12 +288,43 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     [keepOrigin],
   );
 
-  // 停在"加载中"的那一页时正文到了：标记这一章淡入，片刻后清掉（之后新挂上的页面层不再淡入）
+  /** 这次打开已经提示过：自动订阅订了几章、余额不够自动订阅了。各只提示一次，之后安静地订 */
+  const autoTold = useRef({ done: false, short: false });
+
+  /**
+   * 读者往后读了（翻页、往下滚）：记进跳回的"读了多少"，并让自动订阅订好正在读的那章之后几章。
+   * 自动订阅只从这里触发：打开书、跳章都不是阅读进度（subscription 记忆）。
+   */
+  const readOn = useCallback(
+    (n: number, reading: number) => {
+      advance(n);
+      if (n <= 0) return;
+      autoSubscribeAhead(book, reading).then(
+        (res) => {
+          const told = autoTold.current;
+          if (res?.status === 'ok' && !told.done) {
+            told.done = true;
+            const got = Object.keys(res.texts)
+              .map(Number)
+              .sort((a, b) => a - b);
+            toast(`已自动订阅${got.length > 1 ? ` ${got.length} 章` : chapterTitle(book, got[0])}，余额 ${res.balance} 书币`);
+          } else if (res?.status === 'insufficient' && !told.short) {
+            told.short = true;
+            toast('余额不够自动订阅后面的章节了');
+          }
+        },
+        () => {},
+      );
+    },
+    [advance, book, toast],
+  );
+
+  // 停在"加载中"的那一页时正文到了，或在订阅页上订阅成功：标记这一章淡入，片刻后清掉（之后新挂上的页面层不再淡入）
   const shownStatus = useRef(current?.status);
   useEffect(() => {
     const was = shownStatus.current;
     shownStatus.current = current?.status;
-    if (!booted || current?.status !== 'ready' || (was !== 'loading' && was !== 'idle')) return;
+    if (!booted || current?.status !== 'ready' || (was !== 'loading' && was !== 'idle' && was !== 'locked')) return;
     setArrived(chapter);
     const t = window.setTimeout(() => setArrived(null), 400);
     return () => window.clearTimeout(t);
@@ -383,12 +413,12 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
       }
       setArrived(null);
       // 往后翻一页加一，往回翻减一：来回翻看不算往后读
-      advance(dir);
+      readOn(dir, pos.chapter);
       if (!reduced) return setTurn({ dir, to });
       setPos(to);
       if (to.chapter !== pos.chapter) retarget(`/read/${book.id}/${to.chapter + 1}`);
     },
-    [turn, book, pos, counts, reduced, retarget, toast, advance],
+    [turn, book, pos, counts, reduced, retarget, toast, readOn],
   );
 
   // 翻页动画播完：同步提交新位置并移除动画层，同一帧内完成，不闪
@@ -484,8 +514,9 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   /* ---------------- 点击、滑动、滚轮、键盘 ---------------- */
 
   const down = useRef<{ x: number; y: number } | null>(null);
-  /** 点在状态页的按钮上（订阅、重试）：交给按钮，不当作翻页或唤出工具栏 */
-  const fromControl = (e: ReactPointerEvent) => e.target instanceof Element && !!e.target.closest('button, a, input');
+  /** 点在状态页的按钮上（订阅、重试）或订阅笺上：交给它们，不当作翻页或唤出工具栏 */
+  const fromControl = (e: ReactPointerEvent) =>
+    e.target instanceof Element && !!e.target.closest('button, a, input, .rd-lock__card');
   const onPointerDown = (e: ReactPointerEvent) => {
     down.current = fromControl(e) ? null : { x: e.clientX, y: e.clientY };
   };
@@ -560,7 +591,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   /** 某一章的正文或状态页（分页模式的一页、滚动模式的一段共用） */
   const noticeFor = (i: number, status: 'locked' | 'failed' | 'loading' | 'idle') =>
     status === 'locked' ? (
-      <LockedNotice book={book} chapter={i} />
+      <LockedNotice book={book} chapter={i} vertical={settings.vertical} />
     ) : status === 'failed' ? (
       <FailedNotice book={book} chapter={i} />
     ) : (
@@ -614,7 +645,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   };
 
   return (
-    <div className="reader" style={vars} data-mode={settings.mode}>
+    <div className="reader" style={vars} data-mode={settings.mode} data-returning={origin ? '' : undefined}>
       {/* 滚动模式的背景纹理画在阅读器底上，正文在它上面滚动；分页模式画在每一页上（PageFrame） */}
       {!paged && <PaperTexture />}
 
@@ -693,7 +724,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
                 onChapter={onScrollChapter}
                 onProgress={setScrollFrac}
                 onAnchor={onScrollAnchor}
-                onAdvance={advance}
+                onAdvance={(n) => readOn(n, chapter)}
                 renderSection={renderSection}
               />
             )}
@@ -788,7 +819,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
             onBack={() => setFontsOpen(false)}
           />
         ) : (
-          <SettingsPanel settings={settings} update={update} onOpenFonts={() => setFontsOpen(true)} />
+          <SettingsPanel book={book} settings={settings} update={update} onOpenFonts={() => setFontsOpen(true)} />
         )}
       </Sheet>
       <Sheet open={panel === 'background'} title="背景" onClose={() => setPanel(null)}>

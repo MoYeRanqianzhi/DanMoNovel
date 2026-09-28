@@ -3,7 +3,7 @@
  */
 import { AArrowDown, AArrowUp, ChevronRight, Lock, Sun, SunDim } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
-import { chapterAccess } from '@danmo/data/api';
+import { AUTO_AHEAD, FREE_CHAPTERS, chapterAccess, setAutoSubscribe } from '@danmo/data/api';
 import type { Book } from '@danmo/data/books';
 import { chapterTitle } from '@danmo/data/chapters';
 import { IconButton, Segmented } from '@danmo/design/components/ui';
@@ -13,6 +13,7 @@ import { PaperTexture } from '@danmo/design/paper/PaperTexture';
 import { PAPERS } from '@danmo/design/paper/papers';
 import { originOf, useTheme } from '@danmo/design/theme/ThemeContext';
 import { THEMES } from '@danmo/design/theme/themes';
+import { useAutoSubscribe } from './chapters';
 import { BRIGHTNESS_MIN, FONT_SIZE_RANGE, type Leading, type ReaderSettings, type TurnMode } from './settings';
 
 function Row({ label, children, stacked }: { label: string; children: ReactNode; stacked?: boolean }) {
@@ -103,16 +104,24 @@ function ModeGlyph({ mode }: { mode: TurnMode }) {
   );
 }
 
+/**
+ * 阅读设置：字号、行距、字体、排版、翻页，最后是本书的自动订阅（这本书有订阅章节时才有）。
+ * 设置不拆分（reader-menu 记忆），以后新的设置项按组接在后面。
+ * 自动订阅开关在订阅页上也有；开了以后就不会再看到订阅页，所以这里要能关。
+ */
 export function SettingsPanel({
+  book,
   settings,
   update,
   onOpenFonts,
 }: {
+  book: Book;
   settings: ReaderSettings;
   update: (patch: Partial<ReaderSettings>) => void;
   /** 点"字体"一行：面板切到字体列表（FontList，由 Reader 渲染） */
   onOpenFonts: () => void;
 }) {
+  const auto = useAutoSubscribe(book);
   const fontName = useFontName(settings.font);
   const { min, max } = FONT_SIZE_RANGE;
   const paged = settings.mode !== 'scroll';
@@ -205,6 +214,22 @@ export function SettingsPanel({
           onClick={() => update({ reverse: !settings.reverse })}
         />
       </div>
+      {book.chapters > FREE_CHAPTERS && (
+        <div className="rd-setting">
+          <span className="rd-setting__label">
+            自动订阅本书
+            <small className="rd-setting__hint">读到哪里订到哪里，最多提前 {AUTO_AHEAD} 章</small>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            className="switch"
+            aria-label="自动订阅本书"
+            aria-checked={auto}
+            onClick={() => setAutoSubscribe(book.id, !auto)}
+          />
+        </div>
+      )}
     </div>
   );
 }
