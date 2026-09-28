@@ -335,6 +335,8 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 
 ### 背景：纸张、配色与亮度（packages/design/src/paper/，规则见 reading-backgrounds 记忆）
 - **工具栏**：下栏是"目录 / 背景 / 设置"，背景用太阳图标。"夜间"按钮已删，配色从设置面板移进背景面板。
+  - 设置不拆分（reader-menu 记忆）。面板从上到下是字号、行距、字体、排版、翻页。
+  - 新的设置项按组接在后面；不常用的收进面板里的二级页，做法同字体列表。
 - **背景面板**（panels.tsx 的 BackgroundPanel），三行：
   - **亮度**：SunDim、滑块、Sun，下面是"跟随系统"开关。跟随系统时滑块变淡，不压暗。拖滑块写入 `brightness`，同时把 `brightnessAuto` 关掉。
   - **配色**：8 个主题圆点。每个圆点里放 `<PaperTexture paper={当前纸张} scale={0.4} />`，显示"这套配色 + 当前纸张"的样子。
