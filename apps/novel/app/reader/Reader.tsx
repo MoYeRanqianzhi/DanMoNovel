@@ -14,7 +14,10 @@
  * 只有内容确实还没到（远距离跳章、网速慢）时，那一页才显示加载动画，而且延迟一小会儿才出现。
  * 需要订阅的章节显示订阅页，订阅后原地换成正文。
  *
- * 工具栏下栏三个入口：目录、背景（亮度、配色、纸张）、设置（字号、行距、字体、排版、翻页）。
+ * 工具栏下栏：上面一行是上一章、全书进度条（按章拖动，见 Scrubber）、下一章；
+ * 下面三个入口：目录、背景（亮度、配色、纸张）、设置（字号、行距、字体、排版、翻页）。设置不拆分（reader-menu 记忆）。
+ * 跳回（防呆）：用进度条、目录、上一章 / 下一章跳走之后，页脚上方浮出"回到第 N 章"，
+ * 点一下回到跳之前读到的地方；从落点往后读了几页就消失（见下面的 FORGET_PAGES）。
  * 背景纹理分页时画在每一页上（PageFrame），滚动时画在阅读器底上、不随正文滚动；
  * 亮度用最上面一层黑色遮罩压暗（.rd-dim，不透明度取自 <html> 上的 --rd-dim，见 settings.ts）。
  *
@@ -37,7 +40,8 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from 'react';
 import { flushSync } from 'react-dom';
-import { ALargeSmall, ArrowLeft, Bookmark, BookmarkCheck, List, Sun } from 'lucide-react';
+import { ALargeSmall, ArrowLeft, Bookmark, BookmarkCheck, List, Lock, Sun, Undo2 } from 'lucide-react';
+import { chapterAccess } from '@danmo/data/api';
 import { BOOKS, isBookNo, type Book } from '@danmo/data/books';
 import { chapterParagraphs, chapterTitle } from '@danmo/data/chapters';
 import { Sheet, useToast } from '@danmo/design/components/overlays';
@@ -61,6 +65,55 @@ const LEAD_PARAGRAPHS = 3;
 
 /** 滚动模式同时挂着的章数上限 */
 const MAX_SECTIONS = 5;
+
+/** 读者在书里的位置：第几章、章内比例（0~1）。分页取当前页在本章的比例，滚动取视口顶端 */
+interface Place {
+  chapter: number;
+  frac: number;
+}
+
+/** 两个位置算"同一处"：同一章，章内相差不到 2%（滚动时停不到分毫不差的地方） */
+const near = (a: Place, b: Place) => a.chapter === b.chapter && Math.abs(a.frac - b.frac) < 0.02;
+
+/*
+ * 跳回在读者从落点往后读了 FORGET_PAGES 页（滚动时按屏算）之后消失：往后读才证明读者要从这里接着看。
+ * 按净进度算，往回翻、往回滚要减掉，来回翻看不算读。
+ * 不按时间算（用户 2026-09-28 纠正）：跳完章恰好很久没碰手机，回来时应当还能跳回去。
+ */
+const FORGET_PAGES = 3;
+
+/** 跳回的原位置按书存在本机（书号 → 位置）：刷新、退出阅读器再进来，还能回去 */
+const ORIGIN_KEY = 'danmo:return';
+
+function readOrigins(): Record<string, unknown> {
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(ORIGIN_KEY) ?? '{}');
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** 读出这本书的原位置。本地存储是外部输入：章号必须是这本书里的一章，比例必须在 0~1 之间 */
+function loadOrigin(book: Book): Place | null {
+  const p = readOrigins()[book.id];
+  if (!p || typeof p !== 'object') return null;
+  const { chapter, frac } = p as Record<string, unknown>;
+  if (typeof chapter !== 'number' || !Number.isInteger(chapter) || chapter < 0 || chapter >= book.chapters) return null;
+  if (typeof frac !== 'number' || !(frac >= 0 && frac <= 1)) return null;
+  return { chapter, frac };
+}
+
+function saveOrigin(bookId: string, place: Place | null) {
+  try {
+    const all = readOrigins();
+    if (place) all[bookId] = place;
+    else delete all[bookId];
+    localStorage.setItem(ORIGIN_KEY, JSON.stringify(all));
+  } catch {
+    /* 写不进本地存储：只在这次打开时有效 */
+  }
+}
 
 export interface ReaderData {
   book: Book;
@@ -129,6 +182,18 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   const [booted, setBooted] = useState(false);
   /** 读者停在"加载中"的那一页时正文到了：这一章的正文淡入一下，而不是生硬地换掉加载动画 */
   const [arrived, setArrived] = useState<number | null>(null);
+  /** 跳回的原位置：跳走之前读到的地方，没有就是 null。水合之后才从本机读出来（服务端与首帧都没有） */
+  const [origin, setOrigin] = useState<Place | null>(null);
+  const originRef = useRef<Place | null>(null);
+  /** 跳回淡出时还要显示原来那一章的名字：记住最后一个原位置 */
+  const lastOrigin = useRef<Place | null>(null);
+  /** 跳走之后从落点往后读了几页（滚动按屏算；往回翻、往回滚会减掉） */
+  const readSince = useRef(0);
+  /** 滚动模式：视口顶端在哪一章的什么位置（ScrollView 滚动时写入） */
+  const scrollAnchor = useRef<Place>({ chapter: data.chapter, frac: 0 });
+  /** 工具栏下栏：量出它的高度，唤出时"回到第 N 章"升到它上方 */
+  const barRef = useRef<HTMLDivElement>(null);
+  const bar = useElementSize(barRef);
 
   // 不可见页框的正文区：量出正文窗口的可用尺寸。分页、滚动两种模式量的都是它，元素始终不变
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -191,6 +256,39 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   }, [ready, pending]);
   const leadIn = !booted && pending;
 
+  /* ---------------- 跳回：原位置与"读了多少" ---------------- */
+
+  /** 记下或清掉原位置（同时写进本机） */
+  const keepOrigin = useCallback(
+    (place: Place | null) => {
+      originRef.current = place;
+      setOrigin(place);
+      saveOrigin(book.id, place);
+    },
+    [book.id],
+  );
+
+  // 水合之后读出本机记着的原位置
+  useEffect(() => {
+    if (!ready) return;
+    const saved = loadOrigin(book);
+    originRef.current = saved;
+    setOrigin(saved);
+  }, [ready, book]);
+
+  useEffect(() => {
+    if (origin) lastOrigin.current = origin;
+  }, [origin]);
+
+  /** 读者往后读了 n 页（滚动模式按屏算；负数是往回）：从落点往后读够了，就不再提供跳回 */
+  const advance = useCallback(
+    (n: number) => {
+      readSince.current += n;
+      if (originRef.current && readSince.current >= FORGET_PAGES) keepOrigin(null);
+    },
+    [keepOrigin],
+  );
+
   // 停在"加载中"的那一页时正文到了：标记这一章淡入，片刻后清掉（之后新挂上的页面层不再淡入）
   const shownStatus = useRef(current?.status);
   useEffect(() => {
@@ -222,6 +320,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     if (paged) return;
     setScrollStart((s) => ({ chapter, frac: fracRef.current, key: s.key + 1 }));
     setScrollFrac(fracRef.current);
+    scrollAnchor.current = { chapter, frac: fracRef.current };
     // 只在模式切换时执行
   }, [paged]);
 
@@ -283,11 +382,13 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
         to = { chapter: next, page: dir === 1 ? 0 : (counts[next] ?? 0) - 1 };
       }
       setArrived(null);
+      // 往后翻一页加一，往回翻减一：来回翻看不算往后读
+      advance(dir);
       if (!reduced) return setTurn({ dir, to });
       setPos(to);
       if (to.chapter !== pos.chapter) retarget(`/read/${book.id}/${to.chapter + 1}`);
     },
-    [turn, book, pos, counts, reduced, retarget, toast],
+    [turn, book, pos, counts, reduced, retarget, toast, advance],
   );
 
   // 翻页动画播完：同步提交新位置并移除动画层，同一帧内完成，不闪
@@ -301,22 +402,66 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     if (turn.to.chapter !== chapter) retarget(`/read/${book.id}/${turn.to.chapter + 1}`);
   }, [turn, chapter, book.id, retarget]);
 
-  /** 跳到某一章的开头（目录、上一章、下一章）。没取到的章会先显示加载页 */
-  const jumpTo = useCallback(
-    (i: number) => {
-      if (i < 0) return toast('已经是第一章');
-      if (i >= book.chapters) return toast('已经是最后一章');
-      setChrome(false);
-      setPanel(null);
-      setTurn(null);
-      setBooted(true);
-      setPos({ chapter: i, page: 0 });
-      setScrollFrac(0);
-      setScrollStart((s) => ({ chapter: i, frac: 0, key: s.key + 1 }));
-      if (i !== chapter) retarget(`/read/${book.id}/${i + 1}`);
-    },
-    [book.chapters, book.id, chapter, retarget, toast],
-  );
+  /** 读者现在的位置。分页：当前页在本章的比例（本章还没分好页、或是状态页时按章首算）；滚动：视口顶端 */
+  const here = (): Place => {
+    if (!paged) return scrollAnchor.current;
+    const n = counts[pos.chapter];
+    if (!n || chapterState(book, pos.chapter).status !== 'ready') return { chapter: pos.chapter, frac: 0 };
+    return { chapter: pos.chapter, frac: (pos.page < 0 ? n - 1 : Math.min(pos.page, n - 1)) / n };
+  };
+
+  /**
+   * 到某一章的某个位置（章内比例）。没取到的章先显示加载页。
+   * 分页模式等这一章的页数量出来，再按比例落到对应的页（上面"页数量出来或变了"的那段）；
+   * 滚动模式重新挂一条从这个位置开始的滚动视图。
+   * keepChrome：用进度条跳时工具栏不收起，方便接着拖
+   */
+  const goTo = (to: Place, keepChrome = false) => {
+    if (!keepChrome) setChrome(false);
+    setPanel(null);
+    setTurn(null);
+    setBooted(true);
+    setPos({ chapter: to.chapter, page: 0 });
+    fracRef.current = to.frac;
+    seenCount.current = { chapter: to.chapter, n: -1 };
+    scrollAnchor.current = to;
+    setScrollFrac(to.frac);
+    setScrollStart((s) => ({ chapter: to.chapter, frac: to.frac, key: s.key + 1 }));
+    if (to.chapter !== chapter) retarget(`/read/${book.id}/${to.chapter + 1}`);
+  };
+
+  /** 跳到别处：先记下原位置（连跳几次，原位置仍是第一次跳之前那里），重新开始计"读了多少" */
+  const leap = (to: Place, keepChrome = false) => {
+    const from = here();
+    if (!near(from, to)) {
+      if (!originRef.current) keepOrigin(from);
+      readSince.current = 0;
+    }
+    goTo(to, keepChrome);
+  };
+
+  /** 跳到某一章的开头（目录、上一章、下一章、进度条） */
+  const jumpTo = (i: number, keepChrome = false) => {
+    if (i < 0) return toast('已经是第一章');
+    if (i >= book.chapters) return toast('已经是最后一章');
+    leap({ chapter: i, frac: 0 }, keepChrome);
+  };
+
+  /** 点"回到第 N 章"：回到原位置，跳回随之消失 */
+  const backToOrigin = () => {
+    const to = originRef.current;
+    if (!to) return;
+    keepOrigin(null);
+    goTo(to);
+  };
+
+  // 分页模式自己翻回了原位置（同一章同一页）：已经回来了，跳回随之消失
+  useEffect(() => {
+    const o = originRef.current;
+    const n = counts[pos.chapter];
+    if (!paged || !o || o.chapter !== pos.chapter || !n || pos.page < 0) return;
+    if (pos.page === Math.min(n - 1, Math.round(o.frac * n))) keepOrigin(null);
+  }, [pos, counts, paged, origin, keepOrigin]);
 
   // 滚动模式读进了另一章：更新当前章与地址
   const onScrollChapter = useCallback(
@@ -325,6 +470,15 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
       retarget(`/read/${book.id}/${i + 1}`);
     },
     [book.id, retarget],
+  );
+
+  // 滚动模式：记下视口顶端的位置；滚回原位置附近，跳回随之消失
+  const onScrollAnchor = useCallback(
+    (p: Place) => {
+      scrollAnchor.current = p;
+      if (originRef.current && near(p, originRef.current)) keepOrigin(null);
+    },
+    [keepOrigin],
   );
 
   /* ---------------- 点击、滑动、滚轮、键盘 ---------------- */
@@ -392,6 +546,9 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   // 字体列表的预览句：读者正在读的那一段里的一两句（previewSentence）；本章正文还没到时用服务端给的试读开头
   const fontPreview =
     current?.status === 'ready' ? previewSentence(current.text.paragraphs, chapterFrac) : (data.lead[0] ?? book.blurb);
+
+  /** 跳回上写的那一章：淡出时 origin 已经清掉，仍显示原来那一章 */
+  const shownOrigin = origin ?? lastOrigin.current;
 
   const vars = {
     '--rd-size': `${settings.fontSize}px`,
@@ -535,6 +692,8 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
                 relayout={`${settings.fontSize}|${settings.leading}|${settings.font}|${fontTick}|${size.w}x${size.h}`}
                 onChapter={onScrollChapter}
                 onProgress={setScrollFrac}
+                onAnchor={onScrollAnchor}
+                onAdvance={advance}
                 renderSection={renderSection}
               />
             )}
@@ -566,28 +725,19 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
         </IconButton>
       </div>
 
-      <div className="rd-bar rd-bar--bottom sheet" data-shown={chrome || undefined} inert={!chrome}>
-        <div className="rd-bar__progress">
+      <div ref={barRef} className="rd-bar rd-bar--bottom sheet" data-shown={chrome || undefined} inert={!chrome}>
+        {/* 下一页在左边时整行镜像：下一章在左、进度从右往左，和翻页方向一致 */}
+        <div className="rd-bar__progress" dir={rtl ? 'rtl' : 'ltr'}>
           <button type="button" className="rd-bar__chap" onClick={() => jumpTo(chapter - 1)}>
             上一章
           </button>
-          {paged && count && current?.status === 'ready' ? (
-            <input
-              type="range"
-              className="rd-range"
-              aria-label="本章页码"
-              dir={rtl ? 'rtl' : 'ltr'}
-              min={0}
-              max={Math.max(0, count - 1)}
-              value={Math.max(0, pos.page)}
-              onChange={(e) => setPos({ chapter, page: Number(e.target.value) })}
-              style={{ '--fill': `${count > 1 ? (Math.max(0, pos.page) / (count - 1)) * 100 : 100}%` } as CSSProperties}
-            />
-          ) : (
-            <span className="rd-bar__pct">
-              {paged ? (current?.status === 'locked' ? '订阅章节' : ' ') : `本章已读 ${Math.round(chapterFrac * 100)}%`}
-            </span>
-          )}
+          <Scrubber
+            book={book}
+            chapter={chapter}
+            rtl={rtl}
+            mark={origin ? origin.chapter : null}
+            onPick={(i) => jumpTo(i, true)}
+          />
           <button type="button" className="rd-bar__chap" onClick={() => jumpTo(chapter + 1)}>
             下一章
           </button>
@@ -614,6 +764,20 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
           </button>
         </div>
       </div>
+
+      {/* ---- 跳回：跳章之后浮在页脚上方的一枚小签；工具栏唤出时升到下栏上方。淡出时仍显示原来那一章 ---- */}
+      <button
+        type="button"
+        className="rd-return sheet"
+        data-shown={origin ? '' : undefined}
+        data-lifted={chrome || undefined}
+        inert={!origin}
+        style={{ '--rd-bar-h': `${bar.h}px` } as CSSProperties}
+        onClick={backToOrigin}
+      >
+        <Undo2 aria-hidden="true" />
+        <span>回到{shownOrigin && chapterTitle(book, shownOrigin.chapter)}</span>
+      </button>
 
       <Sheet open={panel === 'settings'} title={fontsOpen ? '选择字体' : '阅读设置'} onClose={() => setPanel(null)}>
         {fontsOpen ? (
@@ -672,6 +836,74 @@ function PageFoot({ value, label }: { value: number; label: string }) {
   );
 }
 
+interface ScrubberProps {
+  book: Book;
+  chapter: number;
+  /** 下一页在左边（竖排或反向翻页）：进度条也从右往左 */
+  rtl: boolean;
+  /** 跳回的原位置所在的那一章；没有就是 null */
+  mark: number | null;
+  onPick: (chapter: number) => void;
+}
+
+/**
+ * 全书进度条（工具栏下栏），按章拖动。
+ * 拖动时上方浮出将要去的那一章：章名、第几章 / 共几章、要不要订阅。松手才跳：
+ * 中途不换章，免得拖过的每一章都去取正文。键盘每按一次方向键跳一章。
+ * 有跳回时，原位置那一章在进度条上画一个空心的小结，拖的时候看得到原来读到哪里。
+ */
+function Scrubber({ book, chapter, rtl, mark, onPick }: ScrubberProps) {
+  const [scrub, setScrub] = useState<number | null>(null);
+  const ref = useRef<HTMLInputElement>(null);
+  const latest = useRef({ chapter, onPick });
+  latest.current = { chapter, onPick };
+
+  // 松手（键盘每按一下）时浏览器发 change 事件。React 的 onChange 其实是 input 事件，拖动途中就会连续触发，
+  // 所以"跳"挂在原生的 change 上
+  useEffect(() => {
+    const el = ref.current!;
+    const commit = () => {
+      const i = Number(el.value);
+      setScrub(null);
+      if (i !== latest.current.chapter) latest.current.onPick(i);
+    };
+    el.addEventListener('change', commit);
+    return () => el.removeEventListener('change', commit);
+  }, []);
+
+  const last = Math.max(1, book.chapters - 1);
+  const value = scrub ?? chapter;
+  return (
+    <div className="rd-scrub" dir={rtl ? 'rtl' : 'ltr'}>
+      {scrub !== null && (
+        <div className="rd-scrub__tip" aria-hidden="true">
+          <span>{chapterTitle(book, scrub)}</span>
+          <small>
+            {scrub + 1} / {book.chapters}
+            {chapterAccess(book.id, scrub) === 'locked' && <Lock aria-hidden="true" />}
+          </small>
+        </div>
+      )}
+      {mark !== null && (
+        <i className="rd-scrub__mark" style={{ '--at': mark / last } as CSSProperties} aria-hidden="true" />
+      )}
+      <input
+        ref={ref}
+        type="range"
+        className="rd-range"
+        aria-label="全书进度"
+        aria-valuetext={chapterTitle(book, value)}
+        min={0}
+        max={book.chapters - 1}
+        value={value}
+        onChange={(e) => setScrub(Number(e.target.value))}
+        onBlur={() => setScrub(null)}
+        style={{ '--fill': `${(value / last) * 100}%` } as CSSProperties}
+      />
+    </div>
+  );
+}
+
 /** 服务端给的试读开头：服务端渲染、水合的第一帧，以及首次打开时本章正文到达之前显示 */
 function LeadIn({ data }: { data: ReaderData }) {
   return (
@@ -693,6 +925,10 @@ interface ScrollViewProps {
   relayout: string;
   onChapter: (chapter: number) => void;
   onProgress: (frac: number) => void;
+  /** 视口顶端的位置（章与章内比例）：跳走时记作原位置，跳回时从这里开始滚 */
+  onAnchor: (place: Place) => void;
+  /** 读者往后滚了多少屏（负数是往回滚；程序为了放回原处而改的滚动不算）：跳回据此判断读了多少 */
+  onAdvance: (screens: number) => void;
   /** 渲染一章（正文或状态页）；arrived 为真时这一章刚从"加载中"变成正文，淡入一下 */
   renderSection: (chapter: number, arrived: boolean) => ReactNode;
 }
@@ -707,17 +943,33 @@ interface ScrollViewProps {
  * - 上方插入或移走一章、改字号重新排版时，按"锚点"（视口顶端所在的章与章内比例）把读者放回原处。
  *   不依赖浏览器的 overflow-anchor：Safari 不支持，各浏览器的表现也不一致，这里统一手动补偿。
  * - 视口上方四分之一处读到哪一章，就通知父组件（更新页眉、进度与地址）。
+ * - 从一章的中间开始（跳回原位置）而这一章还没取到时，先不跟着滚动改锚点，正文到了再按比例放好读者。
  */
-function ScrollView({ book, start, vertical, relayout, onChapter, onProgress, renderSection }: ScrollViewProps) {
+function ScrollView({
+  book,
+  start,
+  vertical,
+  relayout,
+  onChapter,
+  onProgress,
+  onAnchor,
+  onAdvance,
+  renderSection,
+}: ScrollViewProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<[number, number]>([start.chapter, start.chapter]);
   const rangeRef = useRef(range);
   const reading = useRef(start.chapter);
   const anchor = useRef({ chapter: start.chapter, frac: start.frac });
-  const notify = useRef({ onChapter, onProgress });
-  notify.current = { onChapter, onProgress };
+  const notify = useRef({ onChapter, onProgress, onAnchor, onAdvance });
+  notify.current = { onChapter, onProgress, onAnchor, onAdvance };
   /** 出现过"加载中"的章：正文到了以后淡入 */
   const waited = useRef(new Set<number>());
+  /** 起点那一章的状态：从章中间开始而正文还没到时，等它到了再放好读者 */
+  const startStatus = chapterState(book, start.chapter).status;
+  const settled = useRef(start.frac === 0 || startStatus === 'ready');
+  /** 上一次的滚动位置：只把读者自己往后滚的距离算作"读了多少" */
+  const lastPos = useRef(0);
 
   /** 滚动位置与各章段在滚动方向上的起点、长度（竖排从右往左量） */
   const measure = () => {
@@ -749,8 +1001,11 @@ function ScrollView({ book, start, vertical, relayout, onChapter, onProgress, re
     const at = sec.start + anchor.current.frac * sec.size;
     if (vertical) el.scrollLeft = -at;
     else el.scrollTop = at;
+    // 程序改的滚动不算读者往后读：以放好之后的实际位置（可能被夹在可滚范围内）为起点
+    lastPos.current = vertical ? -el.scrollLeft : el.scrollTop;
+    if (startStatus === 'ready') settled.current = true;
     // measure 每次渲染都新建，但只读 ref 与 vertical（vertical 变化时整个视图会重新挂载）
-  }, [range, relayout]);
+  }, [range, relayout, startStatus]);
 
   /** 接近两端时接上相邻一章，并把同时挂着的章数控制在上限以内 */
   const extend = () => {
@@ -779,7 +1034,13 @@ function ScrollView({ book, start, vertical, relayout, onChapter, onProgress, re
     if (!secs.length) return;
     const at = (p: number) => secs.find((s) => p < s.start + s.size) ?? secs[secs.length - 1];
     const top = at(pos);
-    anchor.current = { chapter: top.chapter, frac: top.size ? (pos - top.start) / top.size : 0 };
+    if (settled.current) {
+      anchor.current = { chapter: top.chapter, frac: top.size ? (pos - top.start) / top.size : 0 };
+      notify.current.onAnchor(anchor.current);
+      const moved = pos - lastPos.current;
+      if (moved !== 0) notify.current.onAdvance(moved / Math.max(1, view));
+    }
+    lastPos.current = pos;
     const line = pos + view * 0.25;
     const cur = at(line);
     if (cur.chapter !== reading.current) {

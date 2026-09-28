@@ -416,20 +416,76 @@
 .rd-bar__chap:hover {
   color: var(--ink);
 }
-.rd-bar__pct {
+/* ---- 全书进度条（Reader.tsx 的 Scrubber）：一根红线 + 一个线结，按章拖动 ---- */
+.rd-scrub {
+  position: relative;
   flex: 1;
-  text-align: center;
-  font-size: var(--fs-14);
-  color: var(--ink-2);
+  min-width: 0;
+  display: flex;
+  align-items: center;
 }
-
-/* 页码滑块：一根红线 + 一个线结 */
 .rd-range {
+  position: relative;
+  z-index: 1; /* 线结压在"跳回"的记号上面 */
   flex: 1;
+  min-width: 0;
   height: 28px;
   appearance: none;
   background: transparent;
   cursor: pointer;
+}
+/* 跳回的原位置：红线上一个空心的小结，像穿在线上的一颗珠子。
+ * 位置与线结的圆心对齐：线结宽 16px，圆心从 8px 走到"全宽 - 8px" */
+.rd-scrub__mark {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: calc(8px + (100% - 16px) * var(--at) - 4px);
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--sheet);
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}
+/* 拖动时浮在下栏上方的一张小笺：将要去的那一章 */
+.rd-scrub__tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 22px);
+  translate: -50% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  max-width: min(84vw, 360px);
+  padding: 8px 18px 7px;
+  border-radius: var(--radius-m);
+  background: var(--sheet);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 14px 30px -18px rgb(var(--shadow-rgb) / 0.6);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.rd-scrub__tip span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  color: var(--ink);
+}
+.rd-scrub__tip small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.rd-scrub__tip svg {
+  width: 12px;
+  height: 12px;
 }
 .rd-range::-webkit-slider-runnable-track {
   height: 2px;
@@ -440,7 +496,7 @@
     color-mix(in srgb, var(--ink) 18%, transparent) var(--fill)
   );
 }
-.rd-range[dir='rtl']::-webkit-slider-runnable-track {
+.rd-scrub[dir='rtl'] .rd-range::-webkit-slider-runnable-track {
   background: linear-gradient(
     270deg,
     var(--thread) var(--fill),
@@ -477,6 +533,55 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   margin-top: 4px;
+}
+
+/* ---- 跳回：跳章之后浮在页脚上方的一枚小签，点一下回到跳之前读到的地方 ----
+ * 从落点往后读了几页（Reader.tsx 的 FORGET_PAGES）就淡去。工具栏唤出时跟着升到下栏上方（--rd-bar-h 是量出来的下栏高度），
+ * 不被挡住。只有图标用红线色：它标的是"原来读到的位置"，和进度条上那颗空心的小结是一回事 */
+.rd-return {
+  position: absolute;
+  left: 50%;
+  bottom: calc(40px + var(--safe-bottom) + 6px);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(78%, 360px);
+  height: 34px;
+  padding: 0 15px 0 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-14);
+  color: var(--ink);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 10px 24px -14px rgb(var(--shadow-rgb) / 0.6);
+  opacity: 0;
+  translate: -50% 8px;
+  transition:
+    opacity 240ms ease,
+    translate 380ms var(--ease-soft),
+    bottom 380ms var(--ease-soft);
+}
+.rd-return[data-shown] {
+  opacity: 1;
+  translate: -50% 0;
+}
+.rd-return[data-lifted] {
+  bottom: calc(10px + var(--safe-bottom) + var(--rd-bar-h, 120px) + 12px);
+}
+.rd-return:hover {
+  background-color: color-mix(in srgb, var(--ink) 4%, var(--sheet));
+}
+.rd-return svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--thread-ink);
+}
+.rd-return span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .rd-tool {
   display: flex;
