@@ -1,7 +1,7 @@
 # 三站前端原型实现说明（面向代理）
 
 > 记录 UI 原型的实现细节与不显而易见的决定，后续代理不必通读源码就能接着开发。
-> 状态以 2026-09-28 的提交 381e11d 为准（React Router v8 的 pnpm workspace，三站结构）。继续工作前，用 `git log` 与当前文件核对，本文可能已经落后。
+> 状态以 2026-09-28 的提交 65ec30e 为准（React Router v8 的 pnpm workspace，三站结构）。继续工作前，用 `git log` 与当前文件核对，本文可能已经落后。
 > 设计方向与已定决策见 ../MEMORY.md，待办见 ../TODO.md，当前计划与进度见 ../plan/。
 
 ## 1. 概况
@@ -30,7 +30,8 @@ package.json / pnpm-workspace.yaml / tsconfig.base.json
 packages/data/src/
   books.ts      Book 类型、书目 BOOKS、品牌书 BRAND_BOOK、示例书架 SHELF、口味标签、isBookNo/formatBookNo 与格式化函数
   chapters.ts   章节标题与试读正文（按书号为键）
-  api.ts        示例接口：fetchChapter、subscribeChapter、chapterAccess、FREE_CHAPTERS（正式版换成请求 Go 接口，签名不变）
+  api.ts        模拟服务端（正式版换成请求 Go 接口，签名不变）：fetchChapter、chapterAccess、FREE_CHAPTERS；
+                试读开头 chapterLead 与预览 fetchPreview；字数与价格；书币余额与充值；自动订阅开关；subscribeChapters
   posts.ts      发现页的示例帖子 POSTS、帖子类别 POST_KINDS、formatPostTime
 packages/design/src/
   styles/       index.ts（按顺序引入字体与 tokens → themes → base → transitions → layout）、tokens.css（@property 注册）、
@@ -266,12 +267,18 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 
 ### 数据：缓存与预取（chapters.ts，规则见 seamless-reading 记忆）
 - 状态：`ready | loading | failed | locked | idle`。`chapterState(book, i)` 先看订阅权限，未解锁就是 locked，否则查缓存。它读本地存储，只能在浏览器里调用。阅读器等尺寸就绪（水合之后）才读。
-- `prefetchAround(book, center)`：取当前章、往后 3 章（`PREFETCH_AHEAD`）、往前 1 章。往后遇到未解锁的章就停：预取绝不触发订阅或扣费。
+- `prefetchAround(book, center)`：取当前章、往后 3 章（`PREFETCH_AHEAD`）、往前 1 章。
+  - 往后遇到未解锁的章就停，并取好那一章的预览（`ensurePreview`）；当前章本身未解锁时也取预览。
+  - 预取本身绝不订阅、扣费。
 - 进行中的请求去重。失败记为 failed，读者点"重试"才重取。"锁住"不进缓存，因为订阅后会变。
-- 最多缓存 12 章，先丢离当前位置最远的（别的书算最远），进行中的请求不丢。
-- `unlockChapter`：订阅接口直接返回正文，放进缓存后预取窗口继续往后延伸。
-- 组件用 `useChapterCache()` 订阅缓存变化，它的返回值只用来触发重渲染。
-- 示例接口：延迟 300~900ms；前 30 章（`FREE_CHAPTERS`）免费；示例书架上读过的章节视为已订阅，其余订阅记在 `danmo:owned`。
+- 最多缓存 12 章，先丢离当前位置最远的（别的书算最远），进行中的请求不丢。预览另存一张表，不计入这 12 章。
+- `unlockChapters(book, indices)`：订阅接口直接返回最前面几章的正文，放进缓存，再从订到的第一章起预取；余额不足、被拒绝时原样返回结果。
+- `autoSubscribeAhead(book, reading)`：自动订阅，见第 10 节"订阅页"。
+- 组件用 `useChapterCache()` 订阅缓存变化，它的返回值只用来触发重渲染。`useWallet()`、`useAutoSubscribe(book)` 读余额与开关，服务端快照分别是 null 与 false。
+- 示例接口：
+  - 延迟 300~900ms；前 30 章（`FREE_CHAPTERS`）免费；
+  - 示例书架上读过的章节视为已订阅，其余订阅记在 `danmo:owned`；
+  - 余额记在 `danmo:wallet`，自动订阅开关记在 `danmo:auto-subscribe`（书号列表）。
 
 ### 页面结构与分页
 - **分页模式**（五种）：每层 `.rd-page` 是完整的一页 `PageFrame`，由页眉（该页所在章的章名）、正文区、页脚（全书进度红线与页码）组成，随书页一起动（见 page-turn-modes 记忆）。
@@ -419,10 +426,43 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 
 ### 状态页与首屏（notices.tsx）
 - 加载中：延迟 220ms 才淡入，数据很快到就完全看不到；读者停在这一页时正文到了，就淡入一下（`data-arrived`）。
-- 未解锁：订阅页（"订"字印章、"订阅本章"）。它不是错误，不重试。
+- 未解锁：订阅页，见下一小节。它不是错误，不重试。
 - 没能打开：给"重试"。
-- 状态页里的按钮不触发翻页（`fromControl`）。
-- **首屏**：服务端只输出试读开头（`LEAD_PARAGRAPHS=3`）。首次打开时，试读开头一直显示到本章有了结果，不先闪一下加载动画。
+- 状态页里的按钮和订阅笺不触发翻页（`fromControl` 认 `button, a, input, .rd-lock__card`）。
+- 订阅成功时正文淡入：`arrived` 的条件里加了"原来是 locked"。
+- **首屏**：服务端只输出试读开头（`chapterLead`，按字数封顶）。首次打开时，试读开头一直显示到本章有了结果，不先闪一下加载动画。
+
+### 订阅页（notices.tsx 的 LockedNotice，规则见 subscription 记忆）
+- **版面**：`.rd-lock` 是一个竖向的 flex，始终横排（竖排滚动时容器是 vertical-rl，所以这里要显式写 horizontal-tb）。
+  - **预览** `.rd-lock__lead`：`ChapterContent` 渲染章名与预览段落，用正文的字体、字号与行距。
+    - 横排时按内容高度排（`flex: 0 1 auto`），渐隐 mask 盖最后 6em。
+    - 竖排时 `writing-mode: vertical-rl`，高度占满、宽度 max-content 贴右，往左渐隐。
+    - 预览没到时只有章名，到了以后段落淡入（`data-ready`）。
+  - **订阅笺** `.rd-lock__card`：分页时贴在页底（`margin-top: auto`），横排滚动时跟在预览后面。
+    - 有跳回小签时，`.reader[data-returning] .rd-page .rd-lock` 往下多留 54px。
+  - 竖排滚动时，订阅那一段至少 `min(92vw, 440px)` 宽。
+- **订阅笺内容**：
+  - 印章、"订阅后接着读"、本章字数、余额；
+  - 订阅范围 `.rd-plans`（radiogroup）：本章 / 连订 10 章 / 余下全部。只剩 ≤10 章时是"余下 N 章"，只剩本章时不显示范围。只算未订阅的章。
+  - 主按钮写明范围与总价，余额不足时变成"去充值"，并写还差多少；
+  - 自动订阅开关；
+  - 两行小字："订阅后永久可读，也是对{作者}最好的支持"与原型说明。
+- **自动订阅**：
+  - `readOn(n, reading)` 是往后读的唯一入口：翻页 ±1，滚动按屏计。它先计跳回的净进度，n > 0 时调 `autoSubscribeAhead`。
+  - `autoSubscribeAhead` 的条件：开关开着、正在读的那章可读。它订之后 3 章（`AUTO_AHEAD`）里未订阅的章，同一时间只发一次。
+  - 余额不足时记下当时的余额，余额变了再试。
+  - 本次打开第一次自动订阅成功、第一次余额不足，各提示一次。
+  - 开关也在阅读设置的最后一行（书有订阅章节时才显示）。
+- **服务端（api.ts 模拟，正式版在 Go 里做同样的检查）**：
+  - `chapterLead`：按段落顺序取到 200 字，且不超过全章五分之一。最后一段在句末截断，找不到合适的句末就硬截加"……"。没有参数。服务端渲染的试读开头也用它。
+  - `fetchPreview`：返回 chapterLead，每分钟 30 次，超出返回 limited。
+  - `subscribeChapters(bookId, indices, { auto? })`：
+    - 只收未订阅的章；
+    - 自动订阅要求开关开着、`readingAt` 可读、每章都在 `(readingAt, readingAt + 3]` 之内，否则返回 refused；
+    - 余额不够就整笔不订，返回 insufficient；
+    - 成功时扣款、记订阅，只返回最前面 4 章的正文。
+  - 价格：`chapterPrice` 按每千字 5 书币。`chapterWords` 暂按全书平均值 ±15%，以章号为种子。都是原型示例。
+  - 本地存储里的账户数据（订阅、余额、开关）用 `localRecord` 读写，读的时候按形状校验。
 - 竖排时弯引号换成直角引号。
 
 ## 11. 数据（packages/data）
@@ -456,6 +496,11 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - 滚动模式下纹理固定在底上；
     - 深色配色；
     - 组件实验室的纸张矩阵。
+  - 订阅页（分页与滚动、横排与竖排、长夜、宽屏）：
+    - 连订 10 章、余额不足去充值；
+    - 自动订阅只在往后读时订后 3 章，跳章不触发；
+    - 模拟服务端拒绝越界与整本的自动订阅；
+    - 预览同一章每次相同并且限频；服务端渲染的试读开头按字数封顶。
   - 全书进度条与跳回（分页、滚动、竖排、长夜、宽屏）：
     - 拖动途中不跳，松手才跳；键盘逐章跳；
     - 连跳几次原位置不变，刷新后仍在；
