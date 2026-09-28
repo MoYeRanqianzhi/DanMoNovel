@@ -1,7 +1,7 @@
 # 三站前端原型实现说明（面向代理）
 
 > 记录 UI 原型的实现细节与不显而易见的决定，后续代理不必通读源码就能接着开发。
-> 状态以 2026-09-27 的提交 c499fce 为准（React Router v8 的 pnpm workspace，三站结构）。继续工作前，用 `git log` 与当前文件核对，本文可能已经落后。
+> 状态以 2026-09-28 的提交 3989485 为准（React Router v8 的 pnpm workspace，三站结构）。继续工作前，用 `git log` 与当前文件核对，本文可能已经落后。
 > 设计方向与已定决策见 ../MEMORY.md，待办见 ../TODO.md，当前计划与进度见 ../plan/。
 
 ## 1. 概况
@@ -17,7 +17,8 @@
   - `pnpm -r typecheck`：各站先跑 `react-router typegen`，再 `tsc --noEmit`。
   - `pnpm build`
   - `pnpm --filter @danmo/novel start`：跑小说站的生产服务，端口由 `PORT` 决定。
-  - `pnpm check:contrast`：8 套主题的对比度校验。
+  - `pnpm check:contrast`：8 套主题的对比度校验，含阅读纸张叠到纸色上之后的正文对比度（第 10 节"背景"）。
+  - `pnpm gen:paper`：重新生成阅读纸张里由程序画的图案。随机种子固定，重跑结果不变。
 - **许可**：AGPL-3.0-only（见 license 记忆）。新依赖必须与之兼容。
 
 ## 2. 目录与职责
@@ -30,6 +31,7 @@ packages/data/src/
   books.ts      Book 类型、书目 BOOKS、品牌书 BRAND_BOOK、示例书架 SHELF、口味标签、isBookNo/formatBookNo 与格式化函数
   chapters.ts   章节标题与试读正文（按书号为键）
   api.ts        示例接口：fetchChapter、subscribeChapter、chapterAccess、FREE_CHAPTERS（正式版换成请求 Go 接口，签名不变）
+  posts.ts      发现页的示例帖子 POSTS、帖子类别 POST_KINDS、formatPostTime
 packages/design/src/
   styles/       index.ts（按顺序引入字体与 tokens → themes → base → transitions → layout）、tokens.css（@property 注册）、
                 themes.css（8 套主题）、base.css、transitions.css（墨晕与页面进出场）、layout.css（.app/.stage/.screen、版心、按钮）
@@ -42,13 +44,17 @@ packages/design/src/
   lib/          util.ts（cls、seededRandom、clamp、lerp）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts
   fonts/        catalog.ts（平台字体目录、系统字体、字体 id 与字体栈）、imported.ts（导入字体：IndexedDB 与 FontFace）、
                 client.ts（模拟客户端的字体下载）、FontList.tsx + font-list.css（字体列表）、sfnt.ts（格式识别、读字体名、拆合集）
-  scripts/check-contrast.mjs
+  paper/        阅读纸张（第 10 节"背景"）：papers.ts（十种纸张的 id 与名称）、PaperTexture.tsx（纹理层）、
+                papers.css（各纸的纹理与每套配色的颜色表）、masks/（遮罩图案）、motifs/（花笺每套配色一幅的角花）
+packages/design/scripts/
+  check-contrast.mjs   对比度校验（pnpm check:contrast）
+  gen-paper-art.mjs    程序画的纸张图案（pnpm gen:paper）
 apps/novel/app/        小说站（SSR）
   root.tsx      整份 HTML、全局样式、Provider、出错页与出错页标题
   routes.ts     路由表（第 3 节）
   shell.tsx     布局路由：PageStack + 侧栏 + 底部导航 + 启动页
   routes/*.tsx  路由模块（handle、loader、headers、meta；默认导出返回 null）
-  screens/      页面组件（Store、Shelf、Discover、Detail、Profile、Themes、Lab、Splash）
+  screens/      页面组件（Store、Shelf、Discover、Detail、Profile、Themes、Lab、Splash）；BookRing 是书城的书环
   reader/       阅读器（第 10 节）
   http.ts       缓存头、站名、pageTitle、NOT_FOUND_META
   seo.ts        NOVEL_ORIGIN（环境变量 VITE_NOVEL_ORIGIN，默认 http://localhost:5173）、canonical()
@@ -71,9 +77,9 @@ apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false�
 
 | 地址 | 路由 | 缓存 | 说明 |
 |---|---|---|---|
-| `/` | store | 公开 | 书城，tab，hero = 本周热读榜首 |
+| `/` | store | 公开 | 书城（找书），tab，hero = 书环正对读者的那本 |
 | `/shelf` | shelf | 私有，noindex | 书架，tab，hero = "继续读"那本 |
-| `/discover` | discover | 公开 | 发现，tab，hero = 书环第一本 |
+| `/discover` | discover | 公开 | 发现（书友社区），tab，hero = 正在热议的第一本 |
 | `/me` | me | 私有，noindex | 我的，tab |
 | `/book/:bookId` | book | 公开 | 详情。back 'hop'，parent '/'，JSON-LD Book（含 DMBN identifier），og 标签 |
 | `/read/:bookId/:chapter?` | read | 公开 | 阅读。back 'surface'，parent `/book/:id`，JSON-LD Chapter（`isAccessibleForFree = 章节 < FREE_CHAPTERS`） |
@@ -84,8 +90,9 @@ apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false�
 - **出错页**：出错时只渲染到根路由这一层，子路由的 meta 不会被调用，所以各站的 root.tsx 都导出 `meta({ error })`，给出错页标题与 noindex。`ErrorBoundary` 在 Provider 之外渲染，不能用任何上下文，按钮是整页跳转的普通链接。
 
 **服务端渲染的约束**（违反就会水合不一致或泄漏个人数据）：
-- **公开页面的 HTML 对所有访客相同**，才能进 CDN。读者个人的东西（书架状态、读到哪章、主题）不写进 HTML，在浏览器里补上：详情页的 `useShelfEntry` 用 `useClientValue`，操作栏等挂载后再淡入（`data-ready`）。
+- **公开页面的 HTML 对所有访客相同**，才能进 CDN。读者个人的东西（书架状态、读到哪章、主题）不写进 HTML，在浏览器里补上：详情页的 `useShelfEntry` 用 `useClientValue`，操作栏等挂载后再淡入（`data-ready`）；发现页的收藏状态用 `useSyncExternalStore`，服务端快照是空集合。
 - **主题**：服务端一律输出站点默认主题（小说站薛涛笺、作者站缃叶、管理站墨白）。`<head>` 里内联的 `themeBootScript(默认主题)` 在绘制前按 localStorage 写好 `data-theme`、`data-motion` 与 theme-color，所以 `<html>` 带 `suppressHydrationWarning`。
+- **阅读纸张与亮度**：同理。小说站服务端输出 `<html data-paper="xuan">`（默认纸张），紧接在主题脚本之后的 `READER_BOOT_SCRIPT` 按阅读设置在绘制前改写 `data-paper` 并写入 `--rd-dim`（第 10 节"背景"）。
 - **日期与时区**：书架的节气行、我的页的"今天"用 `useClientValue(计算, 服务端占位)`。
 - **尺寸**：服务端不知道视口。Book3D 的宽度用 CSS 变量（`--wn-base` / `--wn-wide`，900px 断点），不用 `useMedia` 在 JS 里选；`useMedia` 的服务端快照是 false。
 - **随机**：封面纹样的 seededRandom 必须在 Motif 渲染时现做，不能由父组件做好再经 props 传入。随机数生成器是有状态的闭包，StrictMode 二次渲染会接着往下取，图案就和服务端对不上（2026-09-27 在书城页出过这个水合错误）。纹样坐标保留两位小数，否则 HTML 体积大约多四分之一。
@@ -132,7 +139,8 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 
 - **变量契约**：每套主题必须定义 themes.css 头部注释列出的全部变量（`--paper --sheet --sheet-2 --ink --ink-2 --line --blush --blush-ink --thread --thread-ink --shadow-rgb --grain --reader-paper --reader-ink --page --page-line --scrim`，以及 `color-scheme`）。缺一个就会从外层主题"漏色"。新增主题后跑 `pnpm check:contrast`。阈值：正文 ≥7，次要文字与按钮文字 ≥4.5，红线图形 ≥3。
 - **局部预览**：任意元素加 `data-theme`，就在局部换主题（主题页色样、阅读设置里的主题圆点）。陷阱：选中环要用当前应用主题的颜色，所以必须在进入 `data-theme` 作用域之前，先把颜色存进自定义属性（`.swatch { --ring: var(--thread) }`），因为自定义属性继承的是已解析的值。
-- **偏好存储**：localStorage 键 `danmo:prefs`（theme、motion、dayTheme），读取时校验。ThemeProvider 用 `useSyncExternalStore`，服务端快照 = 站点默认。水合期间（prefs 仍是服务端快照）不写 DOM，因为启动脚本已经写好了。`reduced` = 用户选了减少，或选了跟随系统且系统要求减少。
+- **偏好存储**：localStorage 键 `danmo:prefs`（theme、motion），读取时校验。原先的"夜间"开关（`toggleNight`、`dayTheme`、`NIGHT_THEME`）已删除：它和配色冲突，阅读器改为在"背景"面板里直接选配色（第 10 节）。ThemeProvider 用 `useSyncExternalStore`，服务端快照 = 站点默认。水合期间（prefs 仍是服务端快照）不写 DOM，因为启动脚本已经写好了。`reduced` = 用户选了减少，或选了跟随系统且系统要求减少。
+- **纸纹** `--grain`：只剩细点。原先的横向纤维层像扫描线，已去掉。阅读页的纸面不用 `--grain`，纹理来自阅读纸张（第 10 节"背景"）；阅读器的工具栏与面板是 `.sheet`，仍带细点。
 - **墨晕切换**：`setTheme(id, origin)` 在支持 View Transition 且未减少动效时，把点击坐标与最大半径写成 CSS 变量，用 `::view-transition-new(root)` 上的径向遮罩配合已注册的 `--ink-r` 做出羽化扩散。不支持就直接切换。
 - **减少动效**：base.css 在 `[data-motion='reduced']` 下把 CSS 动画与过渡压到 1ms。WAAPI 不受这条规则影响，所以飞行、翻页必须自己读 `reduced`。
 
@@ -145,7 +153,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - `--k = --wn / 200`：平面内容的缩放系数，200 必须与 faces.tsx 的 COVER_BASE 一致；
   - `--persp`：透视距离，默认 7w。
   `readPose` 从 `offsetWidth` 读宽度。
-- **其他变量**：`--rx --ry --rz`（姿态，已注册为 angle）、`--tilt-x/--tilt-y`（useTilt 写入）、`--spin`（useSpin 写入）、`--open`（开合 0~1）、`--lift`、`--lines`（内页假文字浓度）、`--progress`（丝带深度）。`perspective="none"` 时根元素改为 preserve-3d，加入父级的 3D 空间（发现页书环）。
+- **其他变量**：`--rx --ry --rz`（姿态，已注册为 angle）、`--tilt-x/--tilt-y`（useTilt 写入）、`--spin`（useSpin 写入）、`--open`（开合 0~1）、`--lift`、`--lines`（内页假文字浓度）、`--progress`（丝带深度）。`perspective="none"` 时根元素改为 preserve-3d，加入父级的 3D 空间（书城的书环）。
 - **光照**：按朝向 `--turn = --ry + --spin + --tilt-y`，用 sin()/cos() 算各面 `::after` 的明暗与封面高光位置。
 - **兜底**：iOS 16.4 以下没有 @property，所以根元素显式写 `--tilt-x/--tilt-y/--spin: 0deg; --lift: 0; --lines: 1`。
 - **禁忌**：`.book3d__float / __body / __cover / __leaf` 是 preserve-3d 层，不能加 overflow、opacity、filter、clip-path、mask，否则会被压扁成平面。
@@ -208,6 +216,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 | 页面 | 无（DOM 顺序） | .screen |
 | 二级页顶栏、详情操作栏 | 5 | layout.css .subbar、detail.css |
 | 阅读器工具栏 | 6 | reader.css .rd-bar |
+| 阅读器亮度遮罩 | 7 | reader.css .rd-dim（连工具栏一起压暗，不拦截点击；Sheet 与 Toast 在 Portal 里，不受影响） |
 | 底部导航、侧栏 | 30 | nav.css |
 | 启动页 | 35 | splash.css（高于导航，低于飞行层） |
 | 飞行覆盖层 | 40 | flight.css |
@@ -221,14 +230,31 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 继续读区：漂浮的主角书、红线进度、"继续读"直接开书推进；挂载后先 `ensureChapter` 取好那一章。
   - 在读、想读、读完三组。视图 `cover | spine`，改名与扩展见待办。
   - 下拉同步用非被动 touchmove，桌面端用顶部按钮触发。
-- **Store**（公开）：
-  - 三张榜单：本周热读按 trend，完结佳作按累计收藏，短篇一口气是 ≤35 万字按收藏。
-  - 竖排题签；榜首是立体书，第 2~5 名是小封面。
+- **Store**（公开；找书的地方，定位见 tab-roles 记忆）：
+  - 版面：标题与搜索框 → 口味标签（`TASTE_TAGS`）→ 书环（编辑推荐，固定七本 `RING_IDS`）→ 三张榜单 → 新书上架 → 馆藏目录。
+  - **找书**：有搜索词或选了口味标签时，书环以下整块换成结果列表，搜索框与标签原地不动。
+    - 搜索匹配书名、作者、CP、标签。口味标签按"标签或题材包含"判断，"古代"是题材，其余是标签。两者可以叠加。
+    - 结果按累计收藏排序，名次是信息，前三名用红线色。
+    - 没有结果时给"清除筛选"，清空后回到原来的版面。
+  - **书环**（BookRing.tsx + book-ring.css）：
+    - `pos` 是不取模的累计值，由 StoreScreen 持有，找书时书环卸载，回来仍停在原处。
+    - 拖动超过 6px 才捕获指针，松手吸附到最近的一本；点侧面的书沿最短方向转到正前。
+    - 下方书名说明的两侧是上一本、下一本；"看看这本"飞进详情页。
+    - 半径与舞台高度从 `--book-w` 推导，书宽 92 / 120（900px 断点），JS 不需要知道屏幕宽度。
+  - **榜单**：本周热读按 trend，完结佳作按累计收藏，短篇一口气是 ≤35 万字按收藏。竖排题签；榜首是立体书，第 2~5 名是小封面。
   - 新书上架按 added；馆藏目录按题材筛选。
-  - 榜单书位名 `board:${榜}:${书号}`，由 `storeHero` 与 BoardCard 共用。
-- **Discover**（公开）：
-  - 七本书的 3D 书环；`pos` 是不取模的累计值，拖动超过 6px 才捕获指针。
-  - 搜索匹配书名、作者、CP、标签；排行按收藏。
+  - **书位名**：书环 `ring:${书号}`（`ringSlot`，storeHero 也用它，启动页的书因此降落在书环正中那本）、榜单 `board:${榜}:${书号}`、找书结果 `rank:`、新书 `fresh:`、目录 `cat:`。
+- **Discover**（公开；书友交流的社区，定位见 tab-roles 记忆）：
+  - 版面：标题与"写点什么" → 正在热议 → 帖子类别（全部、长评、摘句、求文、闲聊）→ 帖子。
+    - 移动端从上到下排；宽屏两栏，帖子在左，正在热议在右侧一栏（sticky）。
+  - **正在热议**：帖子里提到的书，按"提到它的帖子数 + 这些帖子的回复数"排序，取前 6 本。显示的"N 条讨论"就是排序依据。主角是第一本，书位 `hot:${书号}`。
+  - **帖子**（PostCard）：
+    - 头像是一枚淡色闲章，刻昵称的第一个字。不用朱红：满页红印会抢走红线承载的信息。
+    - 摘句帖先放摘的那一句，再放感想；其他帖子先正文后摘句。
+    - 提到的书是一条书签，小书飞进详情页，书位 `post:${帖子 id}`。
+    - 时间用 `formatPostTime`，只取字面上的日期与时刻，不经过 Date，服务端与浏览器结果一致。
+  - **收藏**：只在本机切换。本地存储 `danmo:liked`，读取时只收字符串。收藏过的心用红线色填满，数字加上自己这一个。
+  - 发帖与回复要登录，原型里弹出提示。
 - **Detail**（公开）：
   - 染色纸；大书点一下翻面、拖动转着看。书下不放任何说明文字（见 design-direction 记忆"安静，少说明"）。
   - 舞台是 `role="button"`，回车或空格翻面，不挂 onClick，否则点一下会翻两次。
@@ -307,6 +333,56 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 改名时整行换成输入框（按钮里不能放输入框）；删除要点两下。
 - 界面位置：阅读设置的"字体"一行（用当前字体写出名字）点开，同一个面板切到字体列表，标题变成"选择字体"。
 
+### 背景：纸张、配色与亮度（packages/design/src/paper/，规则见 reading-backgrounds 记忆）
+- **工具栏**：下栏是"目录 / 背景 / 设置"，背景用太阳图标。"夜间"按钮已删，配色从设置面板移进背景面板。
+- **背景面板**（panels.tsx 的 BackgroundPanel），三行：
+  - **亮度**：SunDim、滑块、Sun，下面是"跟随系统"开关。跟随系统时滑块变淡，不压暗。拖滑块写入 `brightness`，同时把 `brightnessAuto` 关掉。
+  - **配色**：8 个主题圆点。每个圆点里放 `<PaperTexture paper={当前纸张} scale={0.4} />`，显示"这套配色 + 当前纸张"的样子。
+  - **背景**：`.rd-papers` 网格里十张 `.rd-paper` 单选卡片，每张是 `<PaperTexture paper={id} scale={0.45} />` 加纸名。
+- **设置字段**（settings.ts）：
+  - `paper: PaperId`，默认 `xuan`，`isPaperId` 校验。
+  - `brightness`：`BRIGHTNESS_MIN`（0.3）到 1，默认 0.85。
+  - `brightnessAuto`：默认 true。
+  - 遮罩不透明度 `dimOf` = 跟随系统时 0，否则 1 − brightness。
+  - 每次写设置，`applyToDocument` 把 `data-paper` 与 `--rd-dim`（保留三位小数）写到 `<html>`。
+- **启动脚本** `READER_BOOT_SCRIPT`：接在 themeBootScript 之后。
+  - 读本地存储的阅读设置，纸张在 `PAPER_IDS` 里才写 `data-paper`。
+  - `brightnessAuto === false` 且 brightness 合法时才写 `--rd-dim`。
+  - 服务端输出的 `<html data-paper>` 是 `DEFAULT_PAPER`。
+- **纹理层**（PaperTexture.tsx + papers.css）：
+  - `<i class="paper-tex">` 铺满纸面，`z-index: -1`。所以纸面要 `isolation: isolate`：`.reader`、`.rd-page`、色样圆点都设了。
+  - 最多两层：`::before` 是 a 层，`::after` 是 b 层。每层由这些变量组成：
+    - `--tex-a`：颜色，纯色或渐变；
+    - `--tex-a-mask`：遮罩，masks/ 下的 SVG，只用透明度；
+    - `--tex-a-size`：遮罩尺寸，乘以 `--paper-scale`；
+    - `--tex-a-pos`、`--tex-a-repeat`：位置与是否平铺。
+    b 层同理。
+  - **选择器**：
+    - 阅读页用 `:root[data-paper=X] .paper-tex:not([data-paper])`；
+    - 预览用 `.paper-tex[data-paper=X]`。
+    - 自定义属性在 `.paper-tex` 上解析，所以放在 `data-theme` 色样里的预览取的是那套配色的颜色。
+  - **挂在哪里**：分页模式下 PageFrame 的第一个子元素就是纹理，随书页一起动；滚动模式在 `.reader` 里放一个，固定在阅读器底上，不随正文滚动。
+  - **平铺与单幅**：平铺的纹理从左上角铺满。树影、月色、银河、猫爪只画一幅，贴在某个角或页脚上方，不平铺。
+- **颜色表**（papers.css 后半部分）：8 套配色 × 每种纸各一组变量。
+  - 变量：`--xuan-speck/fiber`、`--silk-thread/sheen`、`--gold-speck`、`--gold-1/2/3`、`--floral`（角花的图、位置与大小）、`--petal/--petal-heart`、`--tree`、`--moon/--moon-cloud`、`--star/--star-river`、`--paw/--paw-bean`。
+  - 新增主题必须补齐这一整组。
+- **图案**：
+  - masks/ 里手写的：specks、weave、moon、moon-cloud（SVG 滤镜或路径）。
+  - 由 `gen-paper-art.mjs` 生成的（mulberry32 固定种子）：fibers、flecks、petals-a/b、tree、stars、river、paws-a/b。
+  - motifs/ 是花笺的 8 幅角花，颜色直接画在图里。其中 ziteng、yanqishui 也由脚本生成。
+- **资源加载**：
+  - Vite 会改写自定义属性里的 `url()`。4KB 以下的图内联；更大的（tree、stars、petals-a、river、ziteng）是单独的文件，下载完之前这一层透明，不会挡字。
+  - 纸张 CSS 只在阅读器与组件实验室的路由里加载。在生产构建清单里核对过：它落在两个路由共用的 CSS 分块里，文件名是 `BookLoader-*.css`，约 34KB，gzip 后 10KB。
+- **对比度**（check-contrast.mjs 的"阅读纸张"一节）：
+  - 颜色来源：从 papers.css 解析 `rgb(r g b / a)`；从角花 SVG 解析颜色并乘以最大不透明度，先去掉 `<mask>` 里的内容，那是遮罩，不是颜色。
+  - 计算：合成到 `--reader-paper` 上，再对 `--reader-ink` 算对比度。
+  - 三档阈值：
+    - `AREA` ≥7：丝绢光泽、树影、月亮、薄云、银河，以及花笺角花；
+    - `FINE` ≥3：宣纸细点与纤维、丝绢经纬、洒金细点、星点；
+    - 其余 ≥4.5：金箔、花瓣、猫爪。
+- **亮度遮罩**：`.rd-dim` 在阅读器最上面，z-index 7，高于工具栏的 6。黑色，`opacity: var(--rd-dim)`，不拦截点击；Sheet 与 Toast 在 Portal 里，不受影响。
+- **组件实验室**：Lab 页底部有"阅读纸张"矩阵（8 套配色 × 10 种纸），调色时逐格看。
+
 ### 滚动模式（ScrollView）
 - 相邻章节接成一条，最多同时挂 5 章（`MAX_SECTIONS`），超出就丢掉离正在读的那章更远的一端。
 - 接近末尾时接下一章：只要当前最后一章已 ready 就接，还没到的章先放一段"加载中"。
@@ -331,8 +407,12 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 品牌书用预留号 `1001100000000001`。
 - `SHELF`：在读 4 本（首本《盐汽水与蝉》`1002100000010004` 是"继续读"）、想读 3 本、读完 2 本。
 - 正文：只为《盐汽水与蝉》写了两章、为《檐下听雪》`1001100000010002` 写了一章（适合竖排）。其余章节复用试读正文，章首标注"原型示例正文"。
+- **帖子**（posts.ts，发现页用）：
+  - `Post` 字段：id、kind（长评 / 摘句 / 求文 / 闲聊）、author、authorNote（昵称旁的小字）、at、body、bookId?、quote?、likes、replies。
+  - at 是东八区的字面时间，例如 `2026-09-27T21:40`。
+  - 9 条示例。提到的书用书号关联，昵称与内容都是虚构的。
 
-## 12. 已知问题与验收状态（2026-09-27）
+## 12. 已知问题与验收状态（2026-09-28）
 
 - **已在浏览器验收**（Playwright，390×844 与 1440×900）：
   - 服务端输出的状态码、缓存头、标题、canonical、JSON-LD、noindex，开发与生产构建都查过。
@@ -343,13 +423,32 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 书号地址与封底条码，从 DOM 取出的路径解码正确。
   - 点书翻面的各种手势。
   - 阅读字体：系统字体、平台字体按需加载、模拟客户端的下载与删除、导入 TTF 与 TTC 合集、改名、两步删除、刷新后导入的字体仍在、字体丢失时回退。
+  - 背景面板：
+    - 十种纸张都能选中并保存，`<html data-paper>` 随之改变；
+    - 亮度滑块与跟随系统；
+    - 刷新后启动脚本在 DOMContentLoaded 之前写好纸张与遮罩；
+    - 滚动模式下纹理固定在底上；
+    - 深色配色；
+    - 组件实验室的纸张矩阵。
+  - 书城：
+    - 搜索、口味标签，以及两者叠加；
+    - 无结果与清除筛选；
+    - 书环的上一本、下一本，"看看这本"飞进详情页，返回后书环停在原处；
+    - 移动端与宽屏布局。
+  - 发现：
+    - 正在热议按讨论数排序；
+    - 类别筛选；
+    - 收藏后刷新仍在；
+    - 发帖与回复的提示；
+    - 帖子里的书和热议的书都能飞进详情页；
+    - 宽屏两栏；
+    - 启动页降落在书城、发现两页的主角书位上。
 - **未验收或未完成**：
   - 宽屏阅读器是单栏，对开两页属于电脑端布局待办。
   - Profile、Themes、Lab 迁移后没有逐项验收交互。
   - 减少动效没有系统验收。
   - 三项框架 PoC：SPA 包、isbot 对国内爬虫的识别、两个服务端渲染站跑在同一个 Node 进程。
 - **视觉与细节**：
-  - 纸纹的横向纤维太明显。
   - 竖排滚动在桌面浏览器会露出横向滚动条。
   - 动效按帧计算（见第 6 节）。
 - **测试注意**：
