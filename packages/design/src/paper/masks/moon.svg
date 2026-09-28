@@ -1,0 +1,20 @@
+<!-- 月色的月亮（a 层，贴在页面右上）：一轮满月与一圈柔和的月晕，月面上几块更淡的"月海"。只作遮罩，颜色见 papers.css -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  <defs>
+    <radialGradient id="h">
+      <stop offset="0.3" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-opacity="0.18"/>
+      <stop offset="1" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="m">
+      <rect width="320" height="320" fill="#fff"/>
+      <g fill="#000" fill-opacity="0.22">
+        <ellipse cx="196" cy="104" rx="14" ry="10"/>
+        <ellipse cx="220" cy="122" rx="9" ry="12"/>
+        <ellipse cx="204" cy="134" rx="7" ry="5"/>
+      </g>
+    </mask>
+  </defs>
+  <circle cx="210" cy="112" r="120" fill="url(#h)"/>
+  <circle cx="210" cy="112" r="44" mask="url(#m)"/>
+</svg>

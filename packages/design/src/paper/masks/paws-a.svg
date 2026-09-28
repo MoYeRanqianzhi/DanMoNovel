@@ -1,0 +1,11 @@
+<!-- 猫爪的掌垫（a 层，贴在页脚上方）：七个脚印，左右交替，朝着行进方向。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+<defs><path id="p" d="M-5.6 5.2C-6 1.4-3-1.2 0-1.2C3-1.2 6 1.4 5.6 5.2C5.2 8 2.6 8.8 0 8C-2.6 8.8-5.2 8-5.6 5.2Z"/></defs>
+<use href="#p" transform="translate(45.9 165.9) rotate(86) scale(1)"/>
+<use href="#p" transform="translate(99.1 171.5) rotate(80) scale(1)"/>
+<use href="#p" transform="translate(145.3 143) rotate(71) scale(1)"/>
+<use href="#p" transform="translate(200.7 142.2) rotate(71) scale(1)"/>
+<use href="#p" transform="translate(245.9 108.3) rotate(70) scale(1)"/>
+<use href="#p" transform="translate(303.4 101) rotate(64) scale(1)"/>
+<use href="#p" transform="translate(347.7 61.7) rotate(55) scale(1)"/>
+</svg>

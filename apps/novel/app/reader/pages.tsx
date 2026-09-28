@@ -12,8 +12,8 @@
  * 这是 Web 阅读器（如 Readium）的成熟做法：排版、断行、标点挤压全部交给浏览器，
  * 中文排版质量远好于自己逐字测量。
  *
- * 每层页面都是完整的一页：页眉（这页所在章的章名）、正文窗口、页脚（全书进度与页码）。
- * 翻页时三者一起动，像真的纸页，不会出现"字在翻、页眉页脚不动"的断裂（page-turn-modes 记忆）。
+ * 每层页面都是完整的一页：纸（纸色加读者选的背景纹理）、页眉（这页所在章的章名）、正文窗口、页脚（全书进度与页码）。
+ * 翻页时它们一起动，像真的纸页，不会出现"字在翻、页眉页脚不动"的断裂（page-turn-modes 记忆）。
  *
  * 翻页时同时渲染两层页面，用 Web Animations API 驱动：
  * - flip   翻书：上层那页以书脊为轴掀起（往后翻）或落下（往回翻），带明暗变化
@@ -28,6 +28,7 @@
 import { memo, useLayoutEffect, useRef, type CSSProperties, type ReactNode, type Ref } from 'react';
 import type { ChapterText } from '@danmo/data/api';
 import { cls } from '@danmo/design/lib/util';
+import { PaperTexture } from '@danmo/design/paper/PaperTexture';
 import type { PagedMode } from './settings';
 
 /** 一页正文窗口的几何信息 */
@@ -107,8 +108,9 @@ export function countPages(flow: HTMLElement, g: Geometry): number {
 }
 
 /**
- * 一整页的框架：页眉、正文区、页脚。
+ * 一整页的框架：背景纹理、页眉、正文区、页脚。
  * 分页模式下每层页面都是一个 PageFrame；阅读器另有一个不可见的 PageFrame，用它的正文区量出窗口的可用尺寸。
+ * 纹理跟着 <html data-paper> 走（读者在"背景"面板里选的纸），画在每一页上，所以翻页时纹理随书页一起动。
  */
 export function PageFrame({
   title,
@@ -123,6 +125,7 @@ export function PageFrame({
 }) {
   return (
     <>
+      <PaperTexture />
       <header className="rd-page__head">
         <span>{title}</span>
       </header>

@@ -1,0 +1,29 @@
+<!-- 长夜的花笺：右上角一弯新月与几点星子。深色纸上用淡金色，透明度压得很低（浅色的字压在上面仍要清楚），月亮周围有一圈几乎看不出的光晕 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+  <defs>
+    <mask id="m">
+      <circle cx="176" cy="62" r="30" fill="#fff"/>
+      <circle cx="190" cy="50" r="26" fill="#000"/>
+    </mask>
+    <radialGradient id="g">
+      <stop offset="0.45" stop-color="#e9d9a6" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#e9d9a6" stop-opacity="0"/>
+    </radialGradient>
+    <!-- 四角的星芒 -->
+    <path id="s" d="M0-6Q0.6-0.6 6 0Q0.6 0.6 0 6Q-0.6 0.6-6 0Q-0.6-0.6 0-6Z"/>
+  </defs>
+  <g opacity="0.14">
+    <circle cx="176" cy="62" r="58" fill="url(#g)"/>
+    <circle cx="176" cy="62" r="30" fill="#e9d9a6" mask="url(#m)"/>
+    <g fill="#f0e3b8">
+      <use href="#s" transform="translate(112 34) scale(0.9)"/>
+      <use href="#s" transform="translate(90 96) scale(0.6)"/>
+      <use href="#s" transform="translate(140 122) scale(0.5)"/>
+      <use href="#s" transform="translate(214 118) scale(0.45)"/>
+      <circle cx="68" cy="48" r="1.1"/>
+      <circle cx="126" cy="76" r="0.9"/>
+      <circle cx="58" cy="118" r="0.8"/>
+      <circle cx="196" cy="140" r="0.9"/>
+    </g>
+  </g>
+</svg>

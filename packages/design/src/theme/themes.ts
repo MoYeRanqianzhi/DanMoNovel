@@ -9,7 +9,7 @@
 
 export type ThemeId = 'xuetao' | 'changye' | 'douqing' | 'xiangye' | 'tianqing' | 'ziteng' | 'yanqishui' | 'mobai';
 
-/** 主题类别：决定主题页的分组与"夜间"按钮的切换逻辑 */
+/** 主题类别：主题页上每个色样标注的类别 */
 export type ThemeKind = '默认' | '夜间' | '护眼' | '彩色';
 
 export interface ThemeMeta {
@@ -18,23 +18,20 @@ export interface ThemeMeta {
   kind: ThemeKind;
   /** 一句话说明：写清楚它适合什么时候用，而不是形容词堆砌 */
   note: string;
-  /** 是否深色；阅读器的"夜间"按钮在深浅主题之间切换 */
-  dark: boolean;
 }
 
 export const THEMES: ThemeMeta[] = [
-  { id: 'xuetao', name: '薛涛笺', kind: '默认', note: '淡粉色的笺纸，默认主题', dark: false },
-  { id: 'changye', name: '长夜', kind: '夜间', note: '深紫夜色，关灯后读不刺眼', dark: true },
-  { id: 'douqing', name: '豆青', kind: '护眼', note: '低饱和的豆绿，久读不累眼', dark: false },
-  { id: 'xiangye', name: '缃叶', kind: '护眼', note: '旧书页的暖黄，最像纸质书', dark: false },
-  { id: 'tianqing', name: '天青', kind: '彩色', note: '雨过天青的浅蓝', dark: false },
-  { id: 'ziteng', name: '紫藤', kind: '彩色', note: '紫藤花的淡紫', dark: false },
-  { id: 'yanqishui', name: '盐汽水', kind: '彩色', note: '薄荷绿，夏天的教室', dark: false },
-  { id: 'mobai', name: '墨白', kind: '彩色', note: '宣纸与墨，只留一点印章红', dark: false },
+  { id: 'xuetao', name: '薛涛笺', kind: '默认', note: '淡粉色的笺纸，默认主题' },
+  { id: 'changye', name: '长夜', kind: '夜间', note: '深紫夜色，关灯后读不刺眼' },
+  { id: 'douqing', name: '豆青', kind: '护眼', note: '低饱和的豆绿，久读不累眼' },
+  { id: 'xiangye', name: '缃叶', kind: '护眼', note: '旧书页的暖黄，最像纸质书' },
+  { id: 'tianqing', name: '天青', kind: '彩色', note: '雨过天青的浅蓝' },
+  { id: 'ziteng', name: '紫藤', kind: '彩色', note: '紫藤花的淡紫' },
+  { id: 'yanqishui', name: '盐汽水', kind: '彩色', note: '薄荷绿，夏天的教室' },
+  { id: 'mobai', name: '墨白', kind: '彩色', note: '宣纸与墨，只留一点印章红' },
 ];
 
 export const DEFAULT_THEME: ThemeId = 'xuetao';
-export const NIGHT_THEME: ThemeId = 'changye';
 
 export function getTheme(id: ThemeId): ThemeMeta {
   return THEMES.find((t) => t.id === id) ?? THEMES[0];

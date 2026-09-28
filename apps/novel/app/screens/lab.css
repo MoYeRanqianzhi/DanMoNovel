@@ -110,3 +110,58 @@
 .lab-block > .btn {
   align-self: flex-start;
 }
+
+/* ---- 阅读纸张：每行一套配色，每格一种纸。格子自带 data-theme，纸色、墨色与纹理颜色都取那套配色 ---- */
+/* 纸张矩阵单独一栏（不进双栏网格），宽屏上一行五格不用左右滑 */
+@media (min-width: 900px) {
+  .lab-body--wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.lab-papers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.lab-papers__theme {
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.lab-papers__cells {
+  gap: 12px;
+  margin: 6px calc(var(--sp-5) * -1) 0;
+  padding: 2px var(--sp-5) 6px;
+}
+@media (min-width: 900px) {
+  .lab-papers__cells {
+    margin: 6px 0 0;
+    padding: 2px 0 6px;
+  }
+}
+.lab-paper {
+  position: relative;
+  isolation: isolate;
+  flex: none;
+  width: 168px;
+  aspect-ratio: 3 / 4;
+  padding: 16px 14px 28px;
+  overflow: hidden;
+  border-radius: var(--radius-m);
+  background: var(--reader-paper);
+  color: var(--reader-ink);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.lab-paper p {
+  font-family: var(--font-kai);
+  font-size: 13px;
+  line-height: 1.9;
+  text-indent: 2em;
+  text-align: justify;
+}
+.lab-paper figcaption {
+  position: absolute;
+  left: 14px;
+  bottom: 8px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}

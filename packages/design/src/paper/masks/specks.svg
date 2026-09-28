@@ -1,0 +1,8 @@
+<!-- 宣纸与洒金共用的纸浆细点：分形噪声取一个通道，按阈值只留下稀疏的小点。只作遮罩（用透明度），颜色由每套配色在 papers.css 里指定 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240">
+  <filter id="n" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" seed="11" stitchTiles="stitch"/>
+    <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  13 0 0 0 -9.1"/>
+  </filter>
+  <rect width="240" height="240" filter="url(#n)"/>
+</svg>

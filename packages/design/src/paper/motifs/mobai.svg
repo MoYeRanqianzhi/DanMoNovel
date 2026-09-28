@@ -1,0 +1,15 @@
+<!-- 墨白的花笺：页脚一带远山。两重山影用墨灰色，越远越淡，山脚往下渐渐隐进雾里，像水墨的淡墨山 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 150">
+  <defs>
+    <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0.3" stop-color="#6a6d75"/>
+      <stop offset="1" stop-color="#6a6d75" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="near" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0.4" stop-color="#3b3d44"/>
+      <stop offset="1" stop-color="#3b3d44" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+  <path opacity="0.1" fill="url(#far)" d="M0 150V100C30 94 56 80 88 82C116 84 134 62 170 58C204 54 226 80 258 84C292 88 316 66 350 64C388 62 420 86 480 80V150Z"/>
+  <path opacity="0.13" fill="url(#near)" d="M0 150V124C44 116 80 102 124 108C164 114 190 128 236 122C284 116 312 104 352 110C394 116 438 128 480 120V150Z"/>
+</svg>

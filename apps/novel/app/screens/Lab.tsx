@@ -4,6 +4,7 @@
  * 给设计与开发看的"活规范"：Book3D 的全部参数都能在这里直接调，
  * 加载动画的三种尺寸、飞行过渡引擎也各有一个独立示例。
  * 改动 Book3D 之后，先在这里把每个状态都看一遍。
+ * 阅读纸张列出全部"配色 × 纸张"的组合（每一格都是单独调过颜色的），改纸张的颜色表之后在这里逐格核对。
  */
 import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { ArrowLeft } from 'lucide-react';
@@ -13,8 +14,11 @@ import { BookLoader } from '@danmo/design/book3d/BookLoader';
 import { useTilt } from '@danmo/design/book3d/gestures';
 import { IconButton, Segmented, TagMark } from '@danmo/design/components/ui';
 import { BookSlot, useFlight } from '@danmo/design/flight/FlightContext';
+import { PaperTexture } from '@danmo/design/paper/PaperTexture';
+import { PAPERS } from '@danmo/design/paper/papers';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
+import { THEMES } from '@danmo/design/theme/themes';
 import './lab.css';
 
 function Slider({
@@ -187,6 +191,29 @@ export function LabScreen({ screen }: ScreenProps<undefined>) {
           <button type="button" className="btn btn--primary" onClick={fly}>
             让书飞过去
           </button>
+        </Block>
+      </div>
+
+      {/* 放在上面的双栏网格之外：宽屏上预览吸顶，吸在那个网格里，矩阵放进去会和它叠在一起 */}
+      <div className="page lab-body lab-body--wide">
+        <Block title="阅读纸张">
+          <p className="lab-note">每一行是一套配色，每一格是一种纸；纹理的颜色按配色逐格指定，不是同一张纹理叠在不同的纸色上。</p>
+          <div className="lab-papers">
+            {THEMES.map((t) => (
+              <div key={t.id} className="lab-papers__row">
+                <span className="lab-papers__theme">{t.name}</span>
+                <div className="lab-papers__cells scroll-x">
+                  {PAPERS.map((p) => (
+                    <figure key={p.id} className="lab-paper" data-theme={t.id}>
+                      <PaperTexture paper={p.id} />
+                      <p>周一的早读课总是吵的。读英语的、背古诗的、趁着班主任还没来偷偷补作业的，声音混在一起，像一锅刚刚烧开的水。</p>
+                      <figcaption>{p.name}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </Block>
       </div>
     </div>

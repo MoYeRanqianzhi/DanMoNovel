@@ -8,6 +8,10 @@
  *   都在页里，随书页一起翻动、移动；
  * - 滚动模式：页眉 .rd-head、页脚 .rd-foot 固定，中间 .rd-body 连续滚动。
  * 两者的页眉页脚尺寸相同（共用下面的规则）。
+ *
+ * 背景纹理（PaperTexture，样式见 packages/design/src/paper/papers.css）是纸面里的一个 z-index: -1 的层，
+ * 纸面要设 isolation: isolate，纹理才落在纸色之上、文字之下：分页模式的纸面是每一页 .rd-page，
+ * 滚动模式的纸面是 .reader 本身（纹理不随正文滚动）。
  * ============================================================ */
 
 /* 阅读页用专门的阅读纸色，而不是界面的页面色（data-page 由路由模块的 handle.name 给出） */
@@ -19,6 +23,7 @@
 .reader {
   position: absolute;
   inset: 0;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   color: var(--reader-ink);
@@ -86,15 +91,14 @@
   overflow: hidden;
 }
 
-/* 一整页：页眉、正文区、页脚 */
+/* 一整页：纸（纸色 + 背景纹理）、页眉、正文区、页脚 */
 .rd-page {
   position: absolute;
   inset: 0;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   background-color: var(--reader-paper);
-  background-image: var(--grain);
-  background-size: 220px 220px;
   backface-visibility: hidden;
 }
 /* 不可见的页框：只用来量出正文区的尺寸 */
@@ -326,6 +330,19 @@
   writing-mode: horizontal-tb;
 }
 
+/* ---- 亮度：最上面一层黑色遮罩 ----
+ * 黑色半透明叠加近似于整体降低亮度，色相不变。不透明度 --rd-dim 写在 <html> 上（settings.ts），
+ * 首屏由启动脚本写好，夜里打开不会先亮一下。盖在工具栏之上，工具栏一起变暗，唤出时不会突然一亮；
+ * 面板与轻提示在 body 下的浮层里，不受影响。不拦截点击。 */
+.rd-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  background: #000;
+  opacity: var(--rd-dim, 0);
+  pointer-events: none;
+}
+
 /* ---- 工具栏：两张浮起的纸条，从上下边缘滑入 ---- */
 .rd-bar {
   position: absolute;
@@ -537,10 +554,13 @@
   color: var(--ink);
 }
 .rd-swatch__dot {
+  position: relative;
+  isolation: isolate;
   display: grid;
   place-items: center;
   width: 44px;
   height: 44px;
+  overflow: hidden;
   border-radius: 50%;
   font-family: var(--font-kai);
   font-size: 18px;
@@ -551,6 +571,72 @@
     0 4px 10px -6px rgb(var(--shadow-rgb) / 0.6);
 }
 .rd-swatch[aria-pressed='true'] .rd-swatch__dot {
+  box-shadow:
+    0 0 0 2px var(--ring-gap),
+    0 0 0 3.5px var(--ring);
+}
+
+/* ---- 亮度：两端各一个太阳，中间是一根红线滑块（红线的长短就是亮度，是信息） ---- */
+.rd-bright {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-2);
+}
+.rd-bright svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+.rd-bright svg:last-child {
+  width: 22px;
+  height: 22px;
+}
+.rd-bright .rd-range {
+  min-width: 0;
+  transition: opacity var(--dur-quick) ease;
+}
+/* 跟随系统时滑块不起作用，淡着显示；仍然可以拖，一拖就改成手动 */
+.rd-bright[data-auto] .rd-range {
+  opacity: 0.45;
+}
+
+/* ---- 背景（纸张）：五列小卡片，每张是"当前配色 + 这种纸"的一小块 ---- */
+.rd-papers {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px 10px;
+}
+.rd-paper {
+  /* 选中环的颜色取自当前应用主题 */
+  --ring: var(--thread);
+  --ring-gap: var(--sheet);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.rd-paper[aria-checked='true'] {
+  color: var(--ink);
+}
+.rd-paper__card {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: var(--radius-s);
+  background: var(--reader-paper);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 4px 10px -6px rgb(var(--shadow-rgb) / 0.6);
+  transition: box-shadow var(--dur-quick) ease;
+}
+.rd-paper[aria-checked='true'] .rd-paper__card {
   box-shadow:
     0 0 0 2px var(--ring-gap),
     0 0 0 3.5px var(--ring);

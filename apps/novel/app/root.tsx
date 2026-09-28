@@ -9,6 +9,7 @@
  *
  * <html> 上的 data-theme 在服务端一律输出站点默认主题（公开页面的 HTML 要能被 CDN 缓存），
  * <head> 里的启动脚本在绘制前换成读者本机保存的主题，所以 <html> 需要 suppressHydrationWarning。
+ * data-paper（阅读背景）与 --rd-dim（阅读亮度）同理：服务端输出默认的纸、不压暗，启动脚本按本机的阅读设置改写。
  * 不使用 ScrollRestoration：每个页面在页面栈里有自己的滚动容器，返回时滚动位置本来就在。
  */
 import { Links, Meta, Outlet, Scripts, isRouteErrorResponse } from 'react-router';
@@ -21,7 +22,9 @@ import { ToastProvider } from '@danmo/design/components/overlays';
 import { FlightProvider } from '@danmo/design/flight/FlightContext';
 import { ThemeProvider, themeBootScript } from '@danmo/design/theme/ThemeContext';
 import type { ThemeId } from '@danmo/design/theme/themes';
+import { DEFAULT_PAPER } from '@danmo/design/paper/papers';
 import { pageTitle } from './http';
+import { READER_BOOT_SCRIPT } from './reader/settings';
 import { SPLASH_BOOT_SCRIPT } from './screens/Splash';
 
 /** 小说站默认主题：薛涛笺（淡粉），见 multi-site-deployment 记忆 */
@@ -41,7 +44,7 @@ export const meta: Route.MetaFunction = ({ error }) => {
 
 export function Layout({ children }: { children: ReactNode }) {
   return (
-    <html lang="zh-CN" data-theme={DEFAULT_THEME} suppressHydrationWarning>
+    <html lang="zh-CN" data-theme={DEFAULT_THEME} data-paper={DEFAULT_PAPER} suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         {/* viewport-fit=cover：让刘海屏/手势条区域也铺满纸色，内容再用 safe-area 内边距避让 */}
@@ -49,8 +52,10 @@ export function Layout({ children }: { children: ReactNode }) {
         <meta name="theme-color" content="#FBF1F3" />
         <Meta />
         <Links />
-        {/* 启动脚本：必须在样式表之后，在页面绘制之前按本机偏好写好主题；内容是常量，不含用户输入 */}
-        <script dangerouslySetInnerHTML={{ __html: themeBootScript(DEFAULT_THEME) + SPLASH_BOOT_SCRIPT }} />
+        {/* 启动脚本：必须在样式表之后，在页面绘制之前按本机偏好写好主题、阅读背景与亮度；内容是常量，不含用户输入 */}
+        <script
+          dangerouslySetInnerHTML={{ __html: themeBootScript(DEFAULT_THEME) + READER_BOOT_SCRIPT + SPLASH_BOOT_SCRIPT }}
+        />
       </head>
       <body>
         {children}

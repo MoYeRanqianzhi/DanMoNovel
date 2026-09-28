@@ -34,7 +34,7 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { useMediaQuery } from '../lib/useMedia';
-import { NIGHT_THEME, THEMES, getTheme, type ThemeId } from './themes';
+import { THEMES, type ThemeId } from './themes';
 
 /** 动效偏好：跟随系统 / 完整 / 减少 */
 export type MotionPref = 'system' | 'full' | 'reduced';
@@ -42,8 +42,6 @@ export type MotionPref = 'system' | 'full' | 'reduced';
 interface Prefs {
   theme: ThemeId;
   motion: MotionPref;
-  /** 最近一次使用的浅色主题；"夜间"按钮从深色切回时回到它 */
-  dayTheme: ThemeId;
 }
 
 /** 本地存储的键；每个站点是独立的源，各自保存一份 */
@@ -53,14 +51,13 @@ const isThemeId = (id: unknown): id is ThemeId => THEMES.some((t) => t.id === id
 
 /** 解析保存的偏好；数据损坏或 id 已失效时逐项回落到默认值（这是外部输入，需要校验） */
 function parsePrefs(raw: string | null, fallback: ThemeId): Prefs {
-  const base: Prefs = { theme: fallback, motion: 'system', dayTheme: fallback };
+  const base: Prefs = { theme: fallback, motion: 'system' };
   try {
     const p = JSON.parse(raw ?? 'null') as Partial<Prefs> | null;
     if (!p) return base;
     return {
       theme: isThemeId(p.theme) ? p.theme : base.theme,
       motion: p.motion === 'full' || p.motion === 'reduced' ? p.motion : 'system',
-      dayTheme: isThemeId(p.dayTheme) && !getTheme(p.dayTheme).dark ? p.dayTheme : base.dayTheme,
     };
   } catch {
     return base;
@@ -148,8 +145,6 @@ export interface ThemeApi {
   /** 生效的"减少动效"：为 true 时所有过渡都应退化为淡入淡出或直接切换 */
   reduced: boolean;
   setTheme: (id: ThemeId, origin?: Origin) => void;
-  /** 在夜间主题与最近的浅色主题之间切换 */
-  toggleNight: (origin?: Origin) => void;
   setMotionPref: (pref: MotionPref) => void;
 }
 
@@ -184,10 +179,7 @@ export function ThemeProvider({ defaultTheme, children }: { defaultTheme: ThemeI
 
   const setTheme = useCallback(
     (id: ThemeId, origin?: Origin) => {
-      const apply = () => {
-        const p = prefsRef.current;
-        store.set({ ...p, theme: id, dayTheme: getTheme(id).dark ? p.dayTheme : id });
-      };
+      const apply = () => store.set({ ...prefsRef.current, theme: id });
 
       // 不支持 View Transition、没有点击坐标、或用户要求减少动效：直接切换
       if (!origin || reduced || typeof document.startViewTransition !== 'function') {
@@ -210,22 +202,14 @@ export function ThemeProvider({ defaultTheme, children }: { defaultTheme: ThemeI
     [reduced, store],
   );
 
-  const toggleNight = useCallback(
-    (origin?: Origin) => {
-      const p = prefsRef.current;
-      setTheme(getTheme(p.theme).dark ? p.dayTheme : NIGHT_THEME, origin);
-    },
-    [setTheme],
-  );
-
   const setMotionPref = useCallback(
     (motion: MotionPref) => store.set({ ...prefsRef.current, motion }),
     [store],
   );
 
   const api = useMemo<ThemeApi>(
-    () => ({ theme: prefs.theme, motionPref: prefs.motion, reduced, setTheme, toggleNight, setMotionPref }),
-    [prefs.theme, prefs.motion, reduced, setTheme, toggleNight, setMotionPref],
+    () => ({ theme: prefs.theme, motionPref: prefs.motion, reduced, setTheme, setMotionPref }),
+    [prefs.theme, prefs.motion, reduced, setTheme, setMotionPref],
   );
 
   return <ThemeContext.Provider value={api}>{children}</ThemeContext.Provider>;

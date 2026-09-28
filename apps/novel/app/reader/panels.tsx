@@ -1,17 +1,19 @@
 /**
- * 阅读器的两个面板内容：阅读设置、章节目录（外层的 Sheet 由 Reader 提供）
+ * 阅读器的三个面板内容：阅读设置、背景、章节目录（外层的 Sheet 由 Reader 提供）
  */
-import { AArrowDown, AArrowUp, ChevronRight, Lock } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { AArrowDown, AArrowUp, ChevronRight, Lock, Sun, SunDim } from 'lucide-react';
+import type { CSSProperties, ReactNode } from 'react';
 import { chapterAccess } from '@danmo/data/api';
 import type { Book } from '@danmo/data/books';
 import { chapterTitle } from '@danmo/data/chapters';
 import { IconButton, Segmented } from '@danmo/design/components/ui';
 import { fontStack } from '@danmo/design/fonts/catalog';
 import { useFontName } from '@danmo/design/fonts/FontList';
+import { PaperTexture } from '@danmo/design/paper/PaperTexture';
+import { PAPERS } from '@danmo/design/paper/papers';
 import { originOf, useTheme } from '@danmo/design/theme/ThemeContext';
 import { THEMES } from '@danmo/design/theme/themes';
-import { FONT_SIZE_RANGE, type Leading, type ReaderSettings, type TurnMode } from './settings';
+import { BRIGHTNESS_MIN, FONT_SIZE_RANGE, type Leading, type ReaderSettings, type TurnMode } from './settings';
 
 function Row({ label, children, stacked }: { label: string; children: ReactNode; stacked?: boolean }) {
   return (
@@ -111,7 +113,6 @@ export function SettingsPanel({
   /** 点"字体"一行：面板切到字体列表（FontList，由 Reader 渲染） */
   onOpenFonts: () => void;
 }) {
-  const { theme, setTheme } = useTheme();
   const fontName = useFontName(settings.font);
   const { min, max } = FONT_SIZE_RANGE;
   const paged = settings.mode !== 'scroll';
@@ -204,6 +205,58 @@ export function SettingsPanel({
           onClick={() => update({ reverse: !settings.reverse })}
         />
       </div>
+    </div>
+  );
+}
+
+/**
+ * 背景面板：亮度、配色、背景（纸张），顺序按用户原话（计划第 4.6 节）。
+ * 原先工具栏上的"夜间"按钮与设置里的"配色"是同一件事的两个入口，互相打架，现在都收进这里。
+ *
+ * 预览都画成"换上之后的样子"：配色的每个色样是"这套配色 + 当前的纸"，
+ * 纸的每张小卡片是"当前配色 + 这种纸"——每种组合的纹理颜色都是单独调过的（papers.css），所以要让读者直接看到组合。
+ */
+export function BackgroundPanel({
+  settings,
+  update,
+}: {
+  settings: ReaderSettings;
+  update: (patch: Partial<ReaderSettings>) => void;
+}) {
+  const { theme, setTheme } = useTheme();
+  const low = Math.round(BRIGHTNESS_MIN * 100);
+  const bright = Math.round(settings.brightness * 100);
+
+  return (
+    <div className="rd-settings">
+      <Row label="亮度">
+        {/* 跟随系统时滑块淡着（不起作用）；一拖动就改成手动，并关掉"跟随系统" */}
+        <div className="rd-bright" data-auto={settings.brightnessAuto || undefined}>
+          <SunDim aria-hidden="true" />
+          <input
+            type="range"
+            className="rd-range"
+            aria-label="亮度"
+            min={low}
+            max={100}
+            value={bright}
+            onChange={(e) => update({ brightness: Number(e.target.value) / 100, brightnessAuto: false })}
+            style={{ '--fill': `${((bright - low) / (100 - low)) * 100}%` } as CSSProperties}
+          />
+          <Sun aria-hidden="true" />
+        </div>
+      </Row>
+      <div className="rd-setting">
+        <span className="rd-setting__label">跟随系统</span>
+        <button
+          type="button"
+          role="switch"
+          className="switch"
+          aria-label="亮度跟随系统"
+          aria-checked={settings.brightnessAuto}
+          onClick={() => update({ brightnessAuto: !settings.brightnessAuto })}
+        />
+      </div>
       <Row label="配色" stacked>
         <div className="rd-swatches">
           {THEMES.map((t) => (
@@ -216,9 +269,28 @@ export function SettingsPanel({
             >
               {/* 只有圆点带 data-theme，名字仍用当前主题的颜色，保证在面板上可读 */}
               <span className="rd-swatch__dot" data-theme={t.id} aria-hidden="true">
-                文
+                <PaperTexture paper={settings.paper} scale={0.4} />文
               </span>
               <span>{t.name}</span>
+            </button>
+          ))}
+        </div>
+      </Row>
+      <Row label="背景" stacked>
+        <div className="rd-papers" role="radiogroup" aria-label="背景">
+          {PAPERS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              role="radio"
+              aria-checked={settings.paper === p.id}
+              className="rd-paper"
+              onClick={() => update({ paper: p.id })}
+            >
+              <span className="rd-paper__card" aria-hidden="true">
+                <PaperTexture paper={p.id} scale={0.45} />
+              </span>
+              <span className="rd-paper__name">{p.name}</span>
             </button>
           ))}
         </div>

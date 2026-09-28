@@ -1,0 +1,338 @@
+/* ============================================================
+ * 阅读纸张（PaperTexture 的样式）
+ *
+ * 纹理层 .paper-tex 铺满纸面，最多两层：::before 是 a 层，::after 是 b 层。
+ * 每层由三样东西组成：
+ *   --tex-a / --tex-b            这一层的颜色（纯色或渐变；花笺的 b 层直接是一幅带颜色的图）
+ *   --tex-a-mask / --tex-b-mask  遮罩图案（masks/ 下的 SVG，只用它的透明度）；none 表示整层都显示
+ *   --tex-a-size / --tex-b-size  遮罩图块的尺寸，乘上 --paper-scale（面板里的小预览把纹理按比例缩小）
+ *   --tex-a-pos / --tex-b-pos    遮罩的位置；--tex-a-repeat / --tex-b-repeat 是否平铺。
+ *                                平铺的纹理从左上角铺满；树影、月色、猫爪这类只画一幅的，贴在某个角上、不平铺
+ *
+ * 选哪种纸：元素自己带 data-paper 时用自己的（面板里的预览），
+ * 否则跟着 <html data-paper>（阅读页；启动脚本在绘制前写好，首屏不会先闪一下默认的纸）。
+ *
+ * 颜色表（本文件后半部分）：每套配色为每种纸各自指定颜色，而不是用一种灰色纹理去叠所有纸色——
+ * 用户要求"每种颜色与背景搭配有独特显示效果（避免自动合成导致颜色和背景合成不协调）"。
+ * 新增主题时，这里也要补上一整组变量；改了颜色要跑 `pnpm check:contrast`。
+ * ============================================================ */
+
+.paper-tex {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.paper-tex::before,
+.paper-tex::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.paper-tex::before {
+  background: var(--tex-a, none);
+  -webkit-mask: var(--tex-a-mask, none) var(--tex-a-pos, 0 0) / var(--tex-a-size, auto) var(--tex-a-repeat, repeat);
+  mask: var(--tex-a-mask, none) var(--tex-a-pos, 0 0) / var(--tex-a-size, auto) var(--tex-a-repeat, repeat);
+}
+.paper-tex::after {
+  background: var(--tex-b, none);
+  -webkit-mask: var(--tex-b-mask, none) var(--tex-b-pos, 0 0) / var(--tex-b-size, auto) var(--tex-b-repeat, repeat);
+  mask: var(--tex-b-mask, none) var(--tex-b-pos, 0 0) / var(--tex-b-size, auto) var(--tex-b-repeat, repeat);
+}
+
+/* 素笺：不画纹理，只有纸色（不需要规则） */
+
+/* 宣纸：a 层纸浆细点，b 层方向随机的短纤维 */
+.paper-tex[data-paper='xuan'],
+:root[data-paper='xuan'] .paper-tex:not([data-paper]) {
+  --tex-a: var(--xuan-speck);
+  --tex-a-mask: url('./masks/specks.svg');
+  --tex-a-size: calc(240px * var(--paper-scale, 1));
+  --tex-b: var(--xuan-fiber);
+  --tex-b-mask: url('./masks/fibers.svg');
+  --tex-b-size: calc(320px * var(--paper-scale, 1));
+}
+
+/* 丝绢：a 层细密的平纹经纬，b 层一道斜着掠过整页的淡淡光泽（不用遮罩） */
+.paper-tex[data-paper='silk'],
+:root[data-paper='silk'] .paper-tex:not([data-paper]) {
+  --tex-a: var(--silk-thread);
+  --tex-a-mask: url('./masks/weave.svg');
+  --tex-a-size: calc(120px * var(--paper-scale, 1));
+  --tex-b: linear-gradient(115deg, transparent 8%, var(--silk-sheen) 44%, transparent 82%);
+}
+
+/* 洒金：a 层纸浆细点（比宣纸淡），b 层金箔碎屑。金箔的颜色沿页面斜向渐变，像金箔在不同角度反光 */
+.paper-tex[data-paper='gold'],
+:root[data-paper='gold'] .paper-tex:not([data-paper]) {
+  --tex-a: var(--gold-speck);
+  --tex-a-mask: url('./masks/specks.svg');
+  --tex-a-size: calc(240px * var(--paper-scale, 1));
+  --tex-b: linear-gradient(125deg, var(--gold-1), var(--gold-2) 38%, var(--gold-1) 62%, var(--gold-3));
+  --tex-b-mask: url('./masks/flecks.svg');
+  --tex-b-size: calc(360px * var(--paper-scale, 1));
+}
+
+/* 花笺：b 层是每套配色自己的一幅角花（颜色、位置、大小都写在下面的颜色表里） */
+.paper-tex[data-paper='floral'],
+:root[data-paper='floral'] .paper-tex:not([data-paper]) {
+  --tex-b: var(--floral);
+}
+
+/* 落英：a 层稀疏的五瓣小花与散落的花瓣，b 层花心。图块很大，重复不明显 */
+.paper-tex[data-paper='petals'],
+:root[data-paper='petals'] .paper-tex:not([data-paper]) {
+  --tex-a: var(--petal);
+  --tex-a-mask: url('./masks/petals-a.svg');
+  --tex-a-size: calc(400px * var(--paper-scale, 1));
+  --tex-b: var(--petal-heart);
+  --tex-b-mask: url('./masks/petals-b.svg');
+  --tex-b-size: calc(400px * var(--paper-scale, 1));
+}
+
+/* 树影：窗外一枝树的影子，从右上角斜着落进来（只画一幅，不平铺） */
+.paper-tex[data-paper='tree'],
+:root[data-paper='tree'] .paper-tex:not([data-paper]) {
+  --tex-a: var(--tree);
+  --tex-a-mask: url('./masks/tree.svg');
+  --tex-a-pos: 100% 0%;
+  --tex-a-size: min(110%, 520px) auto;
+  --tex-a-repeat: no-repeat;
+}
+
+/* 月色：a 层右上角的一轮月亮与月晕，b 层几缕从月前掠过的薄云（颜色接近纸色，把月亮遮去一截） */
+.paper-tex[data-paper='moon'],
+:root[data-paper='moon'] .paper-tex:not([data-paper]) {
+  --tex-a: var(--moon);
+  --tex-a-mask: url('./masks/moon.svg');
+  --tex-a-pos: 100% 0%;
+  --tex-a-size: min(84%, 360px) auto;
+  --tex-a-repeat: no-repeat;
+  --tex-b: var(--moon-cloud);
+  --tex-b-mask: url('./masks/moon-cloud.svg');
+  --tex-b-pos: 100% 0%;
+  --tex-b-size: min(84%, 360px) auto;
+  --tex-b-repeat: no-repeat;
+}
+
+/* 星河：a 层满页平铺的细碎星点，b 层左上方一道银河与一组北斗 */
+.paper-tex[data-paper='stars'],
+:root[data-paper='stars'] .paper-tex:not([data-paper]) {
+  --tex-a: var(--star);
+  --tex-a-mask: url('./masks/stars.svg');
+  --tex-a-size: calc(360px * var(--paper-scale, 1));
+  --tex-b: var(--star-river);
+  --tex-b-mask: url('./masks/river.svg');
+  --tex-b-pos: 0% 0%;
+  --tex-b-size: min(100%, 520px) auto;
+  --tex-b-repeat: no-repeat;
+}
+
+/* 猫爪：一串小猫的脚印从页脚上方走过。a 层掌垫，b 层四个脚趾的肉垫（可以另配一种颜色，比如粉色） */
+.paper-tex[data-paper='paws'],
+:root[data-paper='paws'] .paper-tex:not([data-paper]) {
+  --tex-a: var(--paw);
+  --tex-a-mask: url('./masks/paws-a.svg');
+  --tex-a-pos: 50% 97%;
+  --tex-a-size: min(100%, 520px) auto;
+  --tex-a-repeat: no-repeat;
+  --tex-b: var(--paw-bean);
+  --tex-b-mask: url('./masks/paws-b.svg');
+  --tex-b-pos: 50% 97%;
+  --tex-b-size: min(100%, 520px) auto;
+  --tex-b-repeat: no-repeat;
+}
+
+/* ============================================================
+ * 颜色表：每套配色 × 每种纸
+ *   --xuan-speck / --xuan-fiber  宣纸的细点与纤维：取这套配色自己的深色调（长夜取浅色）
+ *   --silk-thread / --silk-sheen 丝绢的经纬与光泽
+ *   --gold-speck                 洒金纸底的细点
+ *   --gold-1 / -2 / -3           金箔的暗部、亮部、另一侧暗部：每套配色一种金属色
+ *   --floral                     花笺的角花：图、位置与大小（background 简写）
+ *   --petal / --petal-heart      落英的花瓣与花心：每套配色一种花色（薛涛笺桃粉、豆青梨花白、缃叶桂花金、墨白红梅……）
+ *   --tree                       树影的影子色（长夜是月光下更深的影子）
+ *   --moon / --moon-cloud        月色的月亮（含月晕）与薄云；云取接近纸色的一种，从月前经过时遮去月亮
+ *   --star / --star-river        星河的星点与银河；浅色纸上像一张淡淡的星图，长夜上才是真正的夜空
+ *   --paw / --paw-bean           猫爪的掌垫与脚趾肉垫（多数配色配粉色肉垫；墨白是蘸了墨的猫爪）
+ * 角花的位置用百分比，页面与面板里的小预览都按比例落在同一个角上；
+ * 大小封顶，电脑端的宽页面上不至于大得喧宾夺主。
+ * ============================================================ */
+
+/* 薛涛笺：豆沙色的纹理；洒金用玫瑰金；花笺是一枝花（薛涛笺用芙蓉花汁染成） */
+[data-theme='xuetao'] {
+  --xuan-speck: rgb(140 72 94 / 0.26);
+  --xuan-fiber: rgb(168 104 122 / 0.154);
+  --silk-thread: rgb(150 86 106 / 0.1);
+  --silk-sheen: rgb(255 255 255 / 0.32);
+  --gold-speck: rgb(140 72 94 / 0.12);
+  --gold-1: rgb(196 134 120 / 0.75);
+  --gold-2: rgb(238 202 182 / 0.85);
+  --gold-3: rgb(176 112 104 / 0.7);
+  --floral: url('./motifs/xuetao.svg') no-repeat 106% 94% / min(62%, 260px) auto;
+  --petal: rgb(226 128 152 / 0.24);
+  --petal-heart: rgb(196 92 118 / 0.32);
+  --tree: rgb(120 60 80 / 0.075);
+  --moon: rgb(232 170 150 / 0.2);
+  --moon-cloud: rgb(255 250 250 / 0.8);
+  --star: rgb(196 120 130 / 0.5);
+  --star-river: rgb(208 120 140 / 0.14);
+  --paw: rgb(150 96 108 / 0.17);
+  --paw-bean: rgb(232 120 150 / 0.3);
+}
+
+/* 长夜：深色纸上的纹理用浅色，丝绢的经纬反而用更深的暗色；洒金是淡金，像夜空里的星子；花笺是新月 */
+[data-theme='changye'] {
+  --xuan-speck: rgb(236 222 232 / 0.12);
+  --xuan-fiber: rgb(210 190 205 / 0.07);
+  --silk-thread: rgb(0 0 0 / 0.22);
+  --silk-sheen: rgb(236 222 232 / 0.028);
+  --gold-speck: rgb(236 222 232 / 0.06);
+  --gold-1: rgb(184 158 100 / 0.34);
+  --gold-2: rgb(233 214 160 / 0.26);
+  --gold-3: rgb(160 134 84 / 0.4);
+  --floral: url('./motifs/changye.svg') no-repeat 108% -4% / min(62%, 260px) auto;
+  --petal: rgb(236 214 226 / 0.1);
+  --petal-heart: rgb(233 214 160 / 0.16);
+  --tree: rgb(0 0 0 / 0.3);
+  --moon: rgb(233 222 190 / 0.14);
+  --moon-cloud: rgb(28 25 33 / 0.85);
+  --star: rgb(240 230 200 / 0.38);
+  --star-river: rgb(220 210 235 / 0.08);
+  --paw: rgb(236 222 232 / 0.08);
+  --paw-bean: rgb(232 150 170 / 0.15);
+}
+
+/* 豆青：偏灰的深绿纹理；洒金用哑光的淡金（绿地配金是传统的搭配）；花笺是竹 */
+[data-theme='douqing'] {
+  --xuan-speck: rgb(62 92 64 / 0.24);
+  --xuan-fiber: rgb(88 118 86 / 0.14);
+  --silk-thread: rgb(62 92 64 / 0.1);
+  --silk-sheen: rgb(250 255 246 / 0.3);
+  --gold-speck: rgb(62 92 64 / 0.1);
+  --gold-1: rgb(176 150 86 / 0.7);
+  --gold-2: rgb(222 204 146 / 0.8);
+  --gold-3: rgb(156 130 70 / 0.65);
+  --floral: url('./motifs/douqing.svg') no-repeat 110% 80% / min(62%, 260px) auto;
+  --petal: rgb(255 255 250 / 0.75);
+  --petal-heart: rgb(190 170 90 / 0.34);
+  --tree: rgb(40 70 45 / 0.08);
+  --moon: rgb(252 254 246 / 0.7);
+  --moon-cloud: rgb(160 190 150 / 0.22);
+  --star: rgb(90 120 80 / 0.42);
+  --star-river: rgb(80 120 80 / 0.1);
+  --paw: rgb(62 92 64 / 0.14);
+  --paw-bean: rgb(62 92 64 / 0.2);
+}
+
+/* 缃叶：暖褐色纹理；洒金用偏红的赤金；花笺是银杏叶 */
+[data-theme='xiangye'] {
+  --xuan-speck: rgb(112 80 42 / 0.26);
+  --xuan-fiber: rgb(140 104 58 / 0.154);
+  --silk-thread: rgb(120 88 48 / 0.1);
+  --silk-sheen: rgb(255 250 238 / 0.32);
+  --gold-speck: rgb(112 80 42 / 0.12);
+  --gold-1: rgb(184 136 56 / 0.75);
+  --gold-2: rgb(236 200 112 / 0.85);
+  --gold-3: rgb(160 114 40 / 0.64);
+  --floral: url('./motifs/xiangye.svg') no-repeat -6% 96% / min(62%, 260px) auto;
+  --petal: rgb(220 160 60 / 0.3);
+  --petal-heart: rgb(190 120 40 / 0.32);
+  --tree: rgb(110 76 36 / 0.085);
+  --moon: rgb(236 190 110 / 0.24);
+  --moon-cloud: rgb(250 244 232 / 0.8);
+  --star: rgb(176 130 60 / 0.48);
+  --star-river: rgb(190 140 70 / 0.13);
+  --paw: rgb(140 100 56 / 0.17);
+  --paw-bean: rgb(206 126 96 / 0.26);
+}
+
+/* 天青：青灰色纹理；洒金换成银箔（冷色的纸配银更清雅）；花笺是卷云 */
+[data-theme='tianqing'] {
+  --xuan-speck: rgb(56 90 110 / 0.22);
+  --xuan-fiber: rgb(80 114 134 / 0.133);
+  --silk-thread: rgb(60 96 116 / 0.09);
+  --silk-sheen: rgb(255 255 255 / 0.34);
+  --gold-speck: rgb(56 90 110 / 0.1);
+  --gold-1: rgb(150 166 176 / 0.7);
+  --gold-2: rgb(226 236 240 / 0.95);
+  --gold-3: rgb(128 146 158 / 0.65);
+  --floral: url('./motifs/tianqing.svg') no-repeat 106% 94% / min(62%, 260px) auto;
+  --petal: rgb(140 175 195 / 0.26);
+  --petal-heart: rgb(110 150 170 / 0.32);
+  --tree: rgb(50 90 110 / 0.075);
+  --moon: rgb(170 200 215 / 0.24);
+  --moon-cloud: rgb(255 255 255 / 0.85);
+  --star: rgb(90 130 150 / 0.42);
+  --star-river: rgb(100 150 175 / 0.11);
+  --paw: rgb(60 96 116 / 0.13);
+  --paw-bean: rgb(222 140 150 / 0.26);
+}
+
+/* 紫藤：灰紫色纹理；洒金用香槟金；花笺是垂下来的藤花 */
+[data-theme='ziteng'] {
+  --xuan-speck: rgb(94 74 136 / 0.22);
+  --xuan-fiber: rgb(118 98 160 / 0.133);
+  --silk-thread: rgb(96 78 140 / 0.09);
+  --silk-sheen: rgb(255 255 255 / 0.34);
+  --gold-speck: rgb(94 74 136 / 0.1);
+  --gold-1: rgb(186 164 120 / 0.72);
+  --gold-2: rgb(234 220 186 / 0.85);
+  --gold-3: rgb(164 142 100 / 0.66);
+  --floral: url('./motifs/ziteng.svg') no-repeat 108% -3% / min(62%, 260px) auto;
+  --petal: rgb(170 140 215 / 0.26);
+  --petal-heart: rgb(140 100 190 / 0.32);
+  --tree: rgb(80 60 120 / 0.075);
+  --moon: rgb(210 196 235 / 0.32);
+  --moon-cloud: rgb(255 255 255 / 0.8);
+  --star: rgb(140 110 190 / 0.42);
+  --star-river: rgb(150 120 200 / 0.11);
+  --paw: rgb(96 78 140 / 0.14);
+  --paw-bean: rgb(220 140 180 / 0.28);
+}
+
+/* 盐汽水：薄荷灰纹理；洒金换成带一点薄荷色的银；花笺是一串往上冒的气泡 */
+[data-theme='yanqishui'] {
+  --xuan-speck: rgb(46 104 90 / 0.22);
+  --xuan-fiber: rgb(70 128 112 / 0.133);
+  --silk-thread: rgb(46 104 90 / 0.09);
+  --silk-sheen: rgb(255 255 255 / 0.34);
+  --gold-speck: rgb(46 104 90 / 0.1);
+  --gold-1: rgb(146 176 168 / 0.7);
+  --gold-2: rgb(226 244 238 / 0.95);
+  --gold-3: rgb(124 158 148 / 0.65);
+  --floral: url('./motifs/yanqishui.svg') no-repeat -4% 96% / min(62%, 260px) auto;
+  --petal: rgb(120 200 180 / 0.26);
+  --petal-heart: rgb(90 170 150 / 0.32);
+  --tree: rgb(40 100 85 / 0.075);
+  --moon: rgb(200 236 226 / 0.5);
+  --moon-cloud: rgb(255 255 255 / 0.85);
+  --star: rgb(70 150 130 / 0.42);
+  --star-river: rgb(80 170 150 / 0.11);
+  --paw: rgb(46 104 90 / 0.13);
+  --paw-bean: rgb(219 95 122 / 0.22);
+}
+
+/* 墨白：墨灰纹理；洒金用传统洒金宣的正金色；花笺是页脚的一带远山（横贯页面，所以按宽度铺） */
+[data-theme='mobai'] {
+  --xuan-speck: rgb(40 40 46 / 0.24);
+  --xuan-fiber: rgb(64 64 70 / 0.14);
+  --silk-thread: rgb(40 40 46 / 0.08);
+  --silk-sheen: rgb(255 255 255 / 0.34);
+  --gold-speck: rgb(40 40 46 / 0.1);
+  --gold-1: rgb(182 142 62 / 0.75);
+  --gold-2: rgb(232 202 120 / 0.85);
+  --gold-3: rgb(160 120 44 / 0.7);
+  --floral: url('./motifs/mobai.svg') no-repeat 50% 100% / min(100%, 760px) auto;
+  --petal: rgb(190 50 60 / 0.2);
+  --petal-heart: rgb(120 30 40 / 0.3);
+  --tree: rgb(30 30 36 / 0.085);
+  --moon: rgb(255 255 255 / 0.85);
+  --moon-cloud: rgb(40 40 46 / 0.09);
+  --star: rgb(40 40 46 / 0.36);
+  --star-river: rgb(40 40 46 / 0.07);
+  --paw: rgb(35 36 42 / 0.16);
+  --paw-bean: rgb(35 36 42 / 0.2);
+}

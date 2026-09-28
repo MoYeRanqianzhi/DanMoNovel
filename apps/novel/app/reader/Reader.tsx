@@ -14,6 +14,10 @@
  * 只有内容确实还没到（远距离跳章、网速慢）时，那一页才显示加载动画，而且延迟一小会儿才出现。
  * 需要订阅的章节显示订阅页，订阅后原地换成正文。
  *
+ * 工具栏下栏三个入口：目录、背景（亮度、配色、纸张）、设置（字号、行距、字体、排版、翻页）。
+ * 背景纹理分页时画在每一页上（PageFrame），滚动时画在阅读器底上、不随正文滚动；
+ * 亮度用最上面一层黑色遮罩压暗（.rd-dim，不透明度取自 <html> 上的 --rd-dim，见 settings.ts）。
+ *
  * 服务端渲染：阅读页也是公开页面（可被 CDN 缓存），但服务端只输出本章的试读开头
  * （标题与前几段），供搜索引擎收录与读屏器读取；完整正文在浏览器里另行获取并分页。
  * 深链接打开时，试读开头一直显示到本章正文取到为止，不先闪一下加载动画。
@@ -33,22 +37,22 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from 'react';
 import { flushSync } from 'react-dom';
-import { ALargeSmall, ArrowLeft, Bookmark, BookmarkCheck, List, Moon, Sun } from 'lucide-react';
+import { ALargeSmall, ArrowLeft, Bookmark, BookmarkCheck, List, Sun } from 'lucide-react';
 import { BOOKS, isBookNo, type Book } from '@danmo/data/books';
 import { chapterParagraphs, chapterTitle } from '@danmo/data/chapters';
 import { Sheet, useToast } from '@danmo/design/components/overlays';
 import { IconButton, ThreadProgress } from '@danmo/design/components/ui';
 import { useElementSize } from '@danmo/design/lib/useElementSize';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
-import { originOf, useTheme } from '@danmo/design/theme/ThemeContext';
-import { getTheme } from '@danmo/design/theme/themes';
+import { useTheme } from '@danmo/design/theme/ThemeContext';
 import { DEFAULT_FONT, ensureFont, fontStack, importedIdOf, platformFont } from '@danmo/design/fonts/catalog';
 import { FontList } from '@danmo/design/fonts/FontList';
 import { registerImported } from '@danmo/design/fonts/imported';
+import { PaperTexture } from '@danmo/design/paper/PaperTexture';
 import { chapterState, prefetchAround, useChapterCache } from './chapters';
 import { FailedNotice, LockedNotice, PendingNotice } from './notices';
 import { ChapterContent, Flow, PageFrame, PagedView, countPages, type Geometry, type PageRef, type Turn } from './pages';
-import { SettingsPanel, TocPanel } from './panels';
+import { BackgroundPanel, SettingsPanel, TocPanel } from './panels';
 import { LEADING, useReaderSettings, type PagedMode } from './settings';
 import './reader.css';
 
@@ -96,7 +100,7 @@ function sameCounts(a: Record<number, number>, b: Record<number, number>): boole
 
 export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   const { back, retarget } = useStack();
-  const { reduced, theme, toggleNight } = useTheme();
+  const { reduced } = useTheme();
   const toast = useToast();
   const { book } = data;
   const isTop = screen.isTop;
@@ -116,7 +120,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   /** 滚动模式从哪一章的什么位置开始；跳章、切换模式时换一个 key，重新挂一条滚动视图 */
   const [scrollStart, setScrollStart] = useState({ chapter: data.chapter, frac: 0, key: 0 });
   const [chrome, setChrome] = useState(false);
-  const [panel, setPanel] = useState<'toc' | 'settings' | null>(null);
+  const [panel, setPanel] = useState<'toc' | 'background' | 'settings' | null>(null);
   const [bookmarked, setBookmarked] = useState(false);
   const [fontTick, setFontTick] = useState(0);
   /** 阅读设置面板里正在看字体列表（每次打开面板都从阅读设置开始） */
@@ -383,10 +387,9 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
 
   /* ---------------- 渲染 ---------------- */
 
-  const dark = getTheme(theme).dark;
   const count = counts[chapter];
   const chapterFrac = paged ? (count && current?.status === 'ready' ? (Math.max(0, pos.page) + 1) / count : 0) : scrollFrac;
-  // 字体列表的预览句：读者正在读的这一段的第一句；本章正文还没到时用服务端给的试读开头
+  // 字体列表的预览句：读者正在读的那一段里的一两句（previewSentence）；本章正文还没到时用服务端给的试读开头
   const fontPreview =
     current?.status === 'ready' ? previewSentence(current.text.paragraphs, chapterFrac) : (data.lead[0] ?? book.blurb);
 
@@ -455,6 +458,9 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
 
   return (
     <div className="reader" style={vars} data-mode={settings.mode}>
+      {/* 滚动模式的背景纹理画在阅读器底上，正文在它上面滚动；分页模式画在每一页上（PageFrame） */}
+      {!paged && <PaperTexture />}
+
       {/* 不可见的页框：只用来量出正文窗口的可用尺寸（页眉页脚的高度含安全区，只有 CSS 知道） */}
       <div className="rd-page rd-page--frame" aria-hidden="true">
         <PageFrame title=" " bodyRef={bodyRef} />
@@ -591,9 +597,9 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
             <List aria-hidden="true" />
             <span>目录</span>
           </button>
-          <button type="button" className="rd-tool" onClick={(e) => toggleNight(originOf(e))}>
-            {dark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
-            <span>{dark ? '日间' : '夜间'}</span>
+          <button type="button" className="rd-tool" onClick={() => setPanel('background')}>
+            <Sun aria-hidden="true" />
+            <span>背景</span>
           </button>
           <button
             type="button"
@@ -621,9 +627,15 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
           <SettingsPanel settings={settings} update={update} onOpenFonts={() => setFontsOpen(true)} />
         )}
       </Sheet>
+      <Sheet open={panel === 'background'} title="背景" onClose={() => setPanel(null)}>
+        <BackgroundPanel settings={settings} update={update} />
+      </Sheet>
       <Sheet open={panel === 'toc'} title={`目录（共 ${book.chapters} 章）`} onClose={() => setPanel(null)}>
         <TocPanel book={book} current={chapter} onPick={jumpTo} />
       </Sheet>
+
+      {/* 亮度：最上面一层黑色遮罩，连工具栏一起压暗（面板在 body 下的浮层里，不受影响） */}
+      <div className="rd-dim" aria-hidden="true" />
     </div>
   );
 }

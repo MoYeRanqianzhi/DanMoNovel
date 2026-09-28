@@ -16,6 +16,7 @@
     "dev:admin": "pnpm --filter @danmo/admin dev",
     "build": "pnpm --filter \"./apps/*\" build",
     "typecheck": "pnpm -r typecheck",
-    "check:contrast": "node packages/design/scripts/check-contrast.mjs"
+    "check:contrast": "node packages/design/scripts/check-contrast.mjs",
+    "gen:paper": "node packages/design/scripts/gen-paper-art.mjs"
   }
 }

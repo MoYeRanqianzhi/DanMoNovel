@@ -1,0 +1,11 @@
+<!-- 猫爪的四个脚趾肉垫（b 层），与 paws-a.svg 的掌垫一一对齐。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+<defs><g id="t"><ellipse cx="-6.4" cy="-3.4" rx="1.9" ry="2.5" transform="rotate(-24 -6.4 -3.4)"/><ellipse cx="-2.3" cy="-6.8" rx="2.1" ry="2.7" transform="rotate(-8 -2.3 -6.8)"/><ellipse cx="2.3" cy="-6.8" rx="2.1" ry="2.7" transform="rotate(8 2.3 -6.8)"/><ellipse cx="6.4" cy="-3.4" rx="1.9" ry="2.5" transform="rotate(24 6.4 -3.4)"/></g></defs>
+<use href="#t" transform="translate(45.9 165.9) rotate(86) scale(1)"/>
+<use href="#t" transform="translate(99.1 171.5) rotate(80) scale(1)"/>
+<use href="#t" transform="translate(145.3 143) rotate(71) scale(1)"/>
+<use href="#t" transform="translate(200.7 142.2) rotate(71) scale(1)"/>
+<use href="#t" transform="translate(245.9 108.3) rotate(70) scale(1)"/>
+<use href="#t" transform="translate(303.4 101) rotate(64) scale(1)"/>
+<use href="#t" transform="translate(347.7 61.7) rotate(55) scale(1)"/>
+</svg>
