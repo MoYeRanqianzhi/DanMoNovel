@@ -3,10 +3,13 @@
  *
  * 用法：仓库根目录 `pnpm gen:paper`（即 node packages/design/scripts/gen-paper-art.mjs）
  *
- * 纸张里一部分图案是按固定种子随机生成的（宣纸纤维、洒金碎屑、落英、树影、星河、猫爪，
+ * 纸张里一部分图案是按固定种子随机生成的（宣纸纤维、洒金碎屑、落英、树影的三种画法、星河的星图与夜空、猫爪，
  * 以及紫藤、盐汽水两幅角花里重复的花瓣与气泡），这个脚本把它们写成 src/paper/ 下的 SVG 文件。
  * 种子与参数不变，输出就不变；想调疏密、大小，改这里的参数再重新生成，不要手改生成出来的文件。
- * 其余图案（纸浆细点、丝绢平纹、月亮、六幅手绘角花）是手写的 SVG，不经过这个脚本。
+ * 其余图案（纸浆细点、丝绢平纹、月亮的三种画法、六幅手绘角花）是手写的 SVG，不经过这个脚本。
+ *
+ * 同一种纸在不同配色下可以用不同的画法（reading-backgrounds 记忆，用户 2026-09-28 的纠正）：
+ * 浅色的几套配色共用一种，墨白、长夜各有自己的一种；哪套配色用哪一种，写在 papers.css 的颜色表里。
  *
  * 遮罩类图案（masks/）只用透明度，颜色由 papers.css 按配色逐一指定；角花（motifs/）的颜色直接画在图里。
  * 生成的文件都会被 Vite 当作资源处理（小于 4KB 的内联进 CSS），所以路径保留一位小数、尽量写得紧凑。
@@ -34,6 +37,8 @@ const n1 = (v) => String(Math.round(v * 10) / 10).replace(/^(-?)0\./, '$1.');
 const f = (v) => String(Math.round(v * 10) / 10);
 
 function write(rel, comment, body) {
+  // XML 的注释里不能有两个连着的连字符：写了的话浏览器整张图解码失败，纹理直接不显示，也不报错
+  if (comment.includes('--')) throw new Error(`${rel}：注释里不能出现 "--"（提到 CSS 变量时别写变量名）`);
   writeFileSync(join(root, rel), `<!-- ${comment} -->\n${body}\n`);
   console.log('wrote', rel);
 }
@@ -183,7 +188,7 @@ function petals() {
   write('masks/petals-b.svg', '落英的花心（b 层），与 petals-a.svg 的花一一对齐。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css', svg(hearts));
 }
 
-/* ---------------- 树影：窗外一枝树投在纸上的影子 ---------------- */
+/* ---------------- 树影：窗外一枝树，日影、墨枝、月下枝影三种画法 ---------------- */
 function tree() {
   const r = rng(77);
   /** 枝干：二次贝塞尔（起点、控制点、终点）与线宽；从右上角伸进来，往左下分叉 */
@@ -202,8 +207,9 @@ function tree() {
     (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1],
   ];
   const strokes = branches.map(([p0, p1, p2, w]) => `<path d="M${p0.join(' ')}Q${p1.join(' ')} ${p2.join(' ')}" stroke-width="${w}"/>`);
-  // 叶子是一个个旋转的椭圆，写成两段弧拼起来的路径，全部并进同一条 path，比逐个写 <ellipse> 小得多
-  let leaves = '';
+  // 叶子是一个个旋转的椭圆，写成两段弧拼起来的路径。日影把它们并进同一条 path（比逐个写 <ellipse> 小得多），
+  // 墨枝按浓淡分成几组，所以先逐片收起来
+  const leafList = [];
   const leaf = (x, y, a, len) => {
     const ry = len * (0.34 + r() * 0.12);
     const deg = Math.round((a * 180) / Math.PI);
@@ -211,7 +217,7 @@ function tree() {
     const dy = Math.sin(a) * len * 2;
     const x0 = x - Math.cos(a) * len * 0.1;
     const y0 = y - Math.sin(a) * len * 0.1;
-    leaves += `M${n1(x0)} ${n1(y0)}a${n1(len)} ${n1(ry)} ${deg} 1 0 ${n1(dx)} ${n1(dy)}a${n1(len)} ${n1(ry)} ${deg} 1 0 ${n1(-dx)} ${n1(-dy)}z`;
+    leafList.push(`M${n1(x0)} ${n1(y0)}a${n1(len)} ${n1(ry)} ${deg} 1 0 ${n1(dx)} ${n1(dy)}a${n1(len)} ${n1(ry)} ${deg} 1 0 ${n1(-dx)} ${n1(-dy)}z`);
   };
   for (const b of branches) {
     const [p0, , p2] = b;
@@ -228,20 +234,56 @@ function tree() {
       if (i === steps) for (let k = 0; k < 3; k++) leaf(x, y, dir + (k - 1) * 0.45, 8 + r() * 4);
     }
   }
+  const leaves = leafList.join('');
+  const branch = `<g fill="none" stroke="#000" stroke-linecap="round">${strokes.join('')}</g>`;
+
+  // A 日影（浅色的几套配色）：枝叶整体模糊，像隔着一段距离投在纸上的影子
   write(
     'masks/tree.svg',
-    '树影：窗外一枝树从右上角伸进来，投在纸上的影子；枝叶整体模糊，边缘柔和，像隔着一段距离的影子。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css',
+    '树影的日影画法（浅色配色）：窗外一枝树从右上角伸进来，投在纸上的影子；枝叶整体模糊，边缘柔和，像隔着一段距离的影子。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css',
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 600">
 <filter id="b" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="2.6"/></filter>
 <g filter="url(#b)" opacity="0.9">
-<g fill="none" stroke="#000" stroke-linecap="round">${strokes.join('')}</g>
+${branch}
 <path d="${leaves}"/>
 </g>
 </svg>`,
   );
+
+  // B 墨枝（墨白）：同一枝画成水墨，边缘清楚；枝干是浓墨，叶子分浓、中、淡三种墨色。
+  // 浓淡用另一个种子取，日影的形状不受影响
+  const tone = rng(78);
+  const inked = leafList.map((d) => [[0.9, 0.62, 0.38][Math.floor(tone() * 3)], d]);
+  write(
+    'masks/tree-ink.svg',
+    '树影的墨枝画法（墨白）：与日影同一枝，画成水墨；边缘清楚，枝干浓墨，叶子分浓、中、淡三种墨色。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css',
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 600">
+<filter id="b" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="0.6"/></filter>
+<g filter="url(#b)">
+${branch}
+${grouped(inked, (o) => `fill-opacity="${o}"`)}
+</g>
+</svg>`,
+  );
+
+  // C 月下枝影（长夜）：暗色的纸上画不出"影子"（比纸更暗的一层看不见），所以画成月光：
+  // 一片从右上方斜照进来的月光落在纸上，同一枝树挡住的地方留成暗的。枝影只在月光里看得见，越往边缘越淡。
+  // 遮罩挂在外面的 <g> 上：挂在带 transform 的椭圆上的话，遮罩也跟着转——枝影歪了，遮罩区域的边还会在纸上留下一道斜的直边
+  write(
+    'masks/tree-night.svg',
+    '树影的月下枝影画法（长夜）：一片斜照进来的月光落在纸上，同一枝树挡住的地方留成暗影。深色纸上画不出比纸更暗的影子，所以画月光、把枝叶留出来。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css',
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 600">
+<defs>
+<radialGradient id="l"><stop offset="0" stop-opacity="1"/><stop offset="0.55" stop-opacity="0.72"/><stop offset="1" stop-opacity="0"/></radialGradient>
+<filter id="b" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3"/></filter>
+<mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="480" height="600"><rect width="480" height="600" fill="#fff"/><g filter="url(#b)">${branch}<path d="${leaves}"/></g></mask>
+</defs>
+<g mask="url(#m)"><ellipse cx="300" cy="200" rx="300" ry="215" transform="rotate(-28 300 200)" fill="url(#l)"/></g>
+</svg>`,
+  );
 }
 
-/* ---------------- 星河：满页细碎的星点，加一道银河与北斗 ---------------- */
+/* ---------------- 星河：满页细碎的星点，与浅色配色、墨白用的星图 ---------------- */
 
 /** 四角星芒：中心 (x, y)，半径 s */
 const sparkle = (x, y, s) => {
@@ -261,27 +303,90 @@ function stars() {
     `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360">\n${grouped(items, (o) => `fill-opacity="${o}"`)}\n</svg>`,
   );
 
-  // 银河（b 层，贴在页面左上）：一条斜着的模糊光带，带里的星点更密；右上方一组北斗七星，用细线连起来
-  const r2 = rng(88);
-  const dense = [];
-  for (let i = 0; i < 70; i++) {
-    const t = r2();
-    const off = (r2() + r2() + r2() - 1.5) * 26;
-    const x = 20 + t * 360 + off * 0.47;
-    const y = 300 - t * 250 + off * 0.88;
-    dense.push(dot(x, y, 0.3 + r2() ** 2 * 0.7));
-  }
-  const dipper = [[212, 58], [246, 70], [276, 78], [305, 90], [311, 118], [350, 124], [356, 92]];
-  const line = `M${dipper.map((p) => p.join(' ')).join('L')}L305 90`;
+  // A 星图（浅色配色与墨白，b 层，贴在页面左上）：像一页古星图。几组星官画成小圆圈，用细线连起来；
+  // 牵牛与织女隔着一道虚线画的天河。浅色纸上画不出"亮"的夜空，就画成印在纸上的星图
+  const ring = (x, y, rad) => `M${n1(x + rad)} ${n1(y)}a${n1(rad)} ${n1(rad)} 0 1 0 ${n1(-rad * 2)} 0a${n1(rad)} ${n1(rad)} 0 1 0 ${n1(rad * 2)} 0Z`;
+  /** 星官：星的位置（第一颗是主星，画实心），以及按顺序连线的下标 */
+  const asterisms = [
+    // 北斗七星：斗魁四星加斗柄三星
+    { stars: [[232, 60], [264, 72], [292, 80], [320, 92], [326, 120], [362, 126], [368, 94]], path: [0, 1, 2, 3, 4, 5, 6, 3] },
+    // 织女：一颗亮星带着一个小小的平行四边形
+    { stars: [[118, 96], [132, 112], [146, 108], [140, 126], [126, 130]], path: [0, 1, 2, 3, 4, 1] },
+    // 牵牛：三颗排成一线
+    { stars: [[176, 232], [158, 244], [194, 220]], path: [1, 0, 2] },
+    // 心宿：三颗弯成一道弧
+    { stars: [[74, 300], [92, 312], [112, 318]], path: [0, 1, 2] },
+  ];
+  const lines = asterisms.map(({ stars: s, path }) => `M${path.map((i) => s[i].join(' ')).join('L')}`).join('');
+  const hollow = asterisms.flatMap(({ stars: s }) => s.slice(1).map(([x, y]) => ring(x, y, 2.2))).join('');
+  const solid = asterisms.map(({ stars: [[x, y]] }) => dot(x, y, 2.4)).join('');
+  // 天河：从右下往左上的两道细虚线，正好从牵牛与织女之间穿过
   write(
-    'masks/river.svg',
-    '星河的银河与北斗（b 层，贴在页面左上）：斜着的模糊光带、带里更密的星点、一组用细线连起的北斗七星。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css',
+    'masks/stars-chart.svg',
+    '星河的星图画法（浅色配色与墨白，b 层，贴在页面左上）：北斗、织女、牵牛、心宿几组星官画成小圆圈并用细线相连，牵牛与织女之间隔着一道虚线画的天河，像一页古星图。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css',
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
-<filter id="b" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="16"/></filter>
-<ellipse cx="200" cy="175" rx="250" ry="30" transform="rotate(-35 200 175)" fill-opacity="0.45" filter="url(#b)"/>
-<path fill-opacity="0.8" d="${dense.join('')}"/>
-<path d="${line}" fill="none" stroke="#000" stroke-width="0.6" stroke-opacity="0.5"/>
-<path d="${dipper.map(([x, y], i) => dot(x, y, i === 3 ? 1.5 : 2)).join('')}"/>
+<path d="${lines}" fill="none" stroke="#000" stroke-width="0.7" stroke-opacity="0.55"/>
+<path d="${hollow}" fill="none" stroke="#000" stroke-width="0.9"/>
+<path d="${solid}"/>
+<g fill="none" stroke="#000" stroke-width="0.7" stroke-opacity="0.45" stroke-dasharray="1.5 5" stroke-linecap="round">
+<path d="M330 330C270 250 230 190 110 60"/><path d="M356 300C300 226 262 168 150 42"/>
+</g>
+</svg>`,
+  );
+}
+
+/* ---------------- 星河的夜空画法（长夜）：真正的夜空 ---------------- */
+function nightSky() {
+  // a 层（平铺）：比浅色配色的星点密一倍，亮度分四档；几颗亮星带一圈柔光和四角星芒
+  const r = rng(4343);
+  const items = [];
+  for (const [x, y] of scatter(r, 150, 360, 360, 5, 15)) items.push([[0.25, 0.45, 0.7, 1][Math.floor(r() ** 1.6 * 4)], dot(x, y, 0.3 + r() ** 2.2 * 1.1)]);
+  const bright = scatter(r, 7, 360, 360, 14, 110);
+  write(
+    'masks/stars-night.svg',
+    '星河的夜空画法（长夜，a 层，平铺）：比浅色配色密一倍的星点，亮度分四档；几颗亮星带一圈柔光与四角星芒。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css',
+    `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360">
+<defs><radialGradient id="g"><stop offset="0" stop-opacity="0.34"/><stop offset="1" stop-opacity="0"/></radialGradient></defs>
+${bright.map(([x, y]) => `<circle cx="${f(x)}" cy="${f(y)}" r="7" fill="url(#g)"/>`).join('')}
+${grouped(items, (o) => `fill-opacity="${o}"`)}
+<path d="${bright.map(([x, y]) => sparkle(x, y, 3 + r() * 1.6)).join('')}"/>
+</svg>`,
+  );
+
+  // b 层（贴在页面左上）：一道斜着的银河。先在"顺着银河"的坐标里画（x 沿着银河、y 横穿银河），
+  // 最后整体转 -35° 放到页面左上。一层很宽的淡光，沿着芯排开七团更亮的星云；
+  // 再用噪声把光打散成一团一团的、浓淡不匀（真实的银河不是一道均匀的光带，只用椭圆画出来像一道光束），
+  // 两道被噪声扭弯的暗尘带把芯分开；带里撒着更密的细星。
+  // 遮罩的底是一道两头透明的渐变，银河在两端淡出，不会被图的边界切出一道直边（宽页面上图没铺满，边界落在纸中间）
+  const r2 = rng(89);
+  const clouds = [];
+  for (let i = 0; i < 7; i++) {
+    const x = -180 + i * 60 + (r2() - 0.5) * 24;
+    clouds.push(`<ellipse cx="${f(x)}" cy="${f((r2() - 0.5) * 12)}" rx="${f(30 + r2() * 28)}" ry="${f(10 + r2() * 8)}" fill-opacity="${f(0.6 + r2() * 0.4)}"/>`);
+  }
+  const dense = [];
+  for (let i = 0; i < 130; i++) {
+    // 两个随机数取平均：细星往银河中段聚；三个随机数相加：横向往芯上聚
+    const x = ((r2() + r2()) / 2 - 0.5) * 420;
+    const y = (r2() + r2() + r2() - 1.5) * 22;
+    dense.push(dot(x, y, 0.3 + r2() ** 2 * 0.8));
+  }
+  write(
+    'masks/river-night.svg',
+    '星河的银河（长夜，b 层，贴在页面左上）：很宽的一层淡光与沿着芯排开的几团星云，用噪声打散成浓淡不匀的一团团光，两道弯曲的暗尘带把芯分开，带里撒着更密的细星；两端淡出。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css',
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 440">
+<defs>
+<linearGradient id="t" gradientUnits="userSpaceOnUse" x1="-240" x2="240"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.25" stop-color="#fff"/><stop offset="0.72" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<filter id="w" x="-30%" y="-120%" width="160%" height="340%"><feGaussianBlur stdDeviation="26"/></filter>
+<filter id="c" x="-40%" y="-200%" width="180%" height="500%"><feGaussianBlur stdDeviation="11"/></filter>
+<filter id="n" x="-25%" y="-250%" width="150%" height="600%"><feTurbulence type="fractalNoise" baseFrequency="0.009 0.03" numOctaves="3" seed="11"/><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2.8 0 0 0 -0.9"/><feComposite in="SourceGraphic" operator="arithmetic" k1="0.8" k2="0.3"/><feComponentTransfer><feFuncA type="linear" slope="2"/></feComponentTransfer></filter>
+<filter id="d" x="-20%" y="-400%" width="140%" height="900%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="5"/><feDisplacementMap in="SourceGraphic" scale="20" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation="3.4"/></filter>
+<mask id="m" maskUnits="userSpaceOnUse" x="-360" y="-200" width="720" height="400"><rect x="-360" y="-200" width="720" height="400" fill="url(#t)"/><g filter="url(#d)" fill="none" stroke="#000" stroke-linecap="round"><path d="M-170 3C-110 -4 -60 9 0 2S110 -7 180 4" stroke-width="8" stroke-opacity="0.85"/><path d="M-50 -9C-10 -14 40 -6 100 -12" stroke-width="3.5" stroke-opacity="0.6"/></g></mask>
+</defs>
+<g transform="translate(190 185) rotate(-35)">
+<g mask="url(#m)"><g filter="url(#n)"><ellipse rx="250" ry="56" fill-opacity="0.55" filter="url(#w)"/><g filter="url(#c)">${clouds.join('')}</g></g></g>
+<path fill-opacity="0.9" d="${dense.join('')}"/>
+</g>
 </svg>`,
   );
 }
@@ -405,6 +510,7 @@ flecks();
 petals();
 tree();
 stars();
+nightSky();
 paws();
 wisteria();
 bubbles();

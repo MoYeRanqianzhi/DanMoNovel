@@ -14,7 +14,12 @@
  *
  * 颜色表（本文件后半部分）：每套配色为每种纸各自指定颜色，而不是用一种灰色纹理去叠所有纸色——
  * 用户要求"每种颜色与背景搭配有独特显示效果（避免自动合成导致颜色和背景合成不协调）"。
+ * 树影、月色、星河还按配色分组换画法（--*-art）：浅色的几套共用一种，墨白、长夜各有自己的一种——
+ * 用户要求不能所有配色都配同一种背景设计，深色纸上尤其不能只把颜色换浅了事（比纸更暗的影子在深色纸上根本看不见）。
  * 新增主题时，这里也要补上一整组变量；改了颜色要跑 `pnpm check:contrast`。
+ *
+ * masks/ 下的 SVG 注释里不能写两个连着的连字符（XML 不允许）：写了的话浏览器整张图解码失败，
+ * 纹理直接不显示，控制台也不报错。所以注释里提到 CSS 变量时不写变量名。
  * ============================================================ */
 
 .paper-tex {
@@ -92,39 +97,47 @@
   --tex-b-size: calc(400px * var(--paper-scale, 1));
 }
 
-/* 树影：窗外一枝树的影子，从右上角斜着落进来（只画一幅，不平铺） */
+/* 树影：窗外一枝树从右上角斜着落进来（只画一幅，不平铺）。三种画法，颜色表里按配色选（--tree-art）：
+ * 日影（浅色配色，默认）：模糊的影子；墨枝（墨白）：清楚的水墨枝叶，分浓淡；
+ * 月下枝影（长夜）：深色纸上画不出比纸更暗的影子，改画一片月光，枝叶是月光里留出的暗影 */
 .paper-tex[data-paper='tree'],
 :root[data-paper='tree'] .paper-tex:not([data-paper]) {
   --tex-a: var(--tree);
-  --tex-a-mask: url('./masks/tree.svg');
+  --tex-a-mask: var(--tree-art);
   --tex-a-pos: 100% 0%;
   --tex-a-size: min(110%, 520px) auto;
   --tex-a-repeat: no-repeat;
 }
 
-/* 月色：a 层右上角的一轮月亮与月晕，b 层几缕从月前掠过的薄云（颜色接近纸色，把月亮遮去一截） */
+/* 月色：三种画法，颜色表里按配色选（--moon-art、--moon-cloud-art）：
+ * 淡月（浅色配色，默认）：a 层右上角一轮淡淡的月亮与月晕，b 层几缕接近纸色的薄云从月前掠过，遮去月亮一截；
+ * 烘云托月（墨白）：a 层是月亮四周晕开的淡墨云，月亮本身留白；没有 b 层（--moon-cloud 为 transparent）；
+ * 夜月（长夜）：a 层是更亮的月、月晕与月旁几颗星，b 层是纸色的云横过月面，只在挡住月光的地方看得见 */
 .paper-tex[data-paper='moon'],
 :root[data-paper='moon'] .paper-tex:not([data-paper]) {
   --tex-a: var(--moon);
-  --tex-a-mask: url('./masks/moon.svg');
+  --tex-a-mask: var(--moon-art);
   --tex-a-pos: 100% 0%;
   --tex-a-size: min(84%, 360px) auto;
   --tex-a-repeat: no-repeat;
   --tex-b: var(--moon-cloud);
-  --tex-b-mask: url('./masks/moon-cloud.svg');
+  --tex-b-mask: var(--moon-cloud-art);
   --tex-b-pos: 100% 0%;
   --tex-b-size: min(84%, 360px) auto;
   --tex-b-repeat: no-repeat;
 }
 
-/* 星河：a 层满页平铺的细碎星点，b 层左上方一道银河与一组北斗 */
+/* 星河：a 层满页平铺的星点，b 层贴在左上。两种画法，颜色表里按配色选（--star-art、--star-river-art）：
+ * 星图（浅色配色与墨白，默认）：浅色纸上画不出"亮"的夜空，画成一页古星图——细碎的星点，
+ *   b 层是几组用细线连起的星官（北斗、织女、牵牛、心宿），牵牛与织女之间隔着一道虚线的天河；
+ * 夜空（长夜）：更密、分四档亮度的星，几颗亮星带柔光与星芒，b 层是一道带暗尘带的银河 */
 .paper-tex[data-paper='stars'],
 :root[data-paper='stars'] .paper-tex:not([data-paper]) {
   --tex-a: var(--star);
-  --tex-a-mask: url('./masks/stars.svg');
+  --tex-a-mask: var(--star-art);
   --tex-a-size: calc(360px * var(--paper-scale, 1));
   --tex-b: var(--star-river);
-  --tex-b-mask: url('./masks/river.svg');
+  --tex-b-mask: var(--star-river-art);
   --tex-b-pos: 0% 0%;
   --tex-b-size: min(100%, 520px) auto;
   --tex-b-repeat: no-repeat;
@@ -153,13 +166,27 @@
  *   --gold-1 / -2 / -3           金箔的暗部、亮部、另一侧暗部：每套配色一种金属色
  *   --floral                     花笺的角花：图、位置与大小（background 简写）
  *   --petal / --petal-heart      落英的花瓣与花心：每套配色一种花色（薛涛笺桃粉、豆青梨花白、缃叶桂花金、墨白红梅……）
- *   --tree                       树影的影子色（长夜是月光下更深的影子）
- *   --moon / --moon-cloud        月色的月亮（含月晕）与薄云；云取接近纸色的一种，从月前经过时遮去月亮
- *   --star / --star-river        星河的星点与银河；浅色纸上像一张淡淡的星图，长夜上才是真正的夜空
+ *   --tree                       树影：日影与墨枝是影子的颜色；长夜的月下枝影是月光的颜色（枝叶是月光里留出的暗处）
+ *   --moon / --moon-cloud        月色的月亮（含月晕）与云；云取纸色或接近纸色的一种，从月前经过时遮去月亮。
+ *                                墨白的烘云托月里 --moon 是墨云的颜色，没有云这一层
+ *   --star / --star-river        星河的星点与 b 层：星图画法里是星官、连线与虚线的天河，长夜的夜空画法里是银河
  *   --paw / --paw-bean           猫爪的掌垫与脚趾肉垫（多数配色配粉色肉垫；墨白是蘸了墨的猫爪）
+ *   --tree-art 等 --*-art        树影、月色、星河用哪种画法（masks/ 下的图，见上面的纹理规则）。
+ *                                先给每套配色写上默认画法，墨白、长夜在自己的块里换
  * 角花的位置用百分比，页面与面板里的小预览都按比例落在同一个角上；
  * 大小封顶，电脑端的宽页面上不至于大得喧宾夺主。
  * ============================================================ */
+
+/* 默认画法（浅色的几套配色）。每个带 data-theme 的元素都重置一遍：设置里的配色圆点、Lab 的矩阵
+ * 是嵌在当前配色里的另一套配色，不重置就会继承外层换过的画法（长夜下看薛涛笺的圆点，树影成了月下枝影）。
+ * 必须写在各配色的块之前：两个选择器优先级相同，靠先后顺序让配色自己的块覆盖这里 */
+[data-theme] {
+  --tree-art: url('./masks/tree.svg');
+  --moon-art: url('./masks/moon.svg');
+  --moon-cloud-art: url('./masks/moon-cloud.svg');
+  --star-art: url('./masks/stars.svg');
+  --star-river-art: url('./masks/stars-chart.svg');
+}
 
 /* 薛涛笺：豆沙色的纹理；洒金用玫瑰金；花笺是一枝花（薛涛笺用芙蓉花汁染成） */
 [data-theme='xuetao'] {
@@ -178,31 +205,38 @@
   --moon: rgb(232 170 150 / 0.2);
   --moon-cloud: rgb(255 250 250 / 0.8);
   --star: rgb(196 120 130 / 0.5);
-  --star-river: rgb(208 120 140 / 0.14);
+  --star-river: rgb(190 110 124 / 0.5);
   --paw: rgb(150 96 108 / 0.17);
   --paw-bean: rgb(232 120 150 / 0.3);
 }
 
-/* 长夜：深色纸上的纹理用浅色，丝绢的经纬反而用更深的暗色；洒金是淡金，像夜空里的星子；花笺是新月 */
+/* 长夜：深色纸上的纹理用浅色，丝绢的经纬反而用更深的暗色；洒金是淡金，像夜空里的星子；花笺是新月。
+ * 树影、月色、星河换成夜里的画法：比纸更暗的影子在深色纸上看不见，树影改画月光里留出的枝影；
+ * 月亮更亮，云是纸色，只在挡住月光的地方看得见；星河是真正的夜空与银河 */
 [data-theme='changye'] {
+  --tree-art: url('./masks/tree-night.svg');
+  --moon-art: url('./masks/moon-night.svg');
+  --moon-cloud-art: url('./masks/moon-night-cloud.svg');
+  --star-art: url('./masks/stars-night.svg');
+  --star-river-art: url('./masks/river-night.svg');
   --xuan-speck: rgb(236 222 232 / 0.12);
   --xuan-fiber: rgb(210 190 205 / 0.07);
   --silk-thread: rgb(0 0 0 / 0.22);
-  --silk-sheen: rgb(236 222 232 / 0.028);
+  --silk-sheen: rgb(236 222 232 / 0.06);
   --gold-speck: rgb(236 222 232 / 0.06);
   --gold-1: rgb(184 158 100 / 0.34);
   --gold-2: rgb(233 214 160 / 0.26);
   --gold-3: rgb(160 134 84 / 0.4);
   --floral: url('./motifs/changye.svg') no-repeat 108% -4% / min(62%, 260px) auto;
-  --petal: rgb(236 214 226 / 0.1);
-  --petal-heart: rgb(233 214 160 / 0.16);
-  --tree: rgb(0 0 0 / 0.3);
-  --moon: rgb(233 222 190 / 0.14);
-  --moon-cloud: rgb(28 25 33 / 0.85);
+  --petal: rgb(236 214 226 / 0.16);
+  --petal-heart: rgb(233 214 160 / 0.24);
+  --tree: rgb(214 206 238 / 0.15);
+  --moon: rgb(240 232 206 / 0.26);
+  --moon-cloud: rgb(28 25 33 / 0.92);
   --star: rgb(240 230 200 / 0.38);
-  --star-river: rgb(220 210 235 / 0.08);
-  --paw: rgb(236 222 232 / 0.08);
-  --paw-bean: rgb(232 150 170 / 0.15);
+  --star-river: rgb(220 210 235 / 0.13);
+  --paw: rgb(236 222 232 / 0.12);
+  --paw-bean: rgb(232 150 170 / 0.24);
 }
 
 /* 豆青：偏灰的深绿纹理；洒金用哑光的淡金（绿地配金是传统的搭配）；花笺是竹 */
@@ -222,7 +256,7 @@
   --moon: rgb(252 254 246 / 0.7);
   --moon-cloud: rgb(160 190 150 / 0.22);
   --star: rgb(90 120 80 / 0.42);
-  --star-river: rgb(80 120 80 / 0.1);
+  --star-river: rgb(80 112 76 / 0.44);
   --paw: rgb(62 92 64 / 0.14);
   --paw-bean: rgb(62 92 64 / 0.2);
 }
@@ -244,7 +278,7 @@
   --moon: rgb(236 190 110 / 0.24);
   --moon-cloud: rgb(250 244 232 / 0.8);
   --star: rgb(176 130 60 / 0.48);
-  --star-river: rgb(190 140 70 / 0.13);
+  --star-river: rgb(166 120 56 / 0.48);
   --paw: rgb(140 100 56 / 0.17);
   --paw-bean: rgb(206 126 96 / 0.26);
 }
@@ -266,7 +300,7 @@
   --moon: rgb(170 200 215 / 0.24);
   --moon-cloud: rgb(255 255 255 / 0.85);
   --star: rgb(90 130 150 / 0.42);
-  --star-river: rgb(100 150 175 / 0.11);
+  --star-river: rgb(80 120 142 / 0.44);
   --paw: rgb(60 96 116 / 0.13);
   --paw-bean: rgb(222 140 150 / 0.26);
 }
@@ -288,7 +322,7 @@
   --moon: rgb(210 196 235 / 0.32);
   --moon-cloud: rgb(255 255 255 / 0.8);
   --star: rgb(140 110 190 / 0.42);
-  --star-river: rgb(150 120 200 / 0.11);
+  --star-river: rgb(128 100 180 / 0.44);
   --paw: rgb(96 78 140 / 0.14);
   --paw-bean: rgb(220 140 180 / 0.28);
 }
@@ -310,13 +344,16 @@
   --moon: rgb(200 236 226 / 0.5);
   --moon-cloud: rgb(255 255 255 / 0.85);
   --star: rgb(70 150 130 / 0.42);
-  --star-river: rgb(80 170 150 / 0.11);
+  --star-river: rgb(60 136 118 / 0.44);
   --paw: rgb(46 104 90 / 0.13);
   --paw-bean: rgb(219 95 122 / 0.22);
 }
 
-/* 墨白：墨灰纹理；洒金用传统洒金宣的正金色；花笺是页脚的一带远山（横贯页面，所以按宽度铺） */
+/* 墨白：墨灰纹理；洒金用传统洒金宣的正金色；花笺是页脚的一带远山（横贯页面，所以按宽度铺）。
+ * 树影画成边缘清楚、分浓淡的墨枝；月色是"烘云托月"，月亮不着墨，只在四周晕几团淡墨云 */
 [data-theme='mobai'] {
+  --tree-art: url('./masks/tree-ink.svg');
+  --moon-art: url('./masks/moon-ink.svg');
   --xuan-speck: rgb(40 40 46 / 0.24);
   --xuan-fiber: rgb(64 64 70 / 0.14);
   --silk-thread: rgb(40 40 46 / 0.08);
@@ -328,11 +365,11 @@
   --floral: url('./motifs/mobai.svg') no-repeat 50% 100% / min(100%, 760px) auto;
   --petal: rgb(190 50 60 / 0.2);
   --petal-heart: rgb(120 30 40 / 0.3);
-  --tree: rgb(30 30 36 / 0.085);
-  --moon: rgb(255 255 255 / 0.85);
-  --moon-cloud: rgb(40 40 46 / 0.09);
+  --tree: rgb(30 30 36 / 0.11);
+  --moon: rgb(40 40 46 / 0.13);
+  --moon-cloud: transparent;
   --star: rgb(40 40 46 / 0.36);
-  --star-river: rgb(40 40 46 / 0.07);
+  --star-river: rgb(40 40 46 / 0.4);
   --paw: rgb(35 36 42 / 0.16);
   --paw-bean: rgb(35 36 42 / 0.2);
 }

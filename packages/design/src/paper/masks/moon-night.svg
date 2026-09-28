@@ -1,0 +1,29 @@
+<!-- 月色的夜月画法（长夜，a 层，贴在页面右上）：一轮更亮的满月（月面上几块淡的"月海"）、一圈月晕，以及月旁几颗星。月晕在图里最浓只到 0.45，这一层的颜色（papers.css 里月色的颜色变量）按月面封顶，所以月晕叠上去最多只有月面的一半亮。只作遮罩 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  <defs>
+    <radialGradient id="h" gradientUnits="userSpaceOnUse" cx="236" cy="84" r="150">
+      <stop offset="0.25" stop-opacity="0.45"/>
+      <stop offset="0.5" stop-opacity="0.15"/>
+      <stop offset="1" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="320" height="320">
+      <rect width="320" height="320" fill="#fff"/>
+      <g fill="#000" fill-opacity="0.2">
+        <ellipse cx="224" cy="76" rx="12" ry="9"/>
+        <ellipse cx="246" cy="92" rx="8" ry="11"/>
+        <ellipse cx="230" cy="102" rx="6" ry="4"/>
+      </g>
+    </mask>
+  </defs>
+  <circle cx="236" cy="84" r="150" fill="url(#h)"/>
+  <circle cx="236" cy="84" r="38" mask="url(#m)"/>
+  <g fill-opacity="0.9">
+    <circle cx="64" cy="46" r="1.5"/>
+    <circle cx="118" cy="22" r="1.1"/>
+    <circle cx="96" cy="150" r="1.3"/>
+    <circle cx="36" cy="196" r="1"/>
+    <circle cx="168" cy="236" r="1.2"/>
+    <circle cx="292" cy="218" r="1"/>
+  </g>
+  <path d="M140 118Q140.4 121.6 144 122Q140.4 122.4 140 126Q139.6 122.4 136 122Q139.6 121.6 140 118Z"/>
+</svg>

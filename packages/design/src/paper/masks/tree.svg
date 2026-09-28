@@ -1,4 +1,4 @@
-<!-- 树影：窗外一枝树从右上角伸进来，投在纸上的影子；枝叶整体模糊，边缘柔和，像隔着一段距离的影子。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css -->
+<!-- 树影的日影画法（浅色配色）：窗外一枝树从右上角伸进来，投在纸上的影子；枝叶整体模糊，边缘柔和，像隔着一段距离的影子。由 scripts/gen-paper-art.mjs 生成，只作遮罩，颜色见 papers.css -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 600">
 <filter id="b" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="2.6"/></filter>
 <g filter="url(#b)" opacity="0.9">

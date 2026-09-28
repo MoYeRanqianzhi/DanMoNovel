@@ -10,9 +10,12 @@
  *    对 src/paper/papers.css 里每套配色的每个纹理颜色（rgb(… / 透明度)），按"遮罩最浓处"
  *    把它叠到 --reader-paper 上，再算 --reader-ink 与叠出来的颜色的对比度；
  *    花笺的角花（src/paper/motifs/*.svg）取图里的每种颜色与最大的不透明度，同样叠上去算。
- *    阈值按图案的大小分三档：大面积落在正文后面的层（月亮、月晕与云、树影、银河、丝绢光泽、角花）
- *    按正文标准 7；十几个像素的小图案（金箔、花瓣、脚印）会压住半个字，按 4.5；
- *    一两个像素的细点细线（纸浆细点、纤维、经纬、星点）落在笔画上只影响一两个像素，按 3。
+ *    阈值按图案的大小分三档：大面积落在正文后面的层（树影、月色的云、银河、丝绢光泽、角花）
+ *    按正文标准 7；十几个像素的小图案与一轮小小的月亮（金箔、花瓣、脚印、月面）只压住几个字，按 4.5
+ *    （月晕在图里最浓只到月面的一半，叠上去按 7 也够）；一两个像素的细点细线（纸浆细点、纤维、经纬、
+ *    星点、星图的连线）落在笔画上只影响一两个像素，按 3。
+ *    树影、月色、星河有几种画法（颜色表里的 --*-art），同一个颜色变量换了画法，图案大小也跟着变，
+ *    所以按这套配色实际用的画法定档：比如 --star-river 在长夜是一大片银河（7），在别的配色是星图的细线（3）。
  * 低于阈值的组合会以 ✗ 标出，并让进程以非零码退出（便于将来接入 CI）。
  */
 import { readdirSync, readFileSync } from 'node:fs';
@@ -85,15 +88,24 @@ const toHex = (rgb) => '#' + rgb.map((c) => Math.round(c).toString(16).padStart(
 const over = (fg, a, bg) => fg.map((c, i) => c * a + bg[i] * (1 - a));
 
 /** 纹理层的阈值按图案大小分档（见文件头部） */
-const AREA = new Set(['--silk-sheen', '--tree', '--moon', '--moon-cloud', '--star-river']);
+const AREA = new Set(['--silk-sheen', '--tree', '--moon-cloud', '--star-river']);
 const FINE = new Set(['--xuan-speck', '--xuan-fiber', '--silk-thread', '--gold-speck', '--star']);
-const minFor = (name) => (AREA.has(name) || name.startsWith('花笺') ? 7 : FINE.has(name) ? 3 : 4.5);
+/** 与上面默认分档不同的画法（键是 masks/ 下的文件名）：星图是细线与小圆圈，烘云托月是大片的墨云 */
+const ART_TIER = { 'stars-chart.svg': 3, 'moon-ink.svg': 7 };
+const minFor = (name, arts) =>
+  ART_TIER[arts[`${name}-art`]] ?? (AREA.has(name) || name.startsWith('花笺') ? 7 : FINE.has(name) ? 3 : 4.5);
 
 const papersCss = readFileSync(join(here, '../src/paper/papers.css'), 'utf8');
+/** 块里选的画法：{ '--tree-art': 'tree-night.svg', … } */
+const artsIn = (text) =>
+  Object.fromEntries([...text.matchAll(/(--[a-z-]+-art):\s*url\('\.\/masks\/([a-z-]+\.svg)'\)/g)].map(([, k, v]) => [k, v]));
+// 默认画法写在颜色表开头的 [data-theme] { … } 里，配色自己的块可以换
+const defaultArts = artsIn(papersCss.match(/\[data-theme\]\s*\{([^}]*)\}/)?.[1] ?? '');
 const motifDir = join(here, '../src/paper/motifs');
 console.log('\n\n阅读纸张（纹理叠在阅读纸上最浓处，正文 --reader-ink 的对比度）');
 for (const [, id, body] of papersCss.matchAll(blockRe)) {
   const { '--reader-paper': paper, '--reader-ink': ink } = themeVars[id] ?? {};
+  const arts = { ...defaultArts, ...artsIn(body) };
   if (!paper || !ink) {
     console.log(`  ? [${id}] themes.css 里缺少阅读纸色或正文色`);
     failed++;
@@ -112,7 +124,7 @@ for (const [, id, body] of papersCss.matchAll(blockRe)) {
   let worst = null;
   let bad = 0;
   for (const [name, rgb, a] of layers) {
-    const min = minFor(name);
+    const min = minFor(name, arts);
     const ratio = contrast(ink, toHex(over(rgb, a, hexRgb(paper))));
     if (ratio < min) {
       bad++;

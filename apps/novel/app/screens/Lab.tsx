@@ -197,7 +197,10 @@ export function LabScreen({ screen }: ScreenProps<undefined>) {
       {/* 放在上面的双栏网格之外：宽屏上预览吸顶，吸在那个网格里，矩阵放进去会和它叠在一起 */}
       <div className="page lab-body lab-body--wide">
         <Block title="阅读纸张">
-          <p className="lab-note">每一行是一套配色，每一格是一种纸；纹理的颜色按配色逐格指定，不是同一张纹理叠在不同的纸色上。</p>
+          <p className="lab-note">
+            每一行是一套配色，每一格是一种纸；纹理的颜色按配色逐格指定，不是同一张纹理叠在不同的纸色上。
+            树影、月色、星河还分几种画法：浅色的几套共用一种，墨白、长夜各有自己的一种。
+          </p>
           <div className="lab-papers">
             {THEMES.map((t) => (
               <div key={t.id} className="lab-papers__row">

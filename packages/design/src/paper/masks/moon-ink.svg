@@ -1,0 +1,24 @@
+<!-- 月色的烘云托月画法（墨白，a 层，贴在页面右上）：国画里"烘云托月"的画法，月亮本身不着墨，只在四周晕染几团淡墨的云，把一轮留白的月亮衬出来。云的边缘用噪声扰动过，像墨在宣纸上化开。只作遮罩，颜色见 papers.css（月色的颜色变量） -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  <defs>
+    <filter id="w" x="-30%" y="-30%" width="160%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="34" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+    <filter id="e" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.8"/></filter>
+    <mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="320" height="320">
+      <rect width="320" height="320" fill="#fff"/>
+      <circle cx="210" cy="112" r="44" filter="url(#e)"/>
+    </mask>
+  </defs>
+  <g mask="url(#m)">
+    <g filter="url(#w)">
+      <ellipse cx="150" cy="124" rx="118" ry="42" fill-opacity="0.8"/>
+      <ellipse cx="266" cy="144" rx="68" ry="38" fill-opacity="0.7"/>
+      <ellipse cx="212" cy="62" rx="104" ry="32" fill-opacity="0.6"/>
+      <ellipse cx="116" cy="72" rx="66" ry="24" fill-opacity="0.45"/>
+      <ellipse cx="244" cy="194" rx="86" ry="28" fill-opacity="0.45"/>
+    </g>
+  </g>
+</svg>
