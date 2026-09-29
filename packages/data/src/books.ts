@@ -56,6 +56,74 @@ export interface CoverPalette {
   bandInk?: string;
 }
 
+/* ---------------- 封面、书脊、封底 ---------------- */
+
+/**
+ * 三个面的像素规格。上传的图片经过裁剪器后，一律转成这个尺寸的 PNG（无损），
+ * 各处显示、审核、导出都按同一个尺寸处理，不会因为作者传来的图片大小不一而出错。
+ * 比例与 3D 书本一致：高 = 宽 × 1.42；书脊按最厚的书定宽 = 宽 × 0.26（见 thicknessRatio 的上限）。
+ * 薄书的书脊只露出中间的一段，最薄的书（厚度比 0.07）只露出中间 SPINE_SAFE_PX 宽，
+ * 书脊图片上的字要放在这一段里（裁剪器会画出这条安全区）。
+ * 800 宽足够清晰：最大的显示是详情页与开书推进，约 355 CSS 像素，二倍屏上 710 像素。
+ */
+export const COVER_PX = { width: 800, height: 1136 } as const;
+export const SPINE_PX = { width: 208, height: 1136 } as const;
+export const BACK_PX = { width: 800, height: 1136 } as const;
+export const SPINE_SAFE_PX = 56;
+
+/** 合成封面的书名字体：宋（思源宋体粗）、楷（霞鹜文楷）、行（马善政毛笔楷）、薇（站酷小薇）、仿（朱雀仿宋）、黑（思源黑体） */
+export type TitleFont = 'song' | 'kai' | 'brush' | 'xiaowei' | 'fangsong' | 'hei';
+
+/**
+ * 合成书脊的样式：
+ * - palette 配色：跟着合成封面的配色（合成封面的缺省）
+ * - edge 取色：上传封面最左一列的颜色，书脊像是封面的延续（上传封面的缺省）
+ * - main 主色：上传封面的主色
+ * - paper 素纸：米白的纸，墨色的字
+ * - ink 墨色：近黑的底，米白的字
+ */
+export type SpineStyle = 'palette' | 'edge' | 'main' | 'paper' | 'ink';
+
+/**
+ * 合成封底的样式：
+ * - palette 配色：跟着合成封面的配色与纹样（合成封面的缺省）
+ * - main 主色：上传封面的主色铺满（上传封面的缺省）
+ * - extend 延续：把上传的封面放大、虚化后铺满，像同一幅画绕到了背面
+ * - paper 素纸
+ */
+export type BackStyle = 'palette' | 'main' | 'extend' | 'paper';
+
+/** 封面上的点缀（小元素）：作者的闲章、一轮月、几片花瓣、几点星光；位置避开书名 */
+export type Ornament = 'none' | 'seal' | 'moon' | 'petals' | 'sparkles';
+
+/** 合成的正面：配色、纹样、装帧与腰封文案取自 Book 本身，这里是封面制作器另外的几项 */
+export interface VectorFront {
+  kind: 'vector';
+  font: TitleFont;
+  /** 书名竖排或横排（只对现代装帧有效；线装的书名写在题签上，总是竖排） */
+  layout: 'vertical' | 'horizontal';
+  /** 现代装帧是否有腰封 */
+  band: boolean;
+  ornament: Ornament;
+}
+
+/** 上传的正面：图片与上传时取好的两种颜色 */
+export interface ImageFront {
+  kind: 'image';
+  src: string;
+  /** 最左一列的平均色：书脊"取色"用 */
+  edge: string;
+  /** 整张的主色：书脊、封底"主色"用 */
+  main: string;
+}
+
+export interface CoverDesign {
+  front: VectorFront | ImageFront;
+  /** 合成的书脊：样式与书名字体（缺省跟封面） */
+  spine: { kind: 'auto'; style: SpineStyle; font?: TitleFont } | { kind: 'image'; src: string };
+  back: { kind: 'auto'; style: BackStyle } | { kind: 'image'; src: string };
+}
+
 /** 一本书的元信息 */
 export interface Book {
   /** 书号（DMBN）：16 位数字的字符串，唯一且不可变，本身不含任何信息（见文件开头） */
@@ -83,6 +151,30 @@ export interface Book {
   trend: number;
   /** 上架日期（YYYY-MM-DD），"新书上架"按它排序 */
   added: string;
+  /** 封面、书脊、封底的设计；缺省是平台合成的一套（designOf 给出缺省值） */
+  design?: CoverDesign;
+}
+
+/** 合成封面的缺省设置：线装用毛笔字、左下钤作者的闲章；现代用宋体、竖排书名、带腰封 */
+export function defaultFront(binding: Binding): VectorFront {
+  return {
+    kind: 'vector',
+    font: binding === 'thread' ? 'brush' : 'song',
+    layout: 'vertical',
+    band: true,
+    ornament: binding === 'thread' ? 'seal' : 'none',
+  };
+}
+
+/** 一本书的封面设计：作者没有改过时，是按装帧给出的平台合成封面 */
+export function designOf(book: Book): CoverDesign {
+  return (
+    book.design ?? {
+      front: defaultFront(book.binding),
+      spine: { kind: 'auto', style: 'palette' },
+      back: { kind: 'auto', style: 'palette' },
+    }
+  );
 }
 
 export const BOOKS: Book[] = [
