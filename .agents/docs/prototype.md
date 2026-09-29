@@ -1,7 +1,7 @@
 # 三站前端原型实现说明（面向代理）
 
 > 记录 UI 原型的实现细节与不显而易见的决定，后续代理不必通读源码就能接着开发。
-> 状态以 2026-09-29 的背景画法分组提交为准（React Router v8 的 pnpm workspace，三站结构）。继续工作前，用 `git log` 与当前文件核对，本文可能已经落后。
+> 状态以 2026-09-29 的作者站写作页提交为准（React Router v8 的 pnpm workspace，三站结构）。继续工作前，用 `git log` 与当前文件核对，本文可能已经落后。
 > 设计方向与已定决策见 ../MEMORY.md，待办见 ../TODO.md，当前计划与进度见 ../plan/。
 
 ## 1. 概况
@@ -19,6 +19,7 @@
   - `pnpm --filter @danmo/novel start`：跑小说站的生产服务，端口由 `PORT` 决定。
   - `pnpm check:contrast`：8 套主题的对比度校验，含阅读纸张叠到纸色上之后的正文对比度（第 10 节"背景"）。
   - `pnpm gen:paper`：重新生成阅读纸张里由程序画的图案。随机种子固定，重跑结果不变。
+  - `python packages/design/scripts/gen-grid-font.py`：重新生成方格稿纸的补字字体（第 14 节；需要 Python 3、fontTools、brotli）。
 - **许可**：AGPL-3.0-only（见 license 记忆）。新依赖必须与之兼容。
 
 ## 2. 目录与职责
@@ -33,6 +34,8 @@ packages/data/src/
   api.ts        模拟服务端（正式版换成请求 Go 接口，签名不变）：fetchChapter、chapterAccess、FREE_CHAPTERS；
                 试读开头 chapterLead 与预览 fetchPreview；字数与价格；书币余额与充值；自动订阅开关；subscribeChapters
   posts.ts      发现页的示例帖子 POSTS、帖子类别 POST_KINDS、formatPostTime
+  author.ts     作者站的示例数据（第 13 节）：AUTHOR、WORKS、volumesOf、MESSAGES、LETTERS、statsOf、FANS、REVIEWS（朱批）、今日字数
+  manuscripts.ts 写作页与审核页的示例稿件：manuscriptOf、wordCount、draftWords、hasDraft
 packages/design/src/
   styles/       index.ts（按顺序引入字体与 tokens → themes → base → transitions → layout）、tokens.css（@property 注册）、
                 themes.css（8 套主题）、base.css、transitions.css（墨晕与页面进出场）、layout.css（.app/.stage/.screen、版心、按钮）
@@ -41,7 +44,9 @@ packages/design/src/
                 BookLoader.tsx + loader.css、gestures.ts（useTilt、useSpin）
   flight/       FlightContext.tsx（飞行引擎与 BookSlot）、timing.ts、flight.css
   shell/        stack.tsx（页面栈，第 4 节）、nav.tsx + nav.css（TabBar、SideRail、RailLink）、not-found.tsx（notFoundHandle）
-  components/   ui.tsx（IconButton/ThreadProgress/TagMark/Seal/PairLine/Segmented/Logo）、overlays.tsx（Sheet、Toast）、ErrorPage.tsx
+  components/   ui.tsx（IconButton/ThreadProgress/TagMark/Seal/PairLine/Segmented/Logo）、overlays.tsx（Sheet、Toast）、ErrorPage.tsx、
+                Stamp.tsx + stamp.css（盖章：落下与印泥洇开，still 直接显示盖好的样子）
+  manuscript/   稿纸（第 14 节）：Manuscript.tsx + manuscript.css、danmo-grid.woff2（方格补字字体）与 danmo-grid-OFL.txt
   lib/          util.ts（cls、seededRandom、clamp、lerp）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts
   fonts/        catalog.ts（平台字体目录、系统字体、字体 id 与字体栈）、imported.ts（导入字体：IndexedDB 与 FontFace）、
                 client.ts（模拟客户端的字体下载）、FontList.tsx + font-list.css（字体列表）、sfnt.ts（格式识别、读字体名、拆合集）
@@ -50,6 +55,7 @@ packages/design/src/
 packages/design/scripts/
   check-contrast.mjs   对比度校验（pnpm check:contrast）
   gen-paper-art.mjs    程序画的纸张图案（pnpm gen:paper）
+  gen-grid-font.py     方格稿纸的补字字体 Danmo Grid（第 14 节）
 apps/novel/app/        小说站（SSR）
   root.tsx      整份 HTML、全局样式、Provider、出错页与出错页标题
   routes.ts     路由表（第 3 节）
@@ -59,8 +65,10 @@ apps/novel/app/        小说站（SSR）
   reader/       阅读器（第 10 节）
   http.ts       缓存头、站名、pageTitle、NOT_FOUND_META
   seo.ts        NOVEL_ORIGIN（环境变量 VITE_NOVEL_ORIGIN，默认 http://localhost:5173）、canonical()
-  novel.css     小说站共用样式（章节列表）
-apps/author/app/       作者站（SSR）：首页 /、书房 /desk、404；页面还是占位
+  novel.css     小说站共用样式（章节列表的锁；.toc-list 本身在 layout.css）
+apps/author/app/       作者站（SSR，第 13 节）：首页 /（占位）、书房 /desk、写作 /write/:bookId/:chapter?、404
+  screens/      Desk.tsx；components/ 砚台 Inkstone、月相 moon.ts、墨迹日历 InkCalendar、信笺 LetterCard
+  write/        写作页：Write.tsx（页面与 loadWrite）、Outline.tsx（目录）、panels.tsx（发布、选纸）、drafts.ts（本机副本）、paper.ts（稿纸偏好）
 apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false）：总览 /、404；页面还是占位
 ```
 
@@ -216,6 +224,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 |---|---|---|
 | 页面 | 无（DOM 顺序） | .screen |
 | 二级页顶栏、详情操作栏 | 5 | layout.css .subbar、detail.css |
+| 写作页顶栏 | 10 | write.css .write-bar（稿纸里的印是 2、浮签是 3，只在稿纸内部叠放） |
 | 阅读器工具栏 | 6 | reader.css .rd-bar |
 | 阅读器亮度遮罩 | 7 | reader.css .rd-dim（连工具栏一起压暗，不拦截点击；Sheet 与 Toast 在 Portal 里，不受影响） |
 | 底部导航、侧栏 | 30 | nav.css |
@@ -562,6 +571,84 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 - **视觉与细节**：
   - 竖排滚动在桌面浏览器会露出横向滚动条。
   - 动效按帧计算（见第 6 节）。
+- **作者站已在浏览器验收**（2026-09-29，390×844、1024×768、1440×900，缃叶与长夜）：
+  - 书房：砚台注墨与涟漪、墨迹日历的溢出与滚到最右、"接着写"开书推进进写作页、返回时书合上飞回。
+  - 写作页的方格稿纸：三倍缩放截图看对齐，canvas 量字形（18px 字心比格心低 0.33px，21px 正好居中）；避头尾（"了。"一起下行）、破折号不拆、弯引号占满一格。
+  - 打字、回车补缩进、"保存中"→"已保存"、本机副本；草稿打开时文末在眼前、宽屏光标在文末。
+  - 发布（定时后天 22:00、作者的话）→ 盖"送审" → 撤回；退回 → 修改（总批留下、清单不可点）→ 重新提交；定时、已发布、待审核的顶栏与印。
+  - 横线、素纸、预览；目录面板换章（地址、标题、状态、滚回顶部）；新开一章；越界章节与不存在的书返回 404，缓存头 private。
+  - 宽屏浮签贴纸边、窄屏点开浮签与点别处收起；长夜下格线调淡之后看过。
+  - 作者站生产构建通过：Danmo Grid 与稿纸样式只在写作页的路由里加载；控制台无报错。
+- **作者站未验收**：手机真机的输入法与软键盘（键盘弹起时顶栏与光标的位置）；Safari、Firefox 上 text-spacing-trim 与避头尾的表现；减少动效下的盖章。
 - **测试注意**：
+  - Vite 会缓存"解析失败"：先写了 `import './x.css'`、后建文件时，这个站的开发服务器一直报 500 "Failed to load url"，文件建好也不恢复。先建文件再写 import；已经卡住了就 `touch apps/<站>/vite.config.ts`，那个站的开发服务器会重启。
+  - Playwright 截图的文件名写成 `.playwright-mcp/<名字>.png`（已忽略）。只写文件名会存到仓库根目录，混进未跟踪文件。
   - Windows 上 Playwright 的浏览器窗口被遮挡时，Chrome 会暂停 requestAnimationFrame，动画卡在半途，看起来像代码有问题。测动效前先 `page.bringToFront()`。
   - 连续的测试脚本要先确认工具栏是开是关，不要无条件点击，否则会把上一个脚本留下的状态切反。
+
+## 13. 作者站（apps/author/app/）
+
+- **骨架**：root.tsx（默认主题缃叶）；shell.tsx 四个标签页：书房 /desk、作品 /works、互动 /readers、数据 /stats，侧栏底部是"我" /me（窄屏从书房右上角的闲章进入）；写作页不是标签页。
+  - http.ts：PUBLIC_CACHE、PRIVATE_CACHE、privateMeta（标题加 noindex）、NOT_FOUND_META。
+  - format.ts：formatNumber 自己拼千分位（服务端与浏览器的区域数据可能不同，toLocaleString 会水合不匹配）、formatCount（万）、formatAgo。
+  - 作品、互动、数据、我、首页还没做，地址已被书房里的链接用到（/works/:id、/readers?focus=、/me）。
+- **数据**：packages/data/src/author.ts 与 manuscripts.ts。
+  - 登录的作者是《盐汽水与蝉》的栖迟；另有筹备中的《晚风信号》`1002100000010007`（三章：待审核、草稿、退回）与完结的《青苔与猫》`1002100000010008`。界面称呼作者一律用"你"，不用性别代词。
+  - 有单独稿件的章节（manuscripts.ts 的 DRAFTS）字数按稿件算：第六十六章草稿 931 字，也就是今日字数 TODAY_WORDS；《晚风信号》三章 721、533、542 字，书的总字数由此算出。其余章节借用小说站的试读正文（章首带"示例正文"说明），字数仍是 volumesOf 给的随机值，两者对不上。
+  - REVIEWS 以"书号:章序号"为键；ReviewNote 的 paragraph/start/length 相对段落正文（不含缩进），改稿件时要重新核对偏移。
+- **书房 /desk**（screens/Desk.tsx）：
+  - 砚台 Inkstone：随形端砚，月池里的墨像月相一样从右边盈满（components/moon.ts 的 phasePath，与写作页顶栏的小月亮共用）。挂载时按经过的时间注墨 1200ms，从 0 开始：服务端画空池，否则挂载时会先满、后空、再满地闪一下。点一下泛涟漪并提示还差多少字。
+  - 墨迹日历 InkCalendar：日期只在浏览器里算（useClientValue(todayKey, '')），服务端与读者所在时区可能不同；ResizeObserver 判断溢出，只有溢出时才加渐隐遮罩，打开时滚到最右（今天）。
+  - "接着写"：`push('/write/<书号>/<章>', { flightFrom: heroSlot, book, dive: true })`。消息提到某一章就打开那一章的稿纸，只提到书就打开作品页。
+  - 窄屏一栏（两栏外壳 display: contents，墨迹 order: 10 排到最后），宽屏两栏。
+- **写作 /write/:bookId/:chapter?**（write/）：
+  - loadWrite：章节参数必须是 1 到"已有章数 + 1"的整数，最后那个是新开的一章；省略时打开最后一章草稿，没有草稿就开新的一章；其余返回 `data(MISSING, { status: 404 })`。handle：back 'surface'、book、parent '/desk'（作品页做好后改成作品页）。
+  - WriteScreen 按"书号:章序号"给 ChapterDesk 加 key：目录里换章用 retarget（替换地址，同一页），整张桌子重新挂载，状态不会串到别的章。
+  - 状态：草稿可编辑；发布 → 待审核（盖"送审"，朱文印，作者自己盖的）→ 撤回 → 草稿；定时（印"准"）、已发布（不盖印）、退回（印"退"）点"修改"回到草稿。"准""退"是白文印，与管理站审核时盖的印一致。提交按钮的字按打开时的状态定：退回"重新提交"，定时与已发布"提交修改"，其余"提交审核"。
+  - 顶栏第二行：草稿写小月亮（今日字数/目标）、本章字数、保存中/已保存；待审核"审核中 · N 小时前提交"（ChapterRecord.when 在待审核时是提交距今的小时数）；定时"已过审 · 明天 20:00 发布"；已发布"已发布 · N 天前"；退回"退回修改 · N 处批注"。
+  - 保存：drafts.ts 把 {name, text, state, savedAt} 存进 localStorage 的 `danmo-author:draft:<书号>:<章序号>`，读时逐项校验；停笔 700ms 保存，卸载与换章前立刻保存，Ctrl/⌘+S 立刻保存（拦下浏览器的另存网页）。稿纸偏好在 paper.ts（`danmo-author:paper`，服务端快照是方格）。
+  - 打开时：layout effect 把 .screen 滚回顶；effect 里换上本机副本；如果是草稿，两帧之后按 .ms__mirror 的底边把文末滚到视口 55% 处，`pointer: fine` 时再把光标放到文末（触屏不自动弹键盘）。
+  - 今日字数 = TODAY_WORDS + max(0, 当前字数 - 打开时的字数)；跨过每日目标时提示一次。
+  - 打字时 `.write[data-typing]`，顶栏与左栏淡到 0.22，pointermove 或 pointerdown 恢复。
+  - 目录 Outline：分卷，行用共用的 .toc-list 加状态标记；宽屏（≥1200px）是左栏（sticky，自己滚动），其余收进顶栏按钮打开的 Sheet。当前章滚到中间时只滚最近一层可滚动的祖先；目录不可见时（窄屏上隐藏的左栏）跳过，否则找到的祖先是整页。
+  - 面板 panels.tsx：发布（立即或定时：今天、明天、后天 × 08/12/18/20/22 点；作者的话最多 300 字）；提交后盖章，结果用 role="status" 播报。选纸是三张卡片加示意图。
+  - 预览：阅读纸色、PaperTexture(DEFAULT_PAPER)、文楷 19px、行高 1.95、两字缩进，作者的话排在章末。
+  - 已知不足：定时的时间只是给人看的字，没有时区换算；浏览器后退从写作页直接回书房（换章不进历史记录）。
+
+## 14. 稿纸（packages/design/src/manuscript/）
+
+- **组件**：
+  - Manuscript：外框 .ms-frame 负责量尺寸，里面是纸 .ms，带纸头与印两个插槽，方格纸右下角印着规格（例如"20×20"）。
+  - ManuscriptEditor：文本框，加一份看不见的镜像文字。
+  - ManuscriptText：只读正文，可以带朱批。
+  - ReviewSummary：总批与批注清单；不给 onPick 时清单不可点。
+  - 工具：numberNotes（按出现先后编号，重叠的只留前一条）、paragraphsToText、textToParagraphs、INDENT、PAPER_MODES、isPaperMode。
+  - 管理站审核页要复用它们；在正文上选字、写批语新增批注还没做。
+- **尺寸**：measure() 读 CSS 变量 --ms-size（窄屏 18px、宽屏 21px）与 --ms-pad（16/52px），算出字距、格宽、格数、行间空白与行高：
+  - 字距 T = round(F × 0.28)；格宽 P = F + T；
+  - 格数 N = floor((宽度 − 2pad) / P)，限在 8~20；
+  - 行间空白 G = 2 × round(P × 0.2)，取偶数，格线落在整像素上；行高 L = P + G。
+
+  结果写成 --ms-cols 等变量。量好之前没有 data-ready，格线透明。
+- **对齐**：方格纸的正文宽度是 N×P + T/2 + 1px，padding-left 为 T/2，letter-spacing 为 T，line-height 为 L；格子画在每一行的正中，上下各空 G/2。
+- **断行**：
+  - line-break: normal 守避头尾，遇到时"了。"一起下行，上一行末尾空一格；配合 word-break: break-all。起初用 line-break: anywhere，句号会落到行首，已改掉。
+  - text-spacing-trim: space-all，相邻标点不压缩；text-autospace: no-autospace；关掉字距调整与连字。
+- **补字字体 Danmo Grid**：
+  - 为什么要：文楷的弯双引号“”只有 0.35 个字宽，英文与数字宽窄不一；文楷又没有 fwid 特性，font-variant-east-asian: full-width 对它无效。2026-09-29 在 Chrome 实测；Noto Serif SC 的引号也只有 0.55 个字宽。
+  - 怎么做：gen-grid-font.py 按 lxgw-wenkai-screen-webfont 的 CSS unicode-range 找到含这些字符的子集文件，拆开复合字形、平移后改成一个字宽（2048 单位）。“贴格子右边，”贴左边，其余居中；纵向度量、fsSelection 与 OS/2 版本照抄文楷。
+  - 要同步：脚本里的 CODEPOINTS 与 manuscript.css 的 unicode-range 必须一致。字体用 font-display: block。
+  - 许可：OFL 1.1，改名为 Danmo Grid，danmo-grid-OFL.txt 随字体放在一起。
+- **格线**：GridLayer 是一张 SVG。
+  - 方格：图案平铺，每格画左边线与上下两道横线，最右一列的右边线单独画。每 20 行一页，页与页之间在纸边画裁切线、标页码；窄屏（<600px）不标页码。
+  - 横线：每行一道，位置在格子的底边。
+  - 颜色是 --ms-rule（主色调 58% 加墨），透明度是 --ms-rule-opacity（缺省 0.55，长夜 0.32）。
+- **行数**（useRows）：量镜像（编辑时）或正文（只读时）的高度。方格纸补到整页，至少多一行空格子；横线与素纸多 4 行。
+  - 何时量：内容或尺寸变化时在布局副作用里同步量一次，字体晚到、宽度变化由 ResizeObserver 补量。
+  - 不要先把文本框高度设成 auto 再量：页面滚在底部时，文本框一缩，滚动位置就被夹回去，页面会跳。
+- **回车缩进**（indentOnEnter）：用 execCommand('insertText') 插入，这样进得了撤销栈；它失败时才改用 setRangeText 并补发 input 事件。输入法组字时（isComposing，或 keyCode 229）不拦截。
+- **朱批**：
+  - mark 里放一个零宽的锚点 .ms-mark__anchor（data-note），不占格子；编号按钮用 ::before 显示数字，复制正文时不会带出编号。
+  - 浮签 Slips 有两种放法：
+    - 稿纸旁余下的宽度 ≥ 170（SLIP_ROOM）时贴在纸边：宽 178px，压住纸边 18px，上沿对齐被批的第一行，挨得太近时往下错开 12px；
+    - 余下的宽度不够时只显示展开的那一张，放在被批最后一行的下面（取 getClientRects 的最后一个矩形）。点别处或按 Esc 收起；Esc 在捕获阶段拦下，不触发返回上一页。
