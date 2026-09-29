@@ -1,0 +1,321 @@
+/* ============================================================
+ * 书房（Desk.tsx）
+ * 窄屏一栏：今日、在写、消息、来信、定时发布、墨迹；
+ * 宽屏两栏：左栏今日、在写、墨迹，右栏消息、来信、定时发布。
+ * 两栏的外壳在窄屏上 display: contents，里面的区块直接参与排列，用 order 把墨迹排到最后
+ * ============================================================ */
+
+.desk {
+  padding-top: var(--sp-5);
+}
+@media (min-width: 900px) {
+  .desk {
+    padding-top: var(--sp-10);
+  }
+}
+
+/* ---- 顶部 ---- */
+.desk-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+.desk-head__date {
+  margin-top: 4px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+/* 作者的闲章：点开是"我"；悬停时像被拿起来一点 */
+.desk-head__seal {
+  padding: 4px;
+  border-radius: 10px;
+  transition: transform var(--dur-base) var(--ease-soft);
+}
+.desk-head__seal:hover {
+  transform: translateY(-2px) rotate(2deg);
+}
+
+/* ---- 两栏 ---- */
+.desk-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin-top: var(--sp-6);
+}
+.desk-main,
+.desk-side {
+  display: contents;
+}
+.desk-calendar {
+  order: 10;
+}
+@media (min-width: 900px) {
+  .desk-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr);
+    align-items: start;
+    gap: var(--sp-10) var(--sp-12);
+    margin-top: var(--sp-8);
+  }
+  .desk-main,
+  .desk-side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-10);
+  }
+  .desk-calendar {
+    order: 0;
+  }
+}
+
+/* ---- 今日：砚台与字数 ---- */
+.desk-today {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+}
+.desk-today__label {
+  font-size: var(--fs-12);
+  letter-spacing: 0.24em;
+  color: var(--ink-2);
+}
+.desk-today__count {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 2px;
+  font-family: var(--font-kai);
+}
+.desk-today__count strong {
+  font-size: var(--fs-48);
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.desk-today__count span {
+  font-size: var(--fs-18);
+  color: var(--ink-2);
+}
+.desk-today__goal,
+.desk-today__streak {
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.desk-today__goal {
+  margin-top: 8px;
+  white-space: nowrap;
+}
+.desk-today__streak {
+  margin-top: 2px;
+}
+.desk-today__streak b {
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 900px) {
+  .desk-today {
+    gap: var(--sp-10);
+  }
+  .desk-today__count strong {
+    font-size: var(--fs-72);
+  }
+}
+
+/* ---- 在写 ---- */
+.desk-current {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--sp-4) var(--sp-5);
+  margin-left: -4px;
+}
+.desk-current__book {
+  /* 给漂浮与投影留出空间 */
+  padding: 14px 16px 30px 4px;
+  border-radius: var(--radius-m);
+}
+.desk-current__label {
+  font-size: var(--fs-12);
+  letter-spacing: 0.24em;
+  color: var(--ink-2);
+}
+.desk-current__title {
+  margin-top: 2px;
+  font-family: var(--font-kai);
+  font-size: var(--fs-24);
+  font-weight: 400;
+  line-height: 1.3;
+}
+.desk-current__chapter {
+  margin-top: 6px;
+  font-size: var(--fs-14);
+  color: var(--ink);
+}
+.desk-current__edited {
+  margin: 2px 0 var(--sp-4);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+@media (min-width: 900px) {
+  .desk-current {
+    gap: var(--sp-5) var(--sp-10);
+    margin-left: -10px;
+  }
+  .desk-current__book {
+    padding: 22px 30px 42px 10px;
+  }
+  .desk-current__title {
+    font-size: var(--fs-36);
+  }
+}
+
+/* 其他作品：一排小小的书，像桌角摞着的另外几本 */
+.desk-others {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  grid-column: 1 / -1;
+}
+.desk-other {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-14);
+  background: var(--sheet);
+  box-shadow:
+    0 1px 0 rgb(var(--shadow-rgb) / 0.05),
+    0 6px 16px -10px rgb(var(--shadow-rgb) / 0.45);
+  transition: transform var(--dur-quick) var(--ease-soft);
+}
+.desk-other:hover {
+  transform: translateY(-1px);
+}
+.desk-other__title {
+  font-family: var(--font-kai);
+}
+.desk-other__state {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+
+/* ---- 消息、定时发布：一行一条，细线分隔 ---- */
+.desk-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+}
+.desk-msg,
+.desk-scheduled__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 4px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  border-radius: 2px;
+  transition: background-color var(--dur-quick) ease;
+}
+.desk-msg:hover,
+.desk-scheduled__row:hover {
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+}
+.desk-msg .seal {
+  margin-top: 2px;
+}
+.desk-msg__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.desk-msg__title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-16);
+  color: var(--ink);
+}
+.desk-msg[data-unread] .desk-msg__title {
+  font-weight: 600;
+}
+/* 未读：标题后一粒红点（红线色只标信息） */
+.desk-msg__dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--thread);
+}
+.desk-msg__body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-size: var(--fs-14);
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.desk-msg__meta {
+  margin-top: 2px;
+  font-size: var(--fs-12);
+  color: color-mix(in srgb, var(--ink-2) 85%, transparent);
+}
+
+.desk-scheduled__row {
+  align-items: center;
+}
+.desk-scheduled__row svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.6;
+  color: var(--ink-2);
+}
+.desk-scheduled__row b {
+  display: block;
+  font-size: var(--fs-16);
+  font-weight: 400;
+}
+.desk-scheduled__row small {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+
+/* ---- 读者来信：几张信笺散放在桌上，各自歪一点点 ---- */
+.desk-letters__list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+}
+.desk-letters .letter:nth-child(odd) {
+  rotate: -0.6deg;
+}
+.desk-letters .letter:nth-child(even) {
+  rotate: 0.5deg;
+}
+.desk-letters .letter:hover {
+  rotate: 0deg;
+  translate: 0 -2px;
+}
+.desk-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 12px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.desk-more svg {
+  width: 16px;
+  height: 16px;
+}
+.desk-more:hover {
+  color: var(--ink);
+}

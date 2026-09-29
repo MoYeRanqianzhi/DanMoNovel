@@ -1,0 +1,96 @@
+/* ============================================================
+ * 墨迹日历（InkCalendar.tsx）
+ * ============================================================ */
+
+.ink-cal {
+  margin: 0;
+}
+.ink-cal__body {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+.ink-cal__weekdays {
+  position: relative;
+  flex: none;
+  width: 12px;
+  height: var(--ink-cal-h);
+  font-size: 10px;
+  color: var(--ink-2);
+}
+.ink-cal__weekdays span {
+  position: absolute;
+  left: 0;
+  line-height: 1;
+  translate: 0 -50%;
+}
+/* 放不下全部周数时横着滑（滚动条藏起来）；溢出时左边缘淡出，提示前面还有更早的几周 */
+.ink-cal__scroll {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: var(--ink-cal-h);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.ink-cal__scroll::-webkit-scrollbar {
+  display: none;
+}
+.ink-cal__scroll[data-overflow] {
+  -webkit-mask: linear-gradient(90deg, transparent, #000 28px);
+  mask: linear-gradient(90deg, transparent, #000 28px);
+}
+.ink-cal__svg {
+  flex: none;
+  animation: ink-cal-in var(--dur-slow) ease both;
+}
+@keyframes ink-cal-in {
+  from {
+    opacity: 0;
+  }
+}
+.ink-cal__month {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  fill: var(--ink-2);
+}
+.ink-cal__dry {
+  fill: color-mix(in srgb, var(--ink) 16%, transparent);
+}
+.ink-cal__drop {
+  fill: var(--ink);
+}
+.ink-cal__today {
+  fill: none;
+  stroke: var(--thread);
+  stroke-width: 1.4;
+}
+.ink-cal__caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.ink-cal__caption strong {
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.ink-cal__legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ink-cal__legend i {
+  width: calc(3.6px + var(--l) * 5.6px);
+  height: calc(3.6px + var(--l) * 5.6px);
+  border-radius: 50%;
+  background: var(--ink);
+  opacity: calc(0.22 + var(--l) * 0.62);
+}

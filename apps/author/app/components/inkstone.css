@@ -1,0 +1,89 @@
+/* ============================================================
+ * 砚台（Inkstone.tsx）
+ * 石色、墨色是实物的颜色，写在 SVG 里；影子与轮廓的高光随主题，写在这里
+ * ============================================================ */
+
+.inkstone {
+  display: block;
+  flex: none;
+  width: 150px;
+  border-radius: 20px;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-quick) var(--ease-soft);
+}
+.inkstone:active {
+  transform: scale(0.98);
+}
+.inkstone svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+@media (min-width: 900px) {
+  .inkstone {
+    width: 236px;
+  }
+}
+
+.inkstone__shadow-stop {
+  stop-color: rgb(var(--shadow-rgb));
+  stop-opacity: 0.42;
+}
+/* 砚身外轮廓的亮边：浅色主题上几乎看不出，深色主题上勾出砚台的边 */
+.inkstone__edge {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.1);
+  stroke-width: 1;
+}
+[data-theme='changye'] .inkstone__edge {
+  stroke: rgb(255 255 255 / 0.2);
+}
+.inkstone__rim {
+  fill: none;
+  stroke: rgb(0 0 0 / 0.22);
+  stroke-width: 1.1;
+}
+/* 云纹：暗线在下、亮线错开半个像素在上，看起来是刻进石头里的 */
+.inkstone__cloud-shadow,
+.inkstone__cloud-light {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.inkstone__cloud-shadow {
+  stroke: rgb(0 0 0 / 0.38);
+}
+.inkstone__cloud-light {
+  stroke: rgb(255 255 255 / 0.16);
+  translate: 0.7px 0.9px;
+}
+.inkstone__hall-edge {
+  fill: none;
+  stroke: rgb(0 0 0 / 0.34);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+/* 月池的槽口：一圈更深的凿痕 */
+.inkstone__lip {
+  fill: rgb(0 0 0 / 0.26);
+}
+/* 点一下砚台：池里泛起一圈涟漪 */
+.inkstone__ripple {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.42);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: inkstone-ripple 1000ms var(--ease-soft) forwards;
+}
+@keyframes inkstone-ripple {
+  from {
+    scale: 0.08;
+    opacity: 1;
+  }
+  to {
+    scale: 1.15;
+    opacity: 0;
+  }
+}

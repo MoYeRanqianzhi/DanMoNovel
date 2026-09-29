@@ -1,0 +1,102 @@
+/* ============================================================
+ * 读者来信（LetterCard.tsx）：横线信笺
+ * ============================================================ */
+
+.letter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 16px 12px;
+  text-align: left;
+  border-radius: var(--radius-m);
+  box-shadow:
+    0 1px 0 rgb(var(--shadow-rgb) / 0.05),
+    0 12px 26px -20px rgb(var(--shadow-rgb) / 0.6);
+  transition:
+    box-shadow var(--dur-quick) ease,
+    rotate var(--dur-base) var(--ease-soft),
+    translate var(--dur-base) var(--ease-soft);
+}
+/* 当前要看的那一封：红线圈出"当前位置" */
+.letter[data-focused] {
+  box-shadow:
+    0 0 0 1.5px var(--thread),
+    0 12px 26px -20px rgb(var(--shadow-rgb) / 0.6);
+}
+.letter__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.letter__where {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 段评引的那一句原文 */
+.letter__quote {
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+/* 信笺的横线：每行底下一道细线，与行高对齐，字落在线上 */
+.letter__body {
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 28px;
+  color: var(--ink);
+  background-image: linear-gradient(transparent 27px, var(--line) 27px, var(--line) 28px);
+  background-size: 100% 28px;
+}
+.letter__foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.letter__reader {
+  color: var(--ink);
+}
+.letter__reader small {
+  margin-left: 6px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.letter__likes {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.letter__likes svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 1.8;
+}
+/* 作者的回信：浅浅一层底色，末尾用作者的闲章落款 */
+.letter__reply {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  line-height: 1.65;
+  color: var(--ink-2);
+}

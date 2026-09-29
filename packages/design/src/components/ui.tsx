@@ -98,15 +98,21 @@ interface SealProps {
   /** 1~4 个字；4 个字时按传统印章次序"右列上下、左列上下"排成两列 */
   text: string;
   size?: number;
+  /**
+   * solid：白文印，满底朱红、字留白（缺省，Logo 与闲章用）；
+   * outline：朱文印，红字红边、不填底色，比白文印轻，用在列表里成排的小印上
+   */
+  variant?: 'solid' | 'outline';
   className?: string;
   style?: CSSProperties;
 }
 
-export function Seal({ text, size = 28, className, style }: SealProps) {
+export function Seal({ text, size = 28, variant = 'solid', className, style }: SealProps) {
   return (
     <span
       className={cls('seal', className)}
       data-len={text.length}
+      data-variant={variant === 'outline' ? 'outline' : undefined}
       style={{ '--seal': `${size}px`, ...style } as CSSProperties}
       aria-hidden="true"
     >
