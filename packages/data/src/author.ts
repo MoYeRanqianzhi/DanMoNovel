@@ -12,6 +12,7 @@
  */
 import { chapterTitle } from './chapters';
 import { getBook, type Book } from './books';
+import { draftWords } from './manuscripts';
 
 /* ---------------- 可复现的伪随机数 ---------------- */
 
@@ -83,14 +84,16 @@ export interface Work {
 }
 
 /** 筹备中的新书：还没有上架，书号在创建时已经分配 */
+const EVENING_SIGNAL_ID = '1002100000010007';
 const EVENING_SIGNAL: Book = {
-  id: '1002100000010007',
+  id: EVENING_SIGNAL_ID,
   title: '晚风信号',
   author: '栖迟',
   binding: 'modern',
   motif: 'stars',
   palette: { from: '#2E3A66', to: '#E8A7A1', ink: '#FFF6EA', accent: '#FFD27A', band: '#FFF6EA', bandInk: '#2E3A66' },
-  words: 26800,
+  // 三章都有单独写的稿件（manuscripts.ts），总字数按稿件算
+  words: [0, 1, 2].reduce((sum, i) => sum + draftWords(EVENING_SIGNAL_ID, i), 0),
   chapters: 3,
   status: '连载',
   era: '现代',
@@ -153,12 +156,10 @@ export interface ChapterRecord {
   title: string;
   words: number;
   state: ChapterState;
-  /** 已发布：距今几天发布的；定时：距今几小时后发布 */
+  /** 已发布：距今几天发布的；定时：距今几小时后发布；待审核：距今几小时提交的 */
   when?: number;
   /** 定时发布的时间，写成给人看的样子（原型的示例；正式版存时间戳，由页面按作者的时区换算） */
   scheduledLabel?: string;
-  /** 退回的理由（审核的朱批摘要） */
-  note?: string;
 }
 
 export interface Volume {
@@ -194,7 +195,7 @@ export function volumesOf(bookId: string): Volume[] {
         chapters: [
           ...published(30, 64),
           make(64, '定时', { when: 22, scheduledLabel: '明天 20:00' }),
-          make(65, '草稿', { words: 1286 }),
+          make(65, '草稿', { words: draftWords(bookId, 65) }),
         ],
       },
     ];
@@ -204,9 +205,10 @@ export function volumesOf(bookId: string): Volume[] {
       {
         title: '第一卷 · 调频',
         chapters: [
-          make(0, '待审核', { words: 9120 }),
-          make(1, '草稿', { words: 8460 }),
-          make(2, '退回', { words: 9220, note: '第三段、第十一段两处描写需要调整，已在原文中批注。' }),
+          make(0, '待审核', { words: draftWords(bookId, 0), when: 5 }),
+          make(1, '草稿', { words: draftWords(bookId, 1) }),
+          // 退回的理由与朱批见 REVIEWS
+          make(2, '退回', { words: draftWords(bookId, 2) }),
         ],
       },
     ];
@@ -221,8 +223,8 @@ export function volumesOf(bookId: string): Volume[] {
 
 /* ---------------- 写作记录 ---------------- */
 
-/** 今天写到现在的字数（示例） */
-export const TODAY_WORDS = 1286;
+/** 今天写到现在的字数：第六十六章是今天新开的，今天写下的就是这一章的草稿 */
+export const TODAY_WORDS = draftWords('1002100000010004', 65);
 
 /** 连续写作的天数（含今天） */
 export const STREAK = 12;
@@ -442,3 +444,38 @@ export const FANS: Fan[] = [
   { name: '北方的雪', days: 23, comments: 61 },
   { name: '晚安小满', days: 9, comments: 22 },
 ];
+
+/* ---------------- 审核的朱批 ---------------- */
+
+/**
+ * 一条朱批：批在第几段的哪几个字上，批了什么。
+ * 位置按"段号 + 从第几个字起、共几个字"给，原文由页面从稿件里取，保证批注对得上字。
+ * 管理站的审核页在正文上画朱批，退回后作者在写作页看到同样的批注（原型两站各用示例数据）。
+ */
+export interface ReviewNote {
+  paragraph: number;
+  start: number;
+  length: number;
+  note: string;
+}
+
+export interface Review {
+  /** 审核意见的署名只写"审核"，不写个人名字（审核是编辑部的身份，不是个人） */
+  verdict: '退回';
+  summary: string;
+  minutesAgo: number;
+  notes: ReviewNote[];
+}
+
+/** 退回的章节附带的审核意见，键是"书号:章序号" */
+export const REVIEWS: Record<string, Review> = {
+  [`${EVENING_SIGNAL.id}:2`]: {
+    verdict: '退回',
+    summary: '第三段、第六段两处描写需要调整，改完可以重新提交。',
+    minutesAgo: 60 * 26,
+    notes: [
+      { paragraph: 2, start: 0, length: 20, note: '这一句与上一章结尾重复，建议删去或换个说法。' },
+      { paragraph: 5, start: 25, length: 106, note: '外貌描写略长，可以只留一个细节，其余交给后文。' },
+    ],
+  },
+};
