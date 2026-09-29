@@ -1,0 +1,80 @@
+/* ============================================================
+ * 写作页的目录（Outline.tsx）。行的基本样式是三站共用的 .toc-list（@danmo/design 的 layout.css）
+ * ============================================================ */
+
+.outline__volume + .outline__volume {
+  margin-top: var(--sp-6);
+}
+/* 卷名：贴在目录顶上，往下滚时一直看得到自己在哪一卷 */
+.outline__volume-title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 4px 8px;
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  background: var(--outline-bg, var(--paper));
+}
+.outline__volume-title small {
+  font-family: var(--font-sans);
+  font-size: var(--fs-12);
+  letter-spacing: 0;
+  color: var(--ink-2);
+}
+.outline .toc-list button {
+  padding: 11px 4px;
+  font-size: var(--fs-14);
+}
+.outline__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.outline__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.outline__state svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 1.8;
+}
+.outline__state[data-tone='thread'] {
+  color: var(--thread-ink);
+}
+.outline .toc-list button[aria-current] .outline__state {
+  color: inherit;
+}
+
+.outline__new {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--sp-4) 0 var(--sp-2);
+  padding: 8px 14px 8px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-14);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--line);
+  transition: background-color var(--dur-quick) ease;
+}
+.outline__new:hover {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+.outline__new svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.8;
+}

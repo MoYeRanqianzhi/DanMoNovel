@@ -1,0 +1,147 @@
+/* ============================================================
+ * 写作页的底部面板（panels.tsx）：发布、选纸
+ * ============================================================ */
+
+/* ---------------- 发布 ---------------- */
+.publish {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+.publish__chapter {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 12px 14px;
+  border-radius: var(--radius-m);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  background: var(--sheet-2);
+}
+.publish__chapter span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.publish__chapter b {
+  flex: none;
+  font-family: var(--font-sans);
+  font-size: var(--fs-14);
+  font-weight: 400;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.publish__field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.publish__label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--fs-14);
+  color: var(--ink);
+}
+.publish__label small {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.publish__when {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  animation: publish-when-in var(--dur-base) var(--ease-soft) both;
+}
+@keyframes publish-when-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+.publish__hint {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.publish__note {
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.7;
+  background: var(--sheet-2);
+  resize: vertical;
+}
+.publish__note::placeholder {
+  color: color-mix(in srgb, var(--ink-2) 65%, transparent);
+}
+.publish__submit {
+  align-self: stretch;
+  margin-top: var(--sp-1);
+}
+
+/* ---------------- 选纸：三张卡片（与小说站"书架格式"同一种卡片） ---------------- */
+.paper-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.paper-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 14px 8px 13px;
+  border-radius: var(--radius-m);
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  box-shadow: 0 0 0 1px var(--line);
+  transition:
+    color var(--dur-quick) ease,
+    box-shadow var(--dur-quick) ease,
+    background-color var(--dur-quick) ease;
+}
+.paper-choice:hover {
+  color: var(--ink);
+}
+.paper-choice[aria-checked='true'] {
+  color: var(--thread-ink);
+  background: color-mix(in srgb, var(--thread) 7%, transparent);
+  box-shadow: 0 0 0 1.5px var(--thread);
+}
+.paper-choice__glyph {
+  width: 64px;
+  height: 44px;
+  margin-bottom: 6px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.paper-choice__glyph .glyph-faint {
+  stroke-opacity: 0.4;
+  stroke-width: 1;
+}
+.paper-choice__name {
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  color: inherit;
+}
+.paper-choice[aria-checked='true'] .paper-choice__name {
+  color: var(--ink);
+}
+.paper-choice__note {
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+  text-wrap: balance;
+  color: color-mix(in srgb, var(--ink-2) 80%, transparent);
+}

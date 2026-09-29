@@ -17,6 +17,7 @@
  */
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
+import { phasePath } from './moon';
 import './inkstone.css';
 
 interface InkstoneProps {
@@ -36,20 +37,6 @@ const BODY =
 const HALL = 'M70 110C73 93 108 84 146 86C183 88 205 101 203 119C201 137 174 147 138 147C100 147 67 136 70 110Z';
 /** 月池的位置与半径 */
 const POOL = { cx: 90, cy: 58, r: 25 };
-
-/**
- * 月池里墨的形状：月相。右半圆是亮面（墨），明暗交界线是一段半椭圆，
- * 进度小于一半时向右凹（蛾眉月），大于一半时向左凸（盈凸月）。
- */
-function phasePath(p: number): string {
-  const { cx, cy, r } = POOL;
-  if (p <= 0.001) return '';
-  if (p >= 0.999) return `M${cx} ${cy - r}A${r} ${r} 0 1 1 ${cx} ${cy + r}A${r} ${r} 0 1 1 ${cx} ${cy - r}Z`;
-  const rx = (r * Math.abs(1 - 2 * p)).toFixed(2);
-  // 从下往上画交界线：逆时针经过右侧（蛾眉月），顺时针经过左侧（盈凸月）
-  const sweep = p < 0.5 ? 0 : 1;
-  return `M${cx} ${cy - r}A${r} ${r} 0 0 1 ${cx} ${cy + r}A${rx} ${r} 0 0 ${sweep} ${cx} ${cy - r}Z`;
-}
 
 /** 挂载时的注墨动画时长 */
 const FILL_MS = 1200;
@@ -218,7 +205,7 @@ export function Inkstone({ progress, label, onTap, className }: InkstoneProps) {
         <circle cx={POOL.cx} cy={POOL.cy} r={POOL.r + 3.4} className="inkstone__lip" />
         <circle cx={POOL.cx} cy={POOL.cy} r={POOL.r} fill={url('well')} />
         <g clipPath={url('pool')}>
-          <path d={phasePath(shown)} fill={url('ink')} />
+          <path d={phasePath(shown, POOL.cx, POOL.cy, POOL.r)} fill={url('ink')} />
           {shown > 0.06 && (
             <ellipse
               cx={POOL.cx + 12}
