@@ -3,12 +3,12 @@
  *
  * 宽屏上常驻在稿纸左边（自己滚动），窄屏收在顶栏的"目录"按钮里、从底部升起；打开时当前章滚到中间。
  * 行的样式与小说站的章节列表相同（.toc-list，三站共用），当前章染成红线色、右侧一小段红线。
- * 状态的写法：已发布的不标；定时写发布的时间；待审核写"审核中"；草稿写"草稿"；
- * 退回用红线色写"退回"（等着作者处理的事，是信息）。
+ * 状态的写法见 StateMark（与作品详情的章节列表共用）。
  */
 import { useLayoutEffect, useRef } from 'react';
-import { Clock3, Plus } from 'lucide-react';
-import type { ChapterRecord, ChapterState, Volume } from '@danmo/data/author';
+import { Plus } from 'lucide-react';
+import type { ChapterState, Volume } from '@danmo/data/author';
+import { StateMark } from '../components/StateMark';
 import './outline.css';
 
 interface OutlineProps {
@@ -85,28 +85,4 @@ export function Outline({ volumes, current, currentState, fresh, onPick, onNew }
       )}
     </nav>
   );
-}
-
-function StateMark({ chapter, state }: { chapter?: ChapterRecord; state: ChapterState }) {
-  switch (state) {
-    case '已发布':
-      return null;
-    case '定时':
-      return (
-        <span className="outline__state">
-          <Clock3 aria-hidden="true" />
-          {chapter?.scheduledLabel ?? '定时'}
-        </span>
-      );
-    case '待审核':
-      return <span className="outline__state">审核中</span>;
-    case '退回':
-      return (
-        <span className="outline__state" data-tone="thread">
-          退回
-        </span>
-      );
-    case '草稿':
-      return <span className="outline__state">草稿</span>;
-  }
 }

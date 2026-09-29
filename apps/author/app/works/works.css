@@ -1,0 +1,317 @@
+/* ============================================================
+ * 作品列表（Works.tsx）
+ * 每部作品一张染色的纸，纸上立着这本书；最后一格是虚线勾出来的"新建作品"。
+ * 窄屏一栏，宽屏按宽度排成三四栏。
+ * ============================================================ */
+
+.works {
+  padding-top: var(--sp-5);
+}
+@media (min-width: 900px) {
+  .works {
+    padding-top: var(--sp-10);
+  }
+}
+
+.works-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+.works-head__sub {
+  margin-top: 4px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+/* 窄屏只留加号（列表最后还有一格"新建作品"），宽屏写上字 */
+.works-head__new.btn {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  font-size: var(--fs-14);
+}
+.works-head__new span {
+  display: none;
+}
+@media (min-width: 900px) {
+  .works-head__new.btn {
+    width: auto;
+    padding: 0 18px 0 14px;
+  }
+  .works-head__new span {
+    display: inline;
+  }
+}
+
+.works-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--sp-5);
+  margin-top: var(--sp-6);
+}
+@media (min-width: 900px) {
+  .works-grid {
+    gap: var(--sp-6);
+    margin-top: var(--sp-8);
+  }
+}
+.works-grid > li {
+  display: flex;
+}
+
+/* ---- 一张作品卡：封面的颜色从纸的顶上洇下来 ---- */
+.work-card {
+  --dye-mix: 58%;
+  --dye-l: 0.8;
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 0 22px 18px;
+  border-radius: var(--radius-l);
+  text-align: left;
+  background:
+    radial-gradient(
+      120% 70% at 50% 0%,
+      color-mix(in oklab, var(--dye) var(--dye-mix), transparent) 0%,
+      color-mix(in oklab, var(--dye-2) calc(var(--dye-mix) * 0.45), transparent) 50%,
+      transparent 82%
+    ),
+    var(--sheet);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 18px 34px -30px rgb(var(--shadow-rgb) / 0.8);
+  transition:
+    transform var(--dur-base) var(--ease-soft),
+    box-shadow var(--dur-base) ease;
+}
+/* 深色封面洇开是一团灰：提亮到纸上染得出来的明度（与封面工作室的舞台同一个办法） */
+@supports (color: oklch(from red l c h)) {
+  .work-card {
+    background:
+      radial-gradient(
+        120% 70% at 50% 0%,
+        color-mix(in oklab, oklch(from var(--dye) max(l, var(--dye-l)) c h) var(--dye-mix), transparent) 0%,
+        color-mix(in oklab, oklch(from var(--dye-2) max(l, var(--dye-l)) c h) calc(var(--dye-mix) * 0.45), transparent) 50%,
+        transparent 82%
+      ),
+      var(--sheet);
+  }
+}
+[data-theme='changye'] .work-card {
+  --dye-mix: 22%;
+  --dye-l: 0;
+}
+.work-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 24px 40px -30px rgb(var(--shadow-rgb) / 0.9);
+}
+.work-card:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1.5px var(--thread),
+    0 24px 40px -30px rgb(var(--shadow-rgb) / 0.9);
+}
+.work-card__stage {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  height: 236px;
+  padding-top: 18px;
+}
+.work-card .book3d {
+  margin-bottom: 14px;
+}
+/* 悬停、聚焦：书被拿起一点，转过来一点（与小说站书架同一个手势） */
+.work-card .book3d__float {
+  transition: rotate var(--dur-slow) var(--ease-soft);
+}
+.work-card:hover .book3d,
+.work-card:focus-visible .book3d {
+  --lift: 1;
+}
+.work-card:hover .book3d__float,
+.work-card:focus-visible .book3d__float {
+  rotate: y -8deg;
+}
+.work-card__title {
+  font-family: var(--font-kai);
+  font-size: var(--fs-21);
+  line-height: 1.3;
+}
+.work-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.work-card__state {
+  color: var(--ink);
+}
+.work-card__state[data-state='筹备中'] {
+  color: var(--ink-2);
+}
+.work-card__signed {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+/* 最底下一行：这本书眼下最要紧的一章 */
+.work-card__foot {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-14);
+}
+.work-card__chapter {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- 新建作品：虚线勾出的一本书 ---- */
+.work-card--new {
+  align-items: center;
+  text-align: center;
+  background: transparent;
+  box-shadow: none;
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 20%, transparent);
+}
+.work-card--new:hover {
+  box-shadow: none;
+  border-color: color-mix(in srgb, var(--ink) 36%, transparent);
+}
+.work-card--new:focus-visible {
+  box-shadow: none;
+  border-color: var(--thread);
+}
+.work-card--new .work-card__meta {
+  justify-content: center;
+}
+.blank-book {
+  width: 104px;
+  height: 140px;
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 34%, transparent);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-dasharray: 5 4;
+  transition: transform var(--dur-base) var(--ease-soft);
+}
+.blank-book__spine {
+  fill: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.blank-book__plus {
+  stroke: var(--ink-2);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: none;
+}
+.work-card--new:hover .blank-book {
+  transform: translateY(-4px);
+}
+
+/* ---- 新建作品的面板：左边（窄屏在上）是平台画出来的封面 ---- */
+.new-work {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+@media (min-width: 560px) {
+  .new-work {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--sp-6);
+  }
+}
+.new-work__preview {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 26px 10px;
+  border-radius: var(--radius-l);
+  background: var(--sheet-2);
+}
+.new-work__preview .book3d {
+  margin-bottom: 10px;
+}
+.new-work__shuffle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 6px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-14);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--line);
+  transition: background-color var(--dur-quick) ease;
+}
+.new-work__shuffle:hover {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+.new-work__shuffle svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.8;
+}
+.new-work__form {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.new-work__field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--fs-14);
+}
+.new-work__input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  color: var(--ink);
+  background: var(--sheet-2);
+}
+.new-work__input::placeholder {
+  font-size: var(--fs-16);
+  color: color-mix(in srgb, var(--ink-2) 65%, transparent);
+}
+.new-work__input:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}
+.new-work__note {
+  font-size: var(--fs-12);
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.new-work__create {
+  align-self: stretch;
+}

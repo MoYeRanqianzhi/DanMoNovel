@@ -7,6 +7,7 @@
 import { data } from 'react-router';
 import { MISSING, type ScreenHandle } from '@danmo/design/shell/stack';
 import { NOT_FOUND_META, PRIVATE_CACHE, privateMeta } from '../http';
+import { applyLocal } from '../local';
 import { WriteScreen, loadWrite, type WriteData } from '../write/Write';
 import type { Route } from './+types/write';
 
@@ -14,7 +15,8 @@ export const handle = {
   Screen: WriteScreen,
   name: 'write',
   back: 'surface',
-  book: (d) => d.work.book,
+  // 飞回书房的书换上本机改过的封面，与书房书位上的书一样
+  book: (d) => applyLocal(d.work.book),
   // 从地址直接打开、栈里没有上一页时，"返回"回到书房
   parent: () => '/desk',
 } satisfies ScreenHandle<WriteData>;

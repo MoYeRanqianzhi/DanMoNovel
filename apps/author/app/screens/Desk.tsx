@@ -35,6 +35,7 @@ import { InkCalendar } from '../components/InkCalendar';
 import { Inkstone } from '../components/Inkstone';
 import { LetterCard } from '../components/LetterCard';
 import { formatAgo, formatNumber } from '../format';
+import { useLocalBooks } from '../local';
 import './desk.css';
 
 export interface DeskData {
@@ -77,15 +78,16 @@ export function DeskScreen({ data, screen }: ScreenProps<DeskData>) {
   const { push } = useStack();
   const toast = useToast();
   const date = useClientValue(() => seasonLine(), ' ');
+  const local = useLocalBooks();
   const { author, current, today } = data;
-  const book = current.work.book;
+  const book = local(current.work.book);
   const heroSlot = screen.slot('hero');
   const left = Math.max(0, author.dailyGoal - today);
   const unread = data.messages.filter((m) => m.unread).length;
 
   const write = () =>
     push(`/write/${book.id}/${current.chapter.index + 1}`, { flightFrom: heroSlot, book, dive: true });
-  const openWork = (w: Work, slotId?: string) => push(`/works/${w.book.id}`, { flightFrom: slotId, book: w.book });
+  const openWork = (w: Work, slotId?: string) => push(`/works/${w.book.id}`, { flightFrom: slotId, book: local(w.book) });
 
   return (
     <div className="page desk">
@@ -153,7 +155,7 @@ export function DeskScreen({ data, screen }: ScreenProps<DeskData>) {
                   return (
                     <li key={w.book.id}>
                       <button type="button" className="desk-other" onClick={() => openWork(w, slotId)}>
-                        <BookSlot slotId={slotId} book={w.book} width={30} {...POSES.thumb} shadow={false} label={null} />
+                        <BookSlot slotId={slotId} book={local(w.book)} width={30} {...POSES.thumb} shadow={false} label={null} />
                         <span className="desk-other__title">{w.book.title}</span>
                         <span className="desk-other__state">{w.state}</span>
                       </button>

@@ -1,0 +1,350 @@
+/* ============================================================
+ * 作品详情（Work.tsx）
+ * 与小说站的书籍详情同一个骨架：窄屏从上往下（染色纸上的书、信息、章节）；
+ * 宽屏两栏，左边的书吸顶，右边是信息与分卷章节。
+ * ============================================================ */
+
+.work {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+/* 顶栏叠在染色纸上方，不占版面高度 */
+.work > .subbar {
+  height: 68px;
+  margin-bottom: -68px;
+}
+
+/* ---- 染色纸：封面的颜色从顶部洇进纸里 ---- */
+.work-hero {
+  --dye-mix: 66%;
+  --dye-l: 0.8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 calc(var(--sp-5) * -1);
+  padding: 60px 0 22px;
+  background: radial-gradient(
+    120% 85% at 50% 0%,
+    color-mix(in oklab, var(--dye) var(--dye-mix), transparent) 0%,
+    color-mix(in oklab, var(--dye-2) calc(var(--dye-mix) * 0.45), transparent) 48%,
+    transparent 80%
+  );
+}
+/* 深色封面提亮到纸上染得出来的明度（与封面工作室的舞台同一个办法） */
+@supports (color: oklch(from red l c h)) {
+  .work-hero {
+    background: radial-gradient(
+      120% 85% at 50% 0%,
+      color-mix(in oklab, oklch(from var(--dye) max(l, var(--dye-l)) c h) var(--dye-mix), transparent) 0%,
+      color-mix(in oklab, oklch(from var(--dye-2) max(l, var(--dye-l)) c h) calc(var(--dye-mix) * 0.45), transparent) 48%,
+      transparent 80%
+    );
+  }
+}
+[data-theme='changye'] .work-hero {
+  --dye-mix: 24%;
+  --dye-l: 0;
+}
+.work-stage {
+  padding: 18px 34px 40px;
+  border-radius: var(--radius-l);
+  outline: none;
+}
+.work-stage:focus-visible {
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}
+.work-book {
+  cursor: grab;
+  touch-action: pan-y;
+}
+.work-book[data-dragging] {
+  cursor: grabbing;
+}
+.work-actions {
+  display: flex;
+  gap: 12px;
+}
+.work-actions .btn {
+  min-width: 128px;
+}
+
+/* ---- 信息 ---- */
+.work-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-10);
+  padding: var(--sp-6) 0 var(--sp-12);
+}
+.work-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-4);
+}
+.work-title {
+  font-family: var(--font-kai);
+  font-weight: 400;
+  font-size: var(--fs-36);
+  line-height: 1.2;
+}
+.work-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-top: -6px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.work-state__tag {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-12);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.work-state__tag[data-state='连载中'] {
+  background: color-mix(in srgb, var(--blush) 55%, transparent);
+  box-shadow: none;
+}
+.work-meta {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  justify-content: start;
+  gap: 0 28px;
+  margin: 4px 0;
+}
+.work-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.work-meta dt {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.work-meta dd {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-variant-numeric: tabular-nums;
+}
+.work-blurb {
+  max-width: 36em;
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  line-height: 1.9;
+}
+.work-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+.work-edit {
+  padding: 6px 0;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 5px;
+  transition: color var(--dur-quick) ease;
+}
+.work-edit:hover {
+  color: var(--ink);
+}
+
+/* ---- 分卷与章节 ---- */
+.work-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+.work-counts [data-tone='thread'] {
+  color: var(--thread-ink);
+}
+.work-volume {
+  margin-top: var(--sp-3);
+}
+.work-volume__head {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 4px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.work-volume__title {
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  letter-spacing: 0.06em;
+}
+.work-volume__head small {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.work-volume__head svg {
+  align-self: center;
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  color: var(--ink-2);
+  stroke-width: 1.6;
+  transition: rotate var(--dur-base) var(--ease-soft);
+}
+.work-volume__head[aria-expanded='false'] svg {
+  rotate: -90deg;
+}
+.work-volume__list {
+  animation: work-volume-in 280ms var(--ease-soft) both;
+}
+@keyframes work-volume-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+.work-volume__list button {
+  padding: 12px 4px;
+  font-size: var(--fs-16);
+}
+.work-chapter__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.work-chapter__words {
+  flex: none;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.work-new-chapter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--sp-4);
+  padding: 8px 14px 8px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-14);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--line);
+  transition: background-color var(--dur-quick) ease;
+}
+.work-new-chapter:hover {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+.work-new-chapter svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.8;
+}
+
+/* ---- 作品信息的面板 ---- */
+.work-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+.work-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.work-form__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--fs-14);
+}
+.work-form__label small {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.work-form__input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  color: var(--ink);
+  background: var(--sheet-2);
+}
+.work-form__input:disabled {
+  color: var(--ink-2);
+  cursor: not-allowed;
+}
+.work-form__input:focus-visible,
+.work-form__tag-input:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}
+.work-form__area {
+  height: auto;
+  padding: 12px 14px;
+  line-height: 1.8;
+  resize: vertical;
+}
+.work-form__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.work-form__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px 0 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-14);
+  color: var(--ink);
+  background: var(--sheet-2);
+  transition: background-color var(--dur-quick) ease;
+}
+.work-form__tag span {
+  color: var(--ink-2);
+}
+.work-form__tag:hover {
+  background: color-mix(in srgb, var(--sheet-2) 80%, var(--ink));
+}
+.work-form__tag-input {
+  width: 96px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px dashed color-mix(in srgb, var(--ink) 24%, transparent);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-14);
+  color: var(--ink);
+  background: transparent;
+}
+.work-form__save {
+  align-self: stretch;
+}
+
+@media (min-width: 900px) {
+  .work-body {
+    display: grid;
+    grid-template-columns: minmax(360px, 1fr) minmax(0, 1.15fr);
+    align-items: start;
+    gap: var(--sp-12);
+    padding-top: var(--sp-6);
+  }
+  .work-hero {
+    position: sticky;
+    top: 24px;
+    margin: 0;
+    padding: 64px 0 30px;
+    border-radius: var(--radius-l);
+  }
+  .work-main {
+    padding-top: var(--sp-12);
+  }
+}

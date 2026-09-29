@@ -1,0 +1,924 @@
+/* ============================================================
+ * 封面工作室（CoverStudio.tsx、panels.tsx）
+ *
+ * 窄屏从上往下：顶栏、舞台、三页的标签、面板。顶栏、舞台、标签依次吸顶，
+ * 面板在它们下面滚动——改哪一项，书都在眼前。
+ * 宽屏：顶栏一整行；下面左边是舞台（吸顶、占满一屏高），右边是面板，随页面滚动。
+ *
+ * 选中的选项一圈红线（与写作页选纸同一种标记）；书脊的小样立在一块隔板上，选中的那本抽出来一点。
+ * ============================================================ */
+
+/* 舞台的染色随封面变化时慢慢洇过去：注册成颜色才能过渡（名字带 studio，不与别处的变量相撞） */
+@property --studio-dye {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+@property --studio-dye-2 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+
+.studio {
+  --bar-h: 60px;
+  --stage-h: 296px;
+  min-height: 100%;
+}
+/* 三页长短不一：总是留出滚动条的位置，换页时两栏不左右跳 */
+[data-page='cover'] {
+  scrollbar-gutter: stable;
+}
+@media (min-width: 900px) {
+  .studio {
+    --bar-h: 68px;
+  }
+}
+
+/* ---------------- 顶栏 ---------------- */
+.studio-bar {
+  position: sticky;
+  top: 0;
+  z-index: 7;
+  height: var(--bar-h);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-4);
+  background: var(--paper);
+  box-shadow: 0 1px 0 var(--line);
+}
+@media (min-width: 900px) {
+  .studio-bar {
+    padding: 0 var(--sp-6);
+  }
+}
+.studio-bar__title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.studio-bar__title h1 {
+  flex: none;
+  font-family: var(--font-kai);
+  font-size: var(--fs-21);
+  font-weight: 400;
+}
+.studio-bar__title p {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-bar__actions {
+  display: flex;
+  gap: 8px;
+}
+.studio-bar .btn {
+  height: 40px;
+  padding: 0 18px;
+  font-size: var(--fs-14);
+}
+/* 恢复默认：窄屏只留图标 */
+.studio-bar .studio-reset {
+  width: 40px;
+  padding: 0;
+}
+.studio-reset span {
+  display: none;
+}
+@media (min-width: 900px) {
+  .studio-bar .studio-reset {
+    width: auto;
+    padding: 0 16px 0 14px;
+  }
+  .studio-reset span {
+    display: inline;
+  }
+}
+.studio-bar .btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.studio-bar .btn:disabled:active {
+  transform: none;
+}
+/* 有没保存的改动：保存按钮右上角一个红点 */
+.studio-save {
+  position: relative;
+}
+.studio-save[data-dirty]::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--thread);
+  animation: studio-dot-in var(--dur-base) var(--ease-spring) both;
+}
+@keyframes studio-dot-in {
+  from {
+    scale: 0;
+  }
+}
+
+/* ---------------- 两栏 ---------------- */
+@media (min-width: 900px) {
+  .studio-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(360px, 32vw, 440px);
+    align-items: start;
+  }
+}
+
+/* ---------------- 舞台：染色的纸上一本书 ---------------- */
+.studio-stage {
+  --dye-mix: 62%;
+  --dye-l: 0.8;
+  position: sticky;
+  top: var(--bar-h);
+  z-index: 6;
+  height: var(--stage-h);
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(
+      115% 88% at 50% 0%,
+      color-mix(in oklab, var(--studio-dye) var(--dye-mix), transparent) 0%,
+      color-mix(in oklab, var(--studio-dye-2) calc(var(--dye-mix) * 0.5), transparent) 52%,
+      transparent 86%
+    ),
+    var(--paper);
+  transition:
+    --studio-dye 700ms ease,
+    --studio-dye-2 700ms ease;
+}
+/* 深色的封面按原样洇开是一团灰：把颜色提亮到纸上染得出来的明度，色相与彩度不变
+ * （相对颜色语法不支持时，就按原色染） */
+@supports (color: oklch(from red l c h)) {
+  .studio-stage {
+    background:
+      radial-gradient(
+        115% 88% at 50% 0%,
+        color-mix(in oklab, oklch(from var(--studio-dye) max(l, var(--dye-l)) c h) var(--dye-mix), transparent) 0%,
+        color-mix(in oklab, oklch(from var(--studio-dye-2) max(l, var(--dye-l)) c h) calc(var(--dye-mix) * 0.5), transparent) 52%,
+        transparent 86%
+      ),
+      var(--paper);
+  }
+}
+/* 夜间主题下染色要淡，否则像一团发光的雾（与详情页的染色纸一致）；深色封面也不必提亮 */
+[data-theme='changye'] .studio-stage {
+  --dye-mix: 24%;
+  --dye-l: 0;
+}
+@media (min-width: 900px) {
+  .studio-stage {
+    height: calc(100dvh - var(--bar-h));
+    box-shadow: 1px 0 0 var(--line);
+  }
+}
+
+/* 立体书与展开图叠在同一格里，切换时一个淡出、一个淡入 */
+.studio-view {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+.studio-view > * {
+  grid-area: 1 / 1;
+}
+/* 淡出只加在书外面这一层：书本身的 3D 层不能加 opacity（见 Book3D.tsx 的禁忌） */
+.studio-book {
+  padding-bottom: 10px;
+  transition:
+    opacity 320ms ease,
+    visibility 320ms;
+}
+.studio-book[data-hidden] {
+  opacity: 0;
+  visibility: hidden;
+}
+.studio-jacket {
+  position: relative;
+  animation: studio-jacket-in 460ms var(--ease-soft) both;
+}
+@keyframes studio-jacket-in {
+  from {
+    opacity: 0;
+    scale: 0.94;
+  }
+}
+/* 展开图下面一小段红线：正在编辑的那一面 */
+.studio-jacket__mark {
+  position: absolute;
+  top: calc(100% + 12px);
+  height: 2px;
+  border-radius: 1px;
+  background: var(--thread);
+  transition:
+    left 460ms var(--ease-soft),
+    width 460ms var(--ease-soft);
+}
+.studio-stage__foot {
+  display: flex;
+  justify-content: center;
+  padding: 0 0 14px;
+}
+@media (min-width: 900px) {
+  .studio-stage__foot {
+    padding-bottom: 30px;
+  }
+}
+
+/* ---------------- 面板 ---------------- */
+.studio-panel {
+  position: relative;
+  padding: 0 var(--sp-5) calc(var(--sp-12) + var(--safe-bottom));
+}
+@media (min-width: 900px) {
+  .studio-panel {
+    padding: 0 var(--sp-8) var(--sp-12);
+  }
+}
+
+/* 三页的标签：窄屏吸在舞台下面，宽屏吸在顶栏下面 */
+.studio-tabs {
+  position: sticky;
+  top: calc(var(--bar-h) + var(--stage-h));
+  z-index: 5;
+  display: flex;
+  margin: 0 calc(var(--sp-5) * -1);
+  padding: 0 var(--sp-5);
+  background: var(--paper);
+  box-shadow: 0 1px 0 var(--line);
+}
+@media (min-width: 900px) {
+  .studio-tabs {
+    top: var(--bar-h);
+    margin: 0 calc(var(--sp-8) * -1);
+    padding: 0 var(--sp-8);
+  }
+}
+.studio-tab {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 11px 0 10px;
+  color: var(--ink-2);
+  outline: none;
+  transition: color var(--dur-quick) ease;
+}
+.studio-tab:hover {
+  color: var(--ink);
+}
+.studio-tab__name {
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+}
+.studio-tab__kind {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: color-mix(in srgb, var(--ink-2) 80%, transparent);
+}
+.studio-tab[aria-selected='true'] {
+  color: var(--ink);
+}
+/* 当前这一页：底下一小段红线 */
+.studio-tab::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  width: 28px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--thread);
+  translate: -50% 0;
+  scale: 0 1;
+  transition: scale var(--dur-base) var(--ease-soft);
+}
+.studio-tab[aria-selected='true']::after {
+  scale: 1 1;
+}
+.studio-tab:focus-visible {
+  border-radius: var(--radius-s);
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}
+
+.studio-sheet {
+  animation: studio-sheet-in 300ms var(--ease-soft) both;
+}
+@keyframes studio-sheet-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+/* 合成 / 图片 */
+.studio-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: var(--sp-5) 0;
+}
+.studio-mode__note {
+  font-size: var(--fs-12);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* 一节：小标题、内容、一行说明 */
+.studio-section {
+  padding: var(--sp-5) 0;
+  border-top: 1px solid var(--line);
+}
+.studio-label {
+  margin-bottom: 14px;
+  font-size: var(--fs-12);
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  color: var(--ink-2);
+}
+.studio-note {
+  margin-top: 14px;
+  font-size: var(--fs-12);
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.tile-name {
+  font-family: var(--font-kai);
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--ink-2);
+  white-space: nowrap;
+  transition: color var(--dur-quick) ease;
+}
+[aria-checked='true'] > .tile-name {
+  color: var(--ink);
+}
+
+/* 选项的键盘焦点：一圈红线 */
+.swatch:focus-visible,
+.motif-tile:focus-visible,
+.spine-chip:focus-visible,
+.back-tile:focus-visible,
+.sample:focus-visible {
+  outline: 1.5px solid var(--thread);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
+}
+
+/* ---- 配色：一枚枚小书 ---- */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  gap: 14px 6px;
+}
+.swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 5px;
+}
+.swatch__book {
+  position: relative;
+  width: 32px;
+  height: 45px;
+  border-radius: 2px 4px 4px 2px;
+  background: linear-gradient(160deg, var(--from), var(--to));
+  box-shadow:
+    inset 2px 0 0 rgb(0 0 0 / 0.08),
+    0 0 0 1px rgb(0 0 0 / 0.05),
+    0 6px 12px -8px rgb(var(--shadow-rgb) / 0.75);
+  transition:
+    transform var(--dur-base) var(--ease-soft),
+    box-shadow var(--dur-quick) ease;
+}
+/* 竖着的一道是书名，左下一点是印 */
+.swatch__book::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 3px;
+  height: 19px;
+  border-radius: 1.5px;
+  background: var(--ink);
+  opacity: 0.88;
+}
+.swatch__book::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+/* 还没有自定义过：一圈色轮，表示"挑你自己的颜色" */
+.swatch__book[data-custom] {
+  background: conic-gradient(from 210deg, #f2c4cd, #f3e1b0, #bfe0cf, #b8cde9, #d6c3ea, #f2c4cd);
+}
+.swatch__book[data-custom]::before {
+  top: 50%;
+  right: 50%;
+  width: 12px;
+  height: 1.5px;
+  background: rgb(42 36 38 / 0.7);
+  translate: 50% -50%;
+  box-shadow: none;
+}
+.swatch__book[data-custom]::after {
+  left: 50%;
+  bottom: 50%;
+  width: 1.5px;
+  height: 12px;
+  border-radius: 1px;
+  background: rgb(42 36 38 / 0.7);
+  translate: -50% 50%;
+}
+.swatch:hover .swatch__book {
+  transform: translateY(-2px);
+}
+.swatch[aria-checked='true'] .swatch__book {
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 3.5px var(--thread),
+    0 9px 14px -8px rgb(var(--shadow-rgb) / 0.75);
+}
+
+/* 自定义的两端颜色：两个圆形取色器，中间一段渐变 */
+.custom-colors {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 12px 16px;
+  border-radius: var(--radius-m);
+  background: var(--sheet-2);
+  animation: studio-sheet-in 260ms var(--ease-soft) both;
+}
+.custom-colors__line {
+  flex: 1;
+  height: 8px;
+  margin-bottom: 18px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--from), var(--to));
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06);
+}
+.color-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.color-field input {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  appearance: none;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 3px 8px -4px rgb(var(--shadow-rgb) / 0.6);
+}
+.color-field input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.color-field input::-webkit-color-swatch {
+  border: 0;
+  border-radius: 50%;
+}
+.color-field input::-moz-color-swatch {
+  border: 0;
+  border-radius: 50%;
+}
+.color-field input:focus-visible {
+  outline: 1.5px solid var(--thread);
+  outline-offset: 2px;
+}
+
+/* ---- 纹样：按当前配色画出的小封面 ---- */
+.motif-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  gap: 16px 8px;
+}
+.motif-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+.motif-tile__art {
+  position: relative;
+  width: 100%;
+  max-width: 62px;
+  aspect-ratio: 1 / 1.42;
+  overflow: hidden;
+  border-radius: 2px 5px 5px 2px;
+  background: linear-gradient(160deg, var(--c-from), var(--c-to));
+  box-shadow:
+    inset 2px 0 0 rgb(0 0 0 / 0.08),
+    0 0 0 1px rgb(0 0 0 / 0.05),
+    0 7px 14px -9px rgb(var(--shadow-rgb) / 0.75);
+  transition:
+    transform var(--dur-base) var(--ease-soft),
+    box-shadow var(--dur-quick) ease;
+}
+.motif-tile__art[data-binding='thread'] .cover__motif {
+  opacity: 0.8;
+}
+.motif-tile:hover .motif-tile__art {
+  transform: translateY(-2px);
+}
+.motif-tile[aria-checked='true'] .motif-tile__art {
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 3.5px var(--thread),
+    0 10px 16px -9px rgb(var(--shadow-rgb) / 0.75);
+}
+
+/* ---- 字体：用书名自己的字写出小样 ---- */
+.font-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.font-tile,
+.ornament-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border-radius: var(--radius-m);
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  box-shadow: 0 0 0 1px var(--line);
+  transition:
+    color var(--dur-quick) ease,
+    box-shadow var(--dur-quick) ease,
+    background-color var(--dur-quick) ease;
+}
+.font-tile {
+  padding: 14px 6px 11px;
+}
+.font-tile:hover,
+.ornament-tile:hover {
+  color: var(--ink);
+}
+.font-tile[aria-checked='true'],
+.ornament-tile[aria-checked='true'] {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--thread) 7%, transparent);
+  box-shadow: 0 0 0 1.5px var(--thread);
+}
+.font-tile:focus-visible,
+.ornament-tile:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1.5px var(--thread);
+}
+.font-tile__sample {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 21px;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* ---- 版式与腰封文案 ---- */
+.studio-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+}
+.studio-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+  animation: studio-sheet-in 260ms var(--ease-soft) both;
+}
+.studio-field__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--fs-14);
+}
+.studio-field__label small {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.studio-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  color: var(--ink);
+  background: var(--sheet-2);
+}
+.studio-input::placeholder {
+  color: color-mix(in srgb, var(--ink-2) 65%, transparent);
+}
+.studio-input:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}
+
+/* ---- 点缀 ---- */
+.ornament-tiles {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.ornament-tile {
+  padding: 12px 0 10px;
+}
+.ornament-glyph {
+  width: 30px;
+  height: 30px;
+  fill: currentColor;
+}
+.glyph-none {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-dasharray: 3 3.2;
+}
+.ornament-seal {
+  margin: 2px 0;
+}
+
+/* ---- 书脊：几本书立在一块隔板上，选中的那本抽出来一点 ---- */
+.spine-shelf {
+  position: relative;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  padding: 6px 0 0;
+}
+/* 隔板：在书脚下、名字上面 */
+.spine-shelf::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  bottom: 27px;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  box-shadow: 0 3px 6px -3px rgb(var(--shadow-rgb) / 0.5);
+}
+.spine-chip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 8px 0;
+}
+.spine-chip .face-chip {
+  transition: transform var(--dur-base) var(--ease-soft);
+}
+.spine-chip:hover .face-chip {
+  transform: translateY(-3px);
+}
+.spine-chip[aria-checked='true'] .face-chip {
+  transform: translateY(-10px);
+}
+/* 名字下面一小段红线 */
+.spine-chip::after {
+  content: '';
+  width: 14px;
+  height: 2px;
+  margin-top: -9px;
+  border-radius: 1px;
+  background: var(--thread);
+  scale: 0 1;
+  transition: scale var(--dur-base) var(--ease-soft);
+}
+.spine-chip[aria-checked='true']::after {
+  scale: 1 1;
+}
+
+/* ---- 封底 ---- */
+.back-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 18px;
+}
+.back-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding-top: 4px;
+}
+.back-tile .face-chip {
+  transition:
+    transform var(--dur-base) var(--ease-soft),
+    box-shadow var(--dur-quick) ease;
+}
+.back-tile:hover .face-chip {
+  transform: translateY(-2px);
+}
+.back-tile[aria-checked='true'] .face-chip {
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 3.5px var(--thread),
+    0 10px 16px -9px rgb(var(--shadow-rgb) / 0.75);
+}
+.studio-blurb {
+  padding: 14px 16px;
+  border-radius: var(--radius-m);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.85;
+  text-indent: 2em;
+  color: var(--ink);
+  background: var(--sheet-2);
+}
+
+/* 书脊、封底的小样：真的书脊与封底组件，--k 缩小 */
+.face-chip {
+  position: relative;
+  display: block;
+  flex: none;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.06),
+    0 8px 14px -10px rgb(var(--shadow-rgb) / 0.8);
+}
+.face-chip[data-face='spine'] {
+  border-radius: 2px;
+}
+.face-chip[data-face='back'] {
+  border-radius: 4px 2px 2px 4px;
+}
+
+/* ---------------- 上传 ---------------- */
+.upload {
+  position: relative;
+}
+/* 拖着图经过时，整块亮一圈红线 */
+.upload[data-over]::after {
+  content: '';
+  position: absolute;
+  inset: -8px -10px;
+  border-radius: var(--radius-l);
+  background: color-mix(in srgb, var(--thread) 5%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+  pointer-events: none;
+}
+.upload-drop {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--sp-5);
+  padding: 30px 16px 26px;
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 22%, transparent);
+  border-radius: var(--radius-l);
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--ink) 2.5%, transparent);
+  transition:
+    background-color var(--dur-quick) ease,
+    border-color var(--dur-quick) ease;
+}
+.upload-drop:hover {
+  border-color: color-mix(in srgb, var(--ink) 38%, transparent);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.upload-drop:focus-visible {
+  outline: none;
+  border-color: var(--thread);
+}
+.upload-drop svg {
+  width: 30px;
+  height: 30px;
+  margin-bottom: 4px;
+  stroke-width: 1.4;
+}
+.upload-drop__title {
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  color: var(--ink);
+}
+.upload-drop__note {
+  font-size: var(--fs-12);
+}
+
+.upload-current {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+.upload-current__img {
+  flex: none;
+  width: auto;
+  height: 150px;
+  border-radius: 3px;
+  background: #d8d2c8;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.06),
+    0 10px 18px -12px rgb(var(--shadow-rgb) / 0.8);
+}
+.upload-current__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.upload-current__spec {
+  font-size: var(--fs-12);
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.studio-btn.btn {
+  height: 38px;
+  padding: 0 16px 0 13px;
+  font-size: var(--fs-14);
+}
+
+.samples {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+.sample {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.sample img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 8px 14px -10px rgb(var(--shadow-rgb) / 0.8);
+  transition: transform var(--dur-base) var(--ease-soft);
+}
+.sample:hover img {
+  transform: translateY(-2px);
+}
+.sample .tile-name {
+  font-size: 12px;
+}
+
+/* ---------------- 没保存就离开 ---------------- */
+.studio-leave {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.studio-leave p {
+  margin-bottom: 6px;
+  font-size: var(--fs-16);
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.studio-leave__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
