@@ -229,7 +229,16 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 - **Splash**：intro → 650ms loading（书仰躺翻页）→ 2500ms closing → 3150ms 离场。片头的书是栈顶页面 `hero` 给的那本，离场时飞进它的书位；没有主角的页面（我的等）用品牌书，随纸面淡去。点击跳过；减少动效时 700ms 后直接离场。
 - **Shelf**（私有）：
   - 继续读区：漂浮的主角书、红线进度、"继续读"直接开书推进；挂载后先 `ensureChapter` 取好那一章。
-  - 在读、想读、读完三组。视图 `cover | spine`，改名与扩展见待办。
+  - 在读、想读、读完三组。**显示格式**四种（shelfFormats.tsx；用户 2026-09-29 要求新增列表、宫格，原来的"封面 / 书脊"改名）：
+    - 陈列 `display`：原"封面"视图，`POSES.shelf`，窄屏一组横着滑；
+    - 书柜 `bookcase`：原"书脊"视图，`POSES.spine`，立在书板上；
+    - 宫格 `grid`：`POSES.front`，`repeat(auto-fill, minmax(100px, 1fr))`，390px 三列、320px 两列，一组书全部铺开（用户原话"宫格是完整显示书架中的书"）；
+    - 列表 `list`：`POSES.thumb` 小封面 + 书名、作者·字数；在读的书加"读到第 N 章"与 `ThreadProgress`；宽屏两列。
+  - **切换**：顶部是格式按钮（lucide 图标 + 当前格式名），点开是 Sheet"显示格式"，2×2 卡片，每张一幅 64×40 的示意图、名称与一行说明，与阅读器"翻页方式"同一种卡片；选中后立刻换上并收起面板。换格式时整组按 `key={format}` 重新挂载，`data-switched` 让新的摆法淡入，首次打开不播。
+  - **记住选择**：按设备存 `danmo:shelf-format`（本机存储为准）；另写只挂在 `/shelf` 下的 cookie `danmo-shelf-format`，loader 用 `formatFromCookie` 校验后给出 `serverFormat`，服务端渲染与水合都用它，刷新不闪。
+    - cookie 只挂在 `/shelf`：公开页面的请求不带它，不影响 CDN。页面内跳转取数据的 `/shelf.data` 也不带它（路径匹配要求下一个字符是 `/`），那时 `serverFormat` 是默认值、不作数，挂载时直接读本机存储。
+    - 两者不一致时（cookie 被清掉或刚好是页面内跳转），挂载后按本机存储把 cookie 补写一遍。
+  - **列表的整行点击**：按钮只包住书名，`::after` 伸满整行接住点击；进度红线是读屏器要读出的进度条，放进按钮里会被当作装饰，所以留在按钮外。焦点环用 `:has(:focus-visible)` 画在整行上。
   - 下拉同步用非被动 touchmove，桌面端用顶部按钮触发。
 - **Store**（公开；找书的地方，定位见 tab-roles 记忆）：
   - 版面：标题与搜索框 → 口味标签（`TASTE_TAGS`）→ 书环（编辑推荐，固定七本 `RING_IDS`）→ 三张榜单 → 新书上架 → 馆藏目录。
