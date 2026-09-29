@@ -5,6 +5,9 @@
  * transform: scale(var(--k)) 统一缩放到实际大小。--k 由 Book3D 写入。
  * 颜色来自 faces.tsx 写入的 --c-* 变量（书自己的配色），
  * 只有衬页使用主题变量（内页纸色跟随当前主题）。
+ * 书名字体来自 --title-font / --title-weight（封面制作器的字体变体）；
+ * 书脊、封底的合成样式（data-style）用 --spine-bg/--spine-ink、--back-bg/--back-ink。
+ * 上传的图片面（.face-art--image）不缩放，按实际尺寸铺满。
  * ============================================================ */
 
 .face-art {
@@ -16,6 +19,23 @@
   transform-origin: 0 0;
   transform: scale(var(--k));
   overflow: hidden;
+}
+
+/* 上传的图片：铺满这个面的实际尺寸。书脊图按最厚的书定宽，薄书居中裁掉两边，只露出中间一段 */
+.face-art--image {
+  width: 100%;
+  height: 100%;
+  transform: none;
+  background: #d8d2c8;
+}
+.face-art__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+  user-select: none;
 }
 
 /* ---------------- 封面 ---------------- */
@@ -79,7 +99,8 @@
 }
 .cover__slip-title {
   writing-mode: vertical-rl;
-  font-family: var(--font-brush);
+  font-family: var(--title-font, var(--font-brush));
+  font-weight: var(--title-weight, 400);
   font-size: 28px;
   line-height: 1;
   letter-spacing: 3px;
@@ -111,12 +132,34 @@
   right: 18px;
   top: 22px;
   writing-mode: vertical-rl;
-  font-family: var(--font-serif);
-  font-weight: 700;
+  font-family: var(--title-font, var(--font-serif));
+  font-weight: var(--title-weight, 700);
   font-size: min(30px, calc(188px / var(--title-len) - 4px));
   line-height: 1;
   letter-spacing: 4px;
   color: var(--c-ink);
+}
+/* 没有腰封时竖排书名可以更长一些 */
+.cover[data-layout='vertical']:not([data-band]) .cover__title {
+  font-size: min(32px, calc(232px / var(--title-len) - 4px));
+}
+/* 横排：书名在上方正中，作者在书名下面 */
+.cover[data-layout='horizontal'] .cover__title {
+  left: 14px;
+  right: 14px;
+  top: 34px;
+  writing-mode: horizontal-tb;
+  text-align: center;
+  font-size: min(30px, calc(172px / var(--title-len)));
+  letter-spacing: 3px;
+  line-height: 1.2;
+}
+.cover[data-layout='horizontal'] .cover__author {
+  left: 0;
+  right: 0;
+  top: calc(34px + min(30px, calc(172px / var(--title-len))) * 1.2 + 10px);
+  writing-mode: horizontal-tb;
+  text-align: center;
 }
 
 .cover__author {
@@ -158,6 +201,60 @@
   font-size: 9px;
   letter-spacing: 3px;
   opacity: 0.6;
+}
+/* 没有腰封时，"耽墨文库"单独印在左下角 */
+.cover__imprint--bare {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  color: var(--c-ink);
+}
+
+/* ---- 点缀（CoverOrnament）：位置避开书名 ---- */
+.cover__ornament {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+/* 现代竖排：书名在右上，点缀放在左上 */
+.cover__ornament > g {
+  transform: translate(52px, 58px);
+}
+/* 横排：书名在上方，点缀放在右下（腰封之上）；没有腰封时放得更低一些 */
+.cover[data-layout='horizontal'] .cover__ornament > g {
+  transform: translate(150px, 170px);
+}
+.cover[data-layout='horizontal']:not([data-band]) .cover__ornament > g {
+  transform: translate(150px, 226px);
+}
+.ornament-moon circle {
+  fill: color-mix(in oklab, var(--c-band) 88%, var(--c-accent));
+}
+.ornament-moon .ornament-glow {
+  fill: var(--c-band);
+  opacity: 0.18;
+}
+/* 月牙：用封面的底色挖掉一块 */
+.ornament-moon .ornament-cut {
+  fill: color-mix(in oklab, var(--c-from) 55%, var(--c-to));
+}
+.ornament-petals path {
+  fill: var(--c-accent);
+  opacity: 0.78;
+}
+.ornament-sparkles path {
+  fill: color-mix(in oklab, var(--c-band) 70%, var(--c-accent));
+  opacity: 0.9;
+}
+/* 作者闲章：现代封面上钤在左下（腰封之上） */
+.cover[data-binding='modern'] .cover__seal {
+  left: 18px;
+  bottom: calc(26% + 12px);
+}
+.cover[data-binding='modern']:not([data-band]) .cover__seal {
+  bottom: 34px;
 }
 
 /* 高光带：一道斜向的柔光，横向位置随书本转角移动（--sheen-pos 定义在 book3d.css） */
@@ -207,8 +304,8 @@
 
 .spine__title {
   writing-mode: vertical-rl;
-  font-family: var(--font-serif);
-  font-weight: 700;
+  font-family: var(--title-font, var(--font-serif));
+  font-weight: var(--title-weight, 700);
   font-size: var(--spine-fs);
   line-height: 1;
   letter-spacing: 2px;
@@ -229,6 +326,23 @@
   margin-top: 8px;
 }
 
+/* 书脊的合成样式：取色与主色用上传封面上取到的颜色，素纸与墨色是固定的两套 */
+.spine[data-style='edge'],
+.spine[data-style='main'],
+.spine[data-style='paper'],
+.spine[data-style='ink'] {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--spine-bg) 80%, #000),
+    var(--spine-bg) 45%,
+    color-mix(in oklab, var(--spine-bg) 88%, #000)
+  );
+  color: var(--spine-ink);
+}
+.spine[data-style='paper'] {
+  background: linear-gradient(90deg, #ddd4c2, var(--spine-bg) 45%, #e6dece);
+}
+
 /* 线装书脊：钉线横跨书脊，中上部贴一条小题签以便在书架上认出书名 */
 .spine[data-binding='thread'] {
   background: linear-gradient(
@@ -243,7 +357,8 @@
   margin-top: 104px;
   padding: 5px 1px;
   writing-mode: vertical-rl;
-  font-family: var(--font-kai);
+  font-family: var(--title-font, var(--font-kai));
+  font-weight: var(--title-weight, 400);
   font-size: var(--spine-fs);
   line-height: 1;
   letter-spacing: 1px;
@@ -268,6 +383,40 @@
   text-indent: 2em;
   text-align: justify;
 }
+/* 封底的合成样式：主色铺满、素纸，以及"延续"（上传的封面翻转、放大、虚化后铺满） */
+.back[data-style='main'],
+.back[data-style='paper'],
+.back[data-style='extend'] {
+  background: var(--back-bg);
+  color: var(--back-ink);
+}
+.back[data-style='main'] {
+  background:
+    radial-gradient(120% 90% at 30% 20%, rgb(255 255 255 / 0.12), transparent 60%),
+    var(--back-bg);
+}
+.back__extend {
+  position: absolute;
+  inset: -14%;
+  width: 128%;
+  height: 128%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  filter: blur(9px) saturate(1.12) brightness(0.62);
+}
+.back[data-style='extend']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(10 8 12 / 0.34), rgb(10 8 12 / 0.12) 55%, rgb(10 8 12 / 0.4));
+}
+.back[data-style='extend'] > :not(.back__extend) {
+  position: relative;
+}
+.back[data-style='extend'] .back__blurb {
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.45);
+}
+
 /* 线装封底：简介写在一张浅色笺纸上 */
 .back[data-binding='thread'] .back__blurb {
   padding: 12px 12px 12px 10px;

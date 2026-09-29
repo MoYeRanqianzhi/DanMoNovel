@@ -9,11 +9,20 @@
  *   1. 同一套排版可在 40px 的缩略图与 300px 的详情大图之间无损复用；
  *   2. 规避部分浏览器（尤其中文区域设置下）的"最小字号"限制——
  *      直接写 5px 的字会被强制放大到 12px 从而撑破封面，先排大再缩小则不受影响。
+ * 上传的图片例外：按这个面的实际尺寸铺满（ImageArt），不经过缩放，高分屏上才清楚。
+ *
+ * 每个面画什么由书的封面设计决定（designOf，类型见 @danmo/data/books 的 CoverDesign）：
+ * - 封面：合成（纹样、配色、装帧、书名字体、横竖排、腰封、点缀）或上传的图片；
+ * - 书脊：合成（配色、取色、主色、素纸、墨色五种样式，书名字体可选）或上传的图片；
+ * - 封底：合成（配色、主色、延续、素纸四种样式，都印简介与书号条码）或上传的图片
+ *   （上传的封底在裁剪器里已经印好了条码与朱印）。
+ * 三个面互不绑定：上传了封面，书脊与封底照样可以选合成的样式。
  */
-import type { CSSProperties } from 'react';
-import type { Book } from '@danmo/data/books';
-import { formatBookNo, thicknessRatio } from '@danmo/data/books';
+import { useEffect, type CSSProperties } from 'react';
+import type { Book, CoverDesign, Ornament, SpineStyle, BackStyle, TitleFont } from '@danmo/data/books';
+import { designOf, formatBookNo, thicknessRatio } from '@danmo/data/books';
 import { code128c } from './barcode';
+import { DARK_INK, LIGHT_INK, TITLE_FONTS, ensureTitleFont, readableInk } from './coverStyle';
 import { Motif } from './motifs';
 import './faces.css';
 
@@ -36,16 +45,50 @@ function paletteVars(book: Book): CSSProperties {
   } as CSSProperties;
 }
 
+/** 上传的图片面：按这个面的实际尺寸铺满，不走基准尺寸的缩放（高分屏上才清楚） */
+function ImageArt({ src, face, sheen }: { src: string; face: 'cover' | 'spine' | 'back'; sheen?: boolean }) {
+  return (
+    <div className="face-art face-art--image" data-face={face}>
+      <img className="face-art__img" src={src} alt="" draggable={false} decoding="async" />
+      {sheen && <div className="cover__sheen" />}
+    </div>
+  );
+}
+
+/** 用到的书名字体在浏览器里按需加载（界面字体什么也不做）；服务端先用字体栈里的回退字体 */
+function useTitleFont(font: TitleFont | undefined) {
+  useEffect(() => {
+    if (font) void ensureTitleFont(font);
+  }, [font]);
+}
+
+/** 字体变体写成 CSS 变量，书名、题签、书脊的字都从这里取 */
+function fontVars(font: TitleFont): CSSProperties {
+  const info = TITLE_FONTS[font];
+  return { '--title-font': info.stack, '--title-weight': info.weight } as CSSProperties;
+}
+
 /** 封面 */
 export function CoverFace({ book }: { book: Book }) {
+  const { front } = designOf(book);
+  useTitleFont(front.kind === 'vector' ? front.font : undefined);
+  if (front.kind === 'image') return <ImageArt src={front.src} face="cover" sheen />;
+
   const style = {
     ...paletteVars(book),
+    ...fontVars(front.font),
     // 竖排书名按字数自适应字号：6 个字的书名也能放进腰封以上的区域
     '--title-len': book.title.length,
   } as CSSProperties;
 
   return (
-    <div className="face-art cover" data-binding={book.binding} style={style}>
+    <div
+      className="face-art cover"
+      data-binding={book.binding}
+      data-layout={book.binding === 'thread' ? 'vertical' : front.layout}
+      data-band={book.binding === 'modern' && front.band ? '' : undefined}
+      style={style}
+    >
       <Motif id={book.motif} palette={book.palette} seed={book.id} />
       {book.binding === 'thread' ? (
         <>
@@ -62,38 +105,147 @@ export function CoverFace({ book }: { book: Book }) {
           <div className="cover__slip">
             <span className="cover__slip-title">{book.title}</span>
           </div>
-          <span className="cover__seal">{book.author.slice(0, 1)}</span>
         </>
       ) : (
         <>
-          {/* 现代：竖排书名 + 作者 + 腰封 */}
+          {/* 现代：书名（竖排或横排）+ 作者 + 腰封；没有腰封时"耽墨文库"单独印在左下角 */}
           <span className="cover__title">{book.title}</span>
           <span className="cover__author">{book.author} 著</span>
-          <div className="cover__band">
-            <span className="cover__tagline">{book.tagline}</span>
-            <span className="cover__imprint">耽墨文库</span>
-          </div>
+          {front.band ? (
+            <div className="cover__band">
+              <span className="cover__tagline">{book.tagline}</span>
+              <span className="cover__imprint">耽墨文库</span>
+            </div>
+          ) : (
+            <span className="cover__imprint cover__imprint--bare">耽墨文库</span>
+          )}
         </>
       )}
+      <CoverOrnament ornament={front.ornament} author={book.author} />
       {/* 高光：位置随书本转角变化（见 book3d.css 的 --sheen-pos） */}
       <div className="cover__sheen" />
     </div>
   );
 }
 
-/** 书脊。宽度 = 基准宽度 × 厚度比例，与 Book3D 的 --d 同比例 */
+/**
+ * 封面上的点缀，画在 200×284 的基准坐标里。位置按装帧与书名的排法避开书名：
+ * 现代竖排的书名在右上，点缀放在左上；横排的书名在上方正中，点缀放在右下（腰封之上）；
+ * 线装的题签在右上，闲章按老规矩钤在左下。
+ */
+function CoverOrnament({ ornament, author }: { ornament: Ornament; author: string }) {
+  if (ornament === 'none') return null;
+  if (ornament === 'seal') return <span className="cover__seal">{author.slice(0, 1)}</span>;
+  let art;
+  switch (ornament) {
+    case 'moon':
+      art = (
+        <g className="ornament-moon">
+          <circle cx="0" cy="0" r="30" className="ornament-glow" />
+          <circle cx="0" cy="0" r="17" />
+          <circle cx="6" cy="-4" r="15" className="ornament-cut" />
+        </g>
+      );
+      break;
+    case 'petals':
+      art = (
+        <g className="ornament-petals">
+          {[
+            [-10, -8, -30, 1],
+            [14, 6, 40, 0.8],
+            [-2, 22, 10, 0.65],
+            [22, -16, 75, 0.55],
+            [-24, 14, -60, 0.5],
+          ].map(([x, y, r, s], i) => (
+            <path key={i} d="M0 -7C5 -4 5 3 0 7C-5 3 -5 -4 0 -7Z" transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`} />
+          ))}
+        </g>
+      );
+      break;
+    case 'sparkles':
+      art = (
+        <g className="ornament-sparkles">
+          {[
+            [0, 0, 1],
+            [20, 16, 0.55],
+            [-16, 20, 0.45],
+            [16, -18, 0.4],
+          ].map(([x, y, s], i) => (
+            <path
+              key={i}
+              d="M0 -10C1 -3 3 -1 10 0C3 1 1 3 0 10C-1 3 -3 1 -10 0C-3 -1 -1 -3 0 -10Z"
+              transform={`translate(${x} ${y}) scale(${s})`}
+            />
+          ))}
+        </g>
+      );
+      break;
+  }
+  return (
+    <svg className="cover__ornament" viewBox="0 0 200 284" aria-hidden="true">
+      {art}
+    </svg>
+  );
+}
+
+/** 书脊与封底合成样式的颜色：底色、字色与点缀色；"配色"样式直接用书的配色，返回 null */
+interface Tone {
+  bg: string;
+  ink: string;
+  accent: string;
+}
+
+const PAPER_TONE: Tone = { bg: '#f3ecdf', ink: DARK_INK, accent: '#b8453a' };
+const INK_TONE: Tone = { bg: '#1c181d', ink: '#efe4cf', accent: '#c9a35a' };
+
+function spineTone(book: Book, design: CoverDesign, style: SpineStyle): Tone | null {
+  const image = design.front.kind === 'image' ? design.front : null;
+  switch (style) {
+    case 'palette':
+      return null;
+    case 'edge':
+    case 'main': {
+      const bg = image ? (style === 'edge' ? image.edge : image.main) : style === 'edge' ? book.palette.from : book.palette.to;
+      const ink = readableInk(bg);
+      return { bg, ink, accent: ink };
+    }
+    case 'paper':
+      return PAPER_TONE;
+    case 'ink':
+      return INK_TONE;
+  }
+}
+
+function toneVars(prefix: 'spine' | 'back', tone: Tone | null): CSSProperties {
+  if (!tone) return {};
+  return { [`--${prefix}-bg`]: tone.bg, [`--${prefix}-ink`]: tone.ink, '--c-accent': tone.accent } as CSSProperties;
+}
+
+/**
+ * 书脊。宽度 = 基准宽度 × 厚度比例，与 Book3D 的 --d 同比例。
+ * 线装书的合成封面配"配色"书脊时画钉线与小题签；其余一律是现代书脊（书名、作者、"耽"字）。
+ */
 export function SpineFace({ book }: { book: Book }) {
+  const design = designOf(book);
+  const { spine } = design;
+  const font: TitleFont = spine.kind === 'auto' ? (spine.font ?? (design.front.kind === 'vector' ? design.front.font : 'song')) : 'song';
+  useTitleFont(spine.kind === 'auto' ? font : undefined);
+  if (spine.kind === 'image') return <ImageArt src={spine.src} face="spine" />;
+
   const spineW = COVER_BASE * thicknessRatio(book.words);
+  const thread = book.binding === 'thread' && design.front.kind === 'vector' && spine.style === 'palette';
   const style = {
     ...paletteVars(book),
+    ...fontVars(font),
+    ...toneVars('spine', spineTone(book, design, spine.style)),
     '--spine-w': `${spineW}px`,
     // 书脊上的字号受书脊宽度约束：薄书用小字，厚书最大 17px
     '--spine-fs': `${Math.min(spineW * 0.56, 17)}px`,
   } as CSSProperties;
 
   return (
-    <div className="face-art spine" data-binding={book.binding} style={style}>
-      {book.binding === 'thread' ? (
+    <div className="face-art spine" data-binding={thread ? 'thread' : 'modern'} data-style={spine.style} style={style}>
+      {thread ? (
         <>
           <svg className="spine__stitches" viewBox={`0 0 ${spineW} 284`} preserveAspectRatio="none" aria-hidden="true">
             {STITCH_Y.map((y) => (
@@ -113,10 +265,44 @@ export function SpineFace({ book }: { book: Book }) {
   );
 }
 
-/** 封底：印着简介，右下角是书号条码。详情页拖动书本翻到背面就能读到 */
+function backTone(book: Book, design: CoverDesign, style: BackStyle): Tone | null {
+  switch (style) {
+    case 'palette':
+      return null;
+    case 'main': {
+      const bg = design.front.kind === 'image' ? design.front.main : book.palette.to;
+      const ink = readableInk(bg);
+      return { bg, ink, accent: '#b8453a' };
+    }
+    case 'extend':
+      return { bg: '#16141a', ink: LIGHT_INK, accent: '#b8453a' };
+    case 'paper':
+      return PAPER_TONE;
+  }
+}
+
+/**
+ * 封底：印着简介，右下角是书号条码。详情页拖动书本翻到背面就能读到。
+ * "延续"样式把上传的封面左右翻转、放大、虚化后铺满：书转过来时，封底靠书脊的一边
+ * 正好接着封面靠书脊的一边，像同一幅画绕到了背面。合成封面没有图可延续，按"配色"画。
+ */
 export function BackFace({ book }: { book: Book }) {
+  const design = designOf(book);
+  const { back, front } = design;
+  if (back.kind === 'image') return <ImageArt src={back.src} face="back" />;
+  const style: BackStyle = back.style === 'extend' && front.kind !== 'image' ? 'palette' : back.style;
+  const thread = book.binding === 'thread' && front.kind === 'vector' && style === 'palette';
+
   return (
-    <div className="face-art back" data-binding={book.binding} style={paletteVars(book)}>
+    <div
+      className="face-art back"
+      data-binding={thread ? 'thread' : 'modern'}
+      data-style={style}
+      style={{ ...paletteVars(book), ...toneVars('back', backTone(book, design, style)) }}
+    >
+      {style === 'extend' && front.kind === 'image' && (
+        <img className="back__extend" src={front.src} alt="" draggable={false} decoding="async" />
+      )}
       <p className="back__blurb">{book.blurb}</p>
       <div className="back__foot">
         <span className="back__seal">耽墨</span>

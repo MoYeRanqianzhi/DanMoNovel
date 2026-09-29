@@ -1,0 +1,43 @@
+/* ============================================================
+ * 包封展开图（Jacket.tsx）：封底 | 书脊 | 封面，平铺成一张
+ * 书脊与两个面之间画一道很淡的折痕，看得出哪里会折过去
+ * ============================================================ */
+
+.jacket {
+  display: flex;
+  width: calc(var(--jw) * 2 + var(--js));
+  height: var(--jh);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.12),
+    0 22px 44px -26px rgb(var(--shadow-rgb, 0 0 0) / 0.7);
+}
+.jacket__face {
+  position: relative;
+  flex: none;
+  width: var(--jw);
+  height: 100%;
+  overflow: hidden;
+}
+.jacket__face[data-face='spine'] {
+  width: var(--js);
+}
+/* 折痕：书脊两侧各一道 */
+.jacket__face[data-face='spine']::before,
+.jacket__face[data-face='spine']::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 1px;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.08) 50%, rgb(0 0 0 / 0.2));
+  pointer-events: none;
+}
+.jacket__face[data-face='spine']::before {
+  left: 0;
+}
+.jacket__face[data-face='spine']::after {
+  right: 0;
+}
