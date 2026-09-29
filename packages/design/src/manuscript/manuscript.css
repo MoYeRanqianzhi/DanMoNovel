@@ -1,0 +1,410 @@
+/* ============================================================
+ * 稿纸（Manuscript.tsx）
+ *
+ * 尺寸变量由 Manuscript 量好后写在 .ms-frame 上：--ms-cols 一行几格、--ms-pitch 格宽、
+ * --ms-font 字号、--ms-track 字间距、--ms-gap 行间空白、--ms-line 行高；量好之前用这里的缺省值。
+ * --ms-size（字号）与 --ms-pad（纸边留白）按屏幕宽度给出，Manuscript 读它们来算一行几格。
+ * --ms-rows 是正文区的行数（ManuscriptEditor / ManuscriptText 写在 .ms__body 上）。
+ * ============================================================ */
+
+/* 方格稿纸的补字字体：半角字符与弯引号改成一个字宽（生成方法与许可见 scripts/gen-grid-font.py）。
+ * unicode-range 与脚本里的 CODEPOINTS 一致；只有方格纸用到这些字符时浏览器才会下载它。
+ * block：字体到之前先不画这些字，免得先按半角排、再按全角排，一行字跳一下 */
+@font-face {
+  font-family: 'Danmo Grid';
+  src: url('./danmo-grid.woff2') format('woff2');
+  font-display: block;
+  unicode-range: U+0020-007E, U+00B7, U+00D7, U+2013, U+201C-201D;
+}
+
+.ms-frame {
+  --ms-size: 18px;
+  --ms-pad: 16px;
+  --ms-cols: 14;
+  --ms-font: 18px;
+  --ms-track: 5px;
+  --ms-pitch: 23px;
+  --ms-gap: 10px;
+  --ms-line: 33px;
+  /* 格线：当前配色的主色调里调进一点墨，像印在纸上的淡色格子（不用红线色，红线只承载信息） */
+  --ms-rule: color-mix(in oklab, var(--blush) 58%, var(--ink));
+  --ms-rule-opacity: 0.55;
+  position: relative;
+  width: 100%;
+}
+/* 夜间配色的墨是浅色，同样的浓度在深色纸上显得太亮，夜里写字晃眼：格线再淡一些 */
+[data-theme='changye'] .ms-frame {
+  --ms-rule-opacity: 0.32;
+}
+@media (min-width: 900px) {
+  .ms-frame {
+    --ms-size: 21px;
+    --ms-pad: 52px;
+    --ms-cols: 20;
+    --ms-font: 21px;
+    --ms-track: 6px;
+    --ms-pitch: 27px;
+    --ms-line: 37px;
+  }
+}
+
+/* ---- 纸：一张平放在桌上的稿纸，四角几乎是直角，影子贴着桌面 ---- */
+.ms {
+  position: relative;
+  width: calc(var(--ms-cols) * var(--ms-pitch) + 2 * var(--ms-pad));
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--ms-pad) 34px;
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ink) 4%, transparent),
+    0 1px 2px rgb(var(--shadow-rgb) / 0.08),
+    0 26px 50px -32px rgb(var(--shadow-rgb) / 0.6);
+}
+
+.ms__head {
+  position: relative;
+  padding: 30px 0 18px;
+}
+@media (min-width: 900px) {
+  .ms__head {
+    padding: 54px 0 26px;
+  }
+}
+
+/* 纸头上的印：盖在右上角，压住一点纸边 */
+.ms__stamp {
+  position: absolute;
+  top: 16px;
+  right: calc(var(--ms-pad) - 4px);
+  z-index: 2;
+}
+@media (min-width: 900px) {
+  .ms__stamp {
+    top: 34px;
+    right: calc(var(--ms-pad) + 6px);
+  }
+}
+
+/* 章的标签（"第六十六章"）与章名：纸头的两行字，调用方按需使用 */
+.ms__label {
+  display: block;
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  letter-spacing: 0.32em;
+  color: var(--ink-2);
+}
+.ms__title {
+  display: block;
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-family: var(--font-kai);
+  font-size: 1.625rem;
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--ink);
+}
+.ms__title::placeholder {
+  color: color-mix(in srgb, var(--ink-2) 45%, transparent);
+}
+/* 输入章名时，章名下面浮出一道淡淡的红线（光标所在处） */
+.ms__title:focus-visible {
+  outline: none;
+  box-shadow: 0 1.5px 0 color-mix(in srgb, var(--thread) 55%, transparent);
+}
+@media (min-width: 900px) {
+  .ms__title {
+    font-size: 2rem;
+  }
+}
+
+/* 方格纸右下角印着的规格，例如"20×20" */
+.ms__spec {
+  position: absolute;
+  right: var(--ms-pad);
+  bottom: 11px;
+  font-family: var(--font-kai);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  color: var(--ms-rule);
+  opacity: 0.8;
+}
+
+/* ---- 正文区：格线层在下，文字层在上 ---- */
+.ms__body {
+  position: relative;
+  width: calc(var(--ms-cols) * var(--ms-pitch));
+  min-height: calc(var(--ms-rows, 20) * var(--ms-line));
+}
+
+.ms__grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  color: var(--ms-rule);
+  pointer-events: none;
+  /* 量好尺寸之前不画格线：缺省值排出来的格子可能与文字对不上 */
+  opacity: 0;
+  transition: opacity var(--dur-slow) ease;
+}
+.ms-frame[data-ready] .ms__grid {
+  opacity: var(--ms-rule-opacity);
+}
+.ms__grid path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.ms__page text {
+  fill: currentColor;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+/* 窄屏纸边太窄，放不下页码，只留裁切线 */
+@media (max-width: 599px) {
+  .ms__page text {
+    display: none;
+  }
+}
+
+/* 文字层：文本框、它的镜像与只读正文共用同一套排版，换行的位置才完全一致 */
+.ms__text {
+  display: block;
+  width: calc(var(--ms-cols) * var(--ms-pitch));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-kai);
+  font-size: var(--ms-font);
+  line-height: var(--ms-line);
+  letter-spacing: 0.03em;
+  color: var(--ink);
+  text-align: justify;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ms[data-paper='grid'] .ms__text {
+  width: calc(var(--ms-cols) * var(--ms-pitch) + var(--ms-track) / 2 + 1px);
+  padding-left: calc(var(--ms-track) / 2);
+  font-family: 'Danmo Grid', var(--font-kai);
+  letter-spacing: var(--ms-track);
+  text-align: start;
+  /* 一格一字。换行守中文的避头尾：句号、逗号、后引号不落在行首，前引号不落在行尾——
+   * 遇到时把前一个字连同标点一起挪到下一行，上一行末尾空一格（稿纸上的写法），格子照样对齐；
+   * 两格的省略号"……"、破折号"——"不拆开。英文单词可以从中间断开，相邻标点也不互相压缩 */
+  line-break: normal;
+  word-break: break-all;
+  text-spacing-trim: space-all;
+  text-autospace: no-autospace;
+  font-kerning: none;
+  font-variant-ligatures: none;
+}
+
+.ms__mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.ms__input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+  /* 光标是"写到哪儿了"，用红线色 */
+  caret-color: var(--thread);
+}
+.ms__input:focus-visible {
+  outline: none;
+}
+.ms__input::placeholder {
+  color: color-mix(in srgb, var(--ink-2) 50%, transparent);
+}
+
+/* ---- 朱批：被批的字底下一道朱红波浪线，字底透一点朱色；前面一粒编了号的红点 ---- */
+.ms-mark {
+  color: inherit;
+  background: color-mix(in srgb, var(--thread) 7%, transparent);
+  text-decoration: underline wavy color-mix(in srgb, var(--thread) 85%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+  text-decoration-skip-ink: none;
+  cursor: pointer;
+  transition: background-color var(--dur-quick) ease;
+}
+.ms-mark:hover,
+.ms-mark[data-active] {
+  background: color-mix(in srgb, var(--thread) 15%, transparent);
+}
+.ms-mark__anchor {
+  position: relative;
+}
+.ms-mark__num {
+  position: absolute;
+  left: -7px;
+  top: calc(-0.2em - 8px);
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--thread);
+  color: var(--paper);
+  box-shadow: 0 0 0 2px var(--sheet);
+  user-select: none;
+  letter-spacing: 0;
+  transition: transform var(--dur-quick) var(--ease-soft);
+}
+.ms-mark__num::before {
+  content: attr(data-n);
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  text-align: center;
+}
+.ms-mark[data-active] .ms-mark__num,
+.ms-mark__num:hover {
+  transform: scale(1.18);
+}
+
+/* ---- 浮签：一张窄窄的纸条，淡淡透着朱色，批语用楷书、朱色 ---- */
+.ms-slip {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  padding: 11px 14px 12px 11px;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--sheet) 93%, var(--thread));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--thread) 16%, transparent),
+    0 1px 1px rgb(var(--shadow-rgb) / 0.08),
+    0 10px 22px -14px rgb(var(--shadow-rgb) / 0.55);
+  cursor: default;
+  transition:
+    box-shadow var(--dur-quick) ease,
+    translate var(--dur-base) var(--ease-soft);
+}
+.ms-slip__num {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+  border-radius: 50%;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--paper);
+  background: var(--thread);
+}
+.ms-slip__text {
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  line-height: 1.65;
+  color: var(--thread-ink);
+}
+/* 宽屏：贴在稿纸右边，压住一点纸边，一张歪左、一张歪右 */
+.ms-slip[data-mode='margin'] {
+  left: calc(100% + var(--ms-pad) - 18px);
+  width: 178px;
+}
+.ms-slip[data-mode='margin'][data-tilt='a'] {
+  rotate: 1.2deg;
+}
+.ms-slip[data-mode='margin'][data-tilt='b'] {
+  rotate: -0.9deg;
+}
+.ms-slip[data-mode='margin'][data-active] {
+  translate: 6px 0;
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--thread) 45%, transparent),
+    0 14px 26px -14px rgb(var(--shadow-rgb) / 0.6);
+}
+/* 窄屏：从被批的那一行下面展开，宽度与正文一样 */
+.ms-slip[data-mode='pop'] {
+  left: -4px;
+  right: -4px;
+  rotate: -0.4deg;
+  animation: ms-slip-in var(--dur-base) var(--ease-soft) both;
+}
+@keyframes ms-slip-in {
+  from {
+    opacity: 0;
+    translate: 0 -6px;
+  }
+}
+
+/* ---- 总批：纸头上的一段朱笔批语 ---- */
+.ms-summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 14px 0 2px;
+  border-top: 1px dashed color-mix(in srgb, var(--thread) 30%, transparent);
+}
+.ms-summary__seal {
+  margin-top: 3px;
+}
+.ms-summary__text {
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.7;
+  color: var(--thread-ink);
+}
+.ms-summary__byline {
+  margin-top: 2px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.ms-summary__notes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+}
+.ms-summary__note {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 6px 5px 0;
+  border-radius: 6px;
+  font-size: var(--fs-14);
+  line-height: 1.55;
+  text-align: left;
+  color: var(--ink);
+  transition: background-color var(--dur-quick) ease;
+}
+button.ms-summary__note:hover {
+  background: color-mix(in srgb, var(--thread) 6%, transparent);
+}
+.ms-summary__num {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--paper);
+  background: var(--thread);
+}

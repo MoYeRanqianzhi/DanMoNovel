@@ -1,5 +1,5 @@
 /* ============================================================
- * 站点骨架与跨页面复用的版式：舞台、页面容器、版心、标题、二级页顶栏、按钮
+ * 站点骨架与跨页面复用的版式：舞台、页面容器、版心、标题、二级页顶栏、按钮、章节列表
  * 三站共用；各站自己的布局写在各站的 CSS 里。
  *
  * 页面以"栈"的形式叠放在舞台里（见 shell/stack.tsx）：新页面盖在旧页面上淡入，
@@ -148,4 +148,34 @@
 }
 .btn--ghost:hover {
   background: color-mix(in srgb, var(--sheet) 88%, var(--ink));
+}
+
+/* ---------------- 章节列表 ----------------
+ * 小说站详情页与阅读器的"全部章节"、作者站写作页的目录共用：一行一章，细线分隔，
+ * 当前章的文字染成红线色、右侧一小段红线（当前位置是信息，用红线）。
+ * 各站在行里追加自己的标记（小说站的锁、作者站的章节状态），写在各站的 CSS 里。 */
+.toc-list button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 4px;
+  font-size: var(--fs-16);
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  transition: color var(--dur-quick) ease;
+}
+.toc-list button:hover {
+  color: var(--thread-ink);
+}
+.toc-list button[aria-current] {
+  color: var(--thread-ink);
+}
+.toc-list button[aria-current]::after {
+  content: '';
+  width: 18px;
+  height: 1.5px;
+  margin-left: auto;
+  border-radius: 1px;
+  background: var(--thread);
 }

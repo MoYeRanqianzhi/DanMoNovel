@@ -2,33 +2,7 @@
  * 小说站自己的共用样式（三站共用的在 @danmo/design 里）
  * ============================================================ */
 
-/* ---------------- 章节列表（详情页与阅读器的"全部章节"面板共用） ---------------- */
-.toc-list button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 13px 4px;
-  font-size: var(--fs-16);
-  text-align: left;
-  border-bottom: 1px solid var(--line);
-  transition: color var(--dur-quick) ease;
-}
-.toc-list button:hover {
-  color: var(--thread-ink);
-}
-/* 当前章：文字染成红线色，右侧一小段红线 */
-.toc-list button[aria-current] {
-  color: var(--thread-ink);
-}
-.toc-list button[aria-current]::after {
-  content: '';
-  width: 18px;
-  height: 1.5px;
-  margin-left: auto;
-  border-radius: 1px;
-  background: var(--thread);
-}
+/* ---------------- 章节列表（.toc-list 的基本样式在 @danmo/design 的 layout.css，三站共用） ---------------- */
 /* 未解锁的章节：右侧一把淡淡的小锁（当前章的红线短横仍在最右） */
 .toc-lock {
   flex: none;

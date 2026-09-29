@@ -361,9 +361,11 @@ export function PageStack({ missing, children }: PageStackProps) {
     [navigate],
   );
 
-  // Esc 返回上一页（面板打开时由面板自己在捕获阶段拦截）
+  // Esc 返回上一页（面板打开时由面板自己在捕获阶段拦截）。
+  // 输入法组字时的 Esc 是取消候选词，不是返回：否则在写作页、搜索框里打字时一按 Esc 就离开了这一页
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === 'Escape' && liveOf(entriesRef.current).length > 1) back();
     };
     window.addEventListener('keydown', onKey);
