@@ -169,7 +169,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 - **根元素设了 `user-select: none`**：书是物件。否则鼠标拖书会先选中书面文字，下一次拖动就变成浏览器的原生拖拽（dragstart → pointercancel），转书被打断。
 - **状态** `data-state`：`rest`；`float`（6.4s 漂浮，每屏只给一本主角书）；`loading`（封面 0.92，5 张内页依次翻，2.6s 循环）。
 - **姿态预设** `POSES`：hero {-8, 26}、shelf {-5, 18}、spine {-4, 88}、front {0, 0}、thumb {-2, 12}。书脊只用在模拟实体书架的格式里（见 book-spine 记忆）。
-- **平面内容**（faces.tsx）：全部按 200×284 的基准排版，再用 `scale(var(--k))` 缩放。这样一套排版能在大小书之间复用，也避开中文区域浏览器的"最小字号"：基准下的字号不能小于 12px。
+- **平面内容**（faces.tsx）：全部按 200×284 的基准排版，再用 `scale(var(--k))` 缩放。这样一套排版能在大小书之间复用，也避开中文区域浏览器的"最小字号"：基准下的字号不能小于 12px。上传的图片面例外，按实际尺寸铺满。三个面各自合成或图片，见第 15 节。
   - 装帧 `thread`：线装，左侧钉线、右上题签、左下闲章。
   - 装帧 `modern`：右侧竖排书名、腰封 tagline。
   - 封面内侧是一张藏书票。
@@ -580,6 +580,14 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 宽屏浮签贴纸边、窄屏点开浮签与点别处收起；长夜下格线调淡之后看过。
   - 作者站生产构建通过：Danmo Grid 与稿纸样式只在写作页的路由里加载；控制台无报错。
 - **作者站未验收**：手机真机的输入法与软键盘（键盘弹起时顶栏与光标的位置）；Safari、Firefox 上 text-spacing-trim 与避头尾的表现；减少动效下的盖章。
+- **封面系统与作品页已在浏览器验收**（2026-09-30，1440×900 与 390×844，缃叶与长夜）：
+  - 工作室·合成：配色（预设、原配）、纹样、点缀五种、六种书名字体、线装与现代、横排、无腰封、长书名（线装题签 5/7/11 字、现代竖排 11 字）；书脊五种样式与书脊字体；封底三种样式；换面时书转到那一面；展开图与当前面下的红线。
+  - 工作室·图片：示例图（校园·一做封面、古风·二做书脊、校园·二做封底）与本机文件（testcover 的原图 PNG）都走裁剪器；拖动标记、换浅字；导出的图 naturalWidth×naturalHeight 为 800×1136、208×1136、800×1136；书脊的安全区；不收的格式（.md）提示；重新裁剪、Esc 取消。封面换成图片后书脊自动取色、封底自动主色，"延续"样式。
+  - 保存后刷新从 IndexedDB 读回；恢复默认；没保存就离开的提示（接着改、不保存、保存并离开的前两种点过）；关页时浏览器的离开提示；直接打开工作室时 Esc 不返回（栈里只有一页，与其他页一致）。
+  - 飞行：作品列表 → 详情 → 工作室，逐级返回；书房的书换成本机的图片封面后，"接着写"开书推进与返回。
+  - 作品详情：改简介、加标签后页面更新；键盘翻到封底。新建作品：古代、换一个、长书名。
+  - 小说站的书城、线装书详情页与改动前一样（四字题签不变）；作者站生产构建通过，工作室与作品页各自一个路由包；控制台无报错。
+- **封面系统未验收**：拖放上传（只测了文件选择）；触屏的双指缩放；"保存并离开"；Safari 与 Firefox（相对颜色语法不支持时染色退回原色、canvas 导出）；减少动效。
 - **测试注意**：
   - Vite 会缓存"解析失败"：先写了 `import './x.css'`、后建文件时，这个站的开发服务器一直报 500 "Failed to load url"，文件建好也不恢复。先建文件再写 import；已经卡住了就 `touch apps/<站>/vite.config.ts`，那个站的开发服务器会重启。
   - Playwright 截图的文件名写成 `.playwright-mcp/<名字>.png`（已忽略）。只写文件名会存到仓库根目录，混进未跟踪文件。
@@ -591,7 +599,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 - **骨架**：root.tsx（默认主题缃叶）；shell.tsx 四个标签页：书房 /desk、作品 /works、互动 /readers、数据 /stats，侧栏底部是"我" /me（窄屏从书房右上角的闲章进入）；写作页不是标签页。
   - http.ts：PUBLIC_CACHE、PRIVATE_CACHE、privateMeta（标题加 noindex）、NOT_FOUND_META。
   - format.ts：formatNumber 自己拼千分位（服务端与浏览器的区域数据可能不同，toLocaleString 会水合不匹配）、formatCount（万）、formatAgo。
-  - 作品、互动、数据、我、首页还没做，地址已被书房里的链接用到（/works/:id、/readers?focus=、/me）。
+  - 互动、数据、我、首页还没做，地址已被书房里的链接用到（/readers?focus=、/me）。作品与封面工作室见第 15 节。
 - **数据**：packages/data/src/author.ts 与 manuscripts.ts。
   - 登录的作者是《盐汽水与蝉》的栖迟；另有筹备中的《晚风信号》`1002100000010007`（三章：待审核、草稿、退回）与完结的《青苔与猫》`1002100000010008`。界面称呼作者一律用"你"，不用性别代词。
   - 有单独稿件的章节（manuscripts.ts 的 DRAFTS）字数按稿件算：第六十六章草稿 931 字，也就是今日字数 TODAY_WORDS；《晚风信号》三章 721、533、542 字，书的总字数由此算出。其余章节借用小说站的试读正文（章首带"示例正文"说明），字数仍是 volumesOf 给的随机值，两者对不上。
@@ -602,7 +610,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - "接着写"：`push('/write/<书号>/<章>', { flightFrom: heroSlot, book, dive: true })`。消息提到某一章就打开那一章的稿纸，只提到书就打开作品页。
   - 窄屏一栏（两栏外壳 display: contents，墨迹 order: 10 排到最后），宽屏两栏。
 - **写作 /write/:bookId/:chapter?**（write/）：
-  - loadWrite：章节参数必须是 1 到"已有章数 + 1"的整数，最后那个是新开的一章；省略时打开最后一章草稿，没有草稿就开新的一章；其余返回 `data(MISSING, { status: 404 })`。handle：back 'surface'、book、parent '/desk'（作品页做好后改成作品页）。
+  - loadWrite：章节参数必须是 1 到"已有章数 + 1"的整数，最后那个是新开的一章；省略时打开最后一章草稿，没有草稿就开新的一章；其余返回 `data(MISSING, { status: 404 })`。handle：back 'surface'、book（applyLocal，换上本机改过的封面）、parent '/desk'。
   - WriteScreen 按"书号:章序号"给 ChapterDesk 加 key：目录里换章用 retarget（替换地址，同一页），整张桌子重新挂载，状态不会串到别的章。
   - 状态：草稿可编辑；发布 → 待审核（盖"送审"，朱文印，作者自己盖的）→ 撤回 → 草稿；定时（印"准"）、已发布（不盖印）、退回（印"退"）点"修改"回到草稿。"准""退"是白文印，与管理站审核时盖的印一致。提交按钮的字按打开时的状态定：退回"重新提交"，定时与已发布"提交修改"，其余"提交审核"。
   - 顶栏第二行：草稿写小月亮（今日字数/目标）、本章字数、保存中/已保存；待审核"审核中 · N 小时前提交"（ChapterRecord.when 在待审核时是提交距今的小时数）；定时"已过审 · 明天 20:00 发布"；已发布"已发布 · N 天前"；退回"退回修改 · N 处批注"。
@@ -652,3 +660,52 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 浮签 Slips 有两种放法：
     - 稿纸旁余下的宽度 ≥ 170（SLIP_ROOM）时贴在纸边：宽 178px，压住纸边 18px，上沿对齐被批的第一行，挨得太近时往下错开 12px；
     - 余下的宽度不够时只显示展开的那一张，放在被批最后一行的下面（取 getClientRects 的最后一个矩形）。点别处或按 Esc 收起；Esc 在捕获阶段拦下，不触发返回上一页。
+
+## 15. 封面系统与作品页（2026-09-30）
+
+需求原话、验收标准与决定见 [封面系统计划](../plan/2026-09-29-cover-system.md)，产品规则见 book-spine 记忆。
+
+- **数据**（packages/data/src/books.ts）：
+  - 规格 `COVER_PX` 800×1136、`SPINE_PX` 208×1136、`BACK_PX` 800×1136、`SPINE_SAFE_PX` 56。书脊按最厚的书定宽（thicknessRatio 的上限 0.26），薄书只露中间一段；最薄（0.07）露 56px。
+  - `Book.design?: CoverDesign`：front 是 `VectorFront {font, layout, band, ornament}` 或 `ImageFront {src, edge, main}`；spine 是 `{kind: 'auto', style, font?}` 或 `{kind: 'image', src}`；back 是 `{kind: 'auto', style}` 或 `{kind: 'image', src}`。配色、纹样、装帧、腰封文案仍是 Book 自己的字段。
+  - `designOf(book)` 给缺省：`defaultFront(binding)`（线装 brush 字与闲章；现代 song 字、竖排、腰封、不加点缀），书脊、封底 palette。
+- **3D 书本的面**（faces.tsx / faces.css）：
+  - ImageArt：图片面不走 --k 缩放，按面的实际尺寸 object-fit: cover 居中。
+  - CoverFace：线装强制竖排；`data-band` 没有时"耽墨文库"单独印在左下（.cover__imprint--bare）。CoverOrnament 画在 200×284 坐标里，按排法避开书名：竖排在左上 translate(52, 58)，横排在右下 translate(150, 170)，横排无腰封 translate(150, 226)；闲章在现代封面上钤在左下、腰封之上。
+  - 字体：fontVars 写 --title-font/--title-weight，useTitleFont 在浏览器里 ensureTitleFont，服务端先用字体栈的回退。--title-len 让竖排、横排（`172px / 字数 − 3px`，算上 3px 字距）、题签（高 `clamp(162px, 字数×26px+30px, 236px)`）、书脊上的书名按字数缩小；四个字以内的书样子不变。
+  - SpineFace：字体 = spine.font ?? 合成封面的字体 ?? song。spineTone：palette 用书的配色；edge、main 用图片封面取好的颜色（合成封面用 palette.from、palette.to）；paper #f3ecdf 配深墨；ink #1c181d 配米白与一点金。字色一律 readableInk。钉线与小题签只在"合成封面 + 线装 + 配色样式"时画。
+  - BackFace：main 用图片主色（合成封面用 palette.to）；extend 是深底加 `<img class="back__extend">`（封面图水平翻转、放大到 128%、blur 9px、brightness 0.62，再压一层渐变），合成封面选 extend 时按 palette 画。
+- **颜色与字体**（coverStyle.ts）：TITLE_FONTS 六种，platform 是 fonts/catalog 的 id，按需加载；DARK_INK #2a2426、LIGHT_INK #fbf6ee；parseColor、toHex、luminance（WCAG 相对亮度）、contrast、readableInk。
+- **管线**（coverArt.ts）：
+  - MARKS：封面标记宽高比 28/110、缺省宽 208、最小 128（画面宽的 16%）、最大 352；书脊朱印 40，28~56；封底标记（朱印"耽墨" + 条码标签）宽高比由 backGeometry 按条码模块数算，300，260~420（最小时条码约 200px，每模块约 1.4px）。defaultMark：封面左下（边距 44/48）、书脊正中偏下 56、封底右下 44。
+  - drawSeal：朱印 #b8392f，歪 3°，内圈细边，毛笔字（一个字居中，两个字竖排，按 actualBoundingBox 居中）。drawMark 的封面标记是 110×28 的单位盒，左印右字，浅字带阴影；封底标记是朱印加白底 Code 128C 标签，书号一行与条码等宽。画之前 prepareMarkFonts（document.fonts.load），否则画布落到系统字体。
+  - renderFace：规格尺寸的 canvas，imageSmoothingQuality high；封面先 sampleTones 再画标记（标记不影响取色）；toBlob('image/png')。
+  - sampleTones：edge 是最左 8px 一列的平均色；main 是缩到 40 宽、每通道 4 位分桶、权重 0.25 + 饱和度、取最重的桶的平均色。
+- **包封展开图**（Jacket.tsx）：封底 | 书脊 | 封面，--k = 宽 / 200，书脊宽 = 宽 × thicknessRatio，书脊两侧各一道折痕。
+- **本机存储**（apps/author/app/local.ts）：
+  - 封面：IndexedDB `danmo-author` 版本 1，对象库 `covers`（keyPath bookId），值 `{bookId, edit, blobs, savedAt}`；存进去的 design 里图片的 src 置空，读出来用 urlOf 补上。只存设计里用到的图片面，丢掉的面 releaseBlob。
+  - 作品信息：localStorage `danmo-author:work-info`，`{书号: {blurb, tags}}`，读时逐项校验。
+  - urlOf：WeakMap，同一个 Blob 总是同一个 blob: 地址，保存前后预览不闪。
+  - API：saveCoverEdit、clearCoverEdit、coverBlobs、saveWorkInfo、applyEdit、applyLocal（同步，给 handle.book 与 push 带的书）、useCoverEdit、useLocalBooks（useSyncExternalStore，服务端快照 −1 时返回书本来的样子）。
+  - CoverEdit 另有 `vector?`：封面是图片时记下最近的合成设置，以后切回合成还在。
+- **草稿**（cover/draft.ts）：Draft 存"作者选了什么"（palette、motif、binding、tagline、modes、vector、spine、back、images），composeEdit 拼出设计。
+  - SPINE_STYLES / BACK_STYLES：每种封面能用的样式，第一个是缺省（合成封面：配色；图片封面：书脊取色、封底主色）。记着的样式用不了时拼成缺省，但记着的不动，封面换回来书脊、封底也回来。draftOf 把"等于缺省"的样式记成 palette。
+  - sameEdit 用排序键的 JSON。工作室比较前把保存的与缺省的都 composeEdit(draftOf(...)) 一遍（savedCanon、fallbackCanon），旧记录缺了后加的字段不算改过。
+- **封面工作室**（cover/CoverStudio.tsx，/works/:bookId/cover；handle back 'hop'、book applyLocal、parent /works/:bookId）：
+  - POSE_OF：封面 {−7, 20}、书脊 {−6, 72}、封底 {−7, 160}；从封面转到封底途中经过书脊。
+  - 舞台染色：--studio-dye、--studio-dye-2 注册为 `<color>` 以便过渡；深色封面在 @supports 里用 `oklch(from … max(l, 0.8) c h)` 提亮（长夜主题不提亮）。作品卡片与作品详情用同样的办法。
+  - 展开图宽 = min((宽 − 边距) / (2 + 厚度比), (高 − 64) / 1.42)，当前面下一段红线。
+  - 保存：等于缺省时 clearCoverEdit，否则 saveCoverEdit(blobsOf)；保存后 refreshUrls（存储释放了没存的图的地址，草稿里留着的图重新取地址）。
+  - 离开：useBlocker（有改动、在栈顶、换了路径才拦）→ Sheet：保存并离开、不保存、接着改。不保存时先释放没存的图、setDraft(null)，两帧后 proceed，起飞的书与舞台上的书一样。dirty 时拦 beforeunload。卸载时释放没存的图与原图的 blob: 地址。
+  - 上传只收 PNG、JPEG、WebP、AVIF（不收 SVG），25MB 以内。
+- **裁剪器**（cover/Cropper.tsx，portal，层级 60）：
+  - 状态是源图上的裁取区 {x, y, w}（高 = w × 规格高宽比）与导出图上的标记位置，与屏幕尺寸无关。
+  - 图片最小是整张铺满取景框、最大放大 5 倍；滚轮用非被动的原生监听；双指按两指中点缩放。
+  - 标记：拖动；拉右下角（取横、纵拉得多的方向）；方向键 8px（Shift 32px）；加减号 ±8%。书脊的印只能在安全区里。封面标记的字色一开始按下面的平均亮度选（> 0.42 深字）。屏幕上小于 44px 的标记换小拉手。
+  - 裁取区比规格小时提示发虚；Esc 在捕获阶段取消。
+- **面板**（cover/panels.tsx）：封面（配色：原配、十二套预设、自定义两端颜色 customPalette；纹样按当前配色画小样；装帧切换时，字体与点缀若还是旧装帧的缺省就换成新装帧的缺省；六种字体用书名自己的字；版式与腰封文案 20 字；点缀）、书脊（真 SpineFace 小样，按至少 80 万字加厚，立在一块隔板上，选中的抽出来；"跟封面"的字体）、封底（真 BackFace 小样；简介只读）、图片（选图、拖图、示例图；现在的图，只有这次裁过的有"重新裁剪"）。
+- **素材**（cover/presets.ts）：PALETTES、customPalette（渐变中段的对比度选字色，腰封反过来）、MOTIFS、ORNAMENTS、autoCover(era, variant)（古代线装，现代、未来现代装帧；配色、纹样错开轮换）、SAMPLES。示例图在 public/samples/covers/（1536×2048 JPEG q92 与 180×240 小图），由仓库根目录的 testcover/ 转换，testcover/ 不提交。
+- **作品列表** /works（works/Works.tsx，标签页）：染色纸卡片，BookSlot `work:<书号>`，悬停 --lift；卡片底行 focusOf：退回 > 草稿 > 待审核 > 定时，都没有写编辑时间。新建作品的 Sheet：Book3D 预览（id 1002100000019999，只作纹样的随机种子）、书名 12 字、题材、换一个；原型不创建。
+- **作品详情** /works/:bookId（works/Work.tsx；handle back 'hop'、book applyLocal、parent /works）：骨架与小说站书籍详情一样（useSpin、useTilt、宽屏两栏、书吸顶）；"封面"进工作室，"接着写"开最新的草稿、没有草稿开新的一章；分卷折叠，最后一卷默认展开；InfoSheet 改简介、标签（书名要编辑同意，腰封文案在工作室改），每次打开从保存过的内容开始。
+- **StateMark**（components/StateMark.tsx）：章节状态的小标记，写作页目录与作品详情共用。
+- **已知不足**：改动只在这台浏览器里；本机改过封面的书在服务端渲染与水合时先是原封面，挂载后换上（刷新时闪一下，正式版由服务器给封面就没有这个问题）；新建作品不真的创建；管理站的封面审核没做；裁剪器不能旋转。
