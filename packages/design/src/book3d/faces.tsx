@@ -77,7 +77,7 @@ export function CoverFace({ book }: { book: Book }) {
   const style = {
     ...paletteVars(book),
     ...fontVars(front.font),
-    // 竖排书名按字数自适应字号：6 个字的书名也能放进腰封以上的区域
+    // 书名按字数自适应字号（竖排、横排与线装的题签都用它）：长书名也放得进去
     '--title-len': book.title.length,
   } as CSSProperties;
 
@@ -239,8 +239,9 @@ export function SpineFace({ book }: { book: Book }) {
     ...fontVars(font),
     ...toneVars('spine', spineTone(book, design, spine.style)),
     '--spine-w': `${spineW}px`,
-    // 书脊上的字号受书脊宽度约束：薄书用小字，厚书最大 17px
+    // 书脊上的字号受书脊宽度约束：薄书用小字，厚书最大 17px（书名长时 CSS 再按字数缩小）
     '--spine-fs': `${Math.min(spineW * 0.56, 17)}px`,
+    '--title-len': book.title.length,
   } as CSSProperties;
 
   return (

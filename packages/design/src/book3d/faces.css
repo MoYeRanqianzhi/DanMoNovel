@@ -81,12 +81,14 @@
 }
 
 /* 题签：贴在封面右上的竖长纸条，毛笔竖写书名，双线边框 */
+/* 题签随书名变长：四个字以内 162px，更长的书名题签往下长（最长到 236px），再长就把字写小 */
 .cover__slip {
+  --slip-h: clamp(162px, calc(var(--title-len) * 26px + 30px), 236px);
   position: absolute;
   right: 24px;
   top: 22px;
   width: 44px;
-  height: 162px;
+  height: var(--slip-h);
   display: flex;
   justify-content: center;
   padding-top: 14px;
@@ -101,7 +103,7 @@
   writing-mode: vertical-rl;
   font-family: var(--title-font, var(--font-brush));
   font-weight: var(--title-weight, 400);
-  font-size: 28px;
+  font-size: min(28px, calc((var(--slip-h) - 26px) / var(--title-len) - 3px));
   line-height: 1;
   letter-spacing: 3px;
   color: #2b2622;
@@ -150,14 +152,15 @@
   top: 34px;
   writing-mode: horizontal-tb;
   text-align: center;
-  font-size: min(30px, calc(172px / var(--title-len)));
+  /* 一行放下：每个字占字号加 3px 字距，172px 是封面宽减去两边的留白 */
+  font-size: min(30px, calc(172px / var(--title-len) - 3px));
   letter-spacing: 3px;
   line-height: 1.2;
 }
 .cover[data-layout='horizontal'] .cover__author {
   left: 0;
   right: 0;
-  top: calc(34px + min(30px, calc(172px / var(--title-len))) * 1.2 + 10px);
+  top: calc(34px + min(30px, calc(172px / var(--title-len) - 3px)) * 1.2 + 10px);
   writing-mode: horizontal-tb;
   text-align: center;
 }
@@ -302,11 +305,12 @@
   bottom: 7px;
 }
 
+/* 书名长时字写小，给下面的作者名与"耽"字留出位置 */
 .spine__title {
   writing-mode: vertical-rl;
   font-family: var(--title-font, var(--font-serif));
   font-weight: var(--title-weight, 700);
-  font-size: var(--spine-fs);
+  font-size: min(var(--spine-fs), calc(168px / var(--title-len) - 2px));
   line-height: 1;
   letter-spacing: 2px;
   margin-top: 8px;
@@ -359,7 +363,7 @@
   writing-mode: vertical-rl;
   font-family: var(--title-font, var(--font-kai));
   font-weight: var(--title-weight, 400);
-  font-size: var(--spine-fs);
+  font-size: min(var(--spine-fs), calc(140px / var(--title-len) - 1px));
   line-height: 1;
   letter-spacing: 1px;
   color: #2b2622;
