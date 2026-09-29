@@ -9,7 +9,8 @@ import type { Route } from './+types/shelf';
 
 export const handle = { Screen: ShelfScreen, name: 'shelf', tab: true, hero: shelfHero } satisfies ScreenHandle<ShelfData>;
 
-export const loader = () => loadShelf();
+// 显示格式记在 /shelf 路径下的 cookie 里：服务端直接按读者的格式渲染（见 screens/shelfFormats.tsx）
+export const loader = ({ request }: Route.LoaderArgs) => loadShelf(request.headers.get('Cookie'));
 
 export const headers = () => PRIVATE_CACHE;
 

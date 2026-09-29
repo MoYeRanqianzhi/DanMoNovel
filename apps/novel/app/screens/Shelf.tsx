@@ -1,10 +1,12 @@
 /**
  * 书架（首页）
  *
- * 版面：顶部标题与日期 → "继续读"（漂浮的主角书 + 红线进度）→ 在读 / 想读 / 读完 三排书。
- * 两种视图：
- * - 封面：书微微转身站成一排，露出封面和一点厚度
- * - 书脊：书脊朝外立在书板上，厚薄随字数、高矮略有参差，像真的书架；悬停时书会被"抽出来"一点
+ * 版面：顶部标题与日期 → "继续读"（漂浮的主角书 + 红线进度）→ 在读 / 想读 / 读完 三组书。
+ * 四种显示格式（名称、示意图与读者的选择见 shelfFormats.tsx）：
+ * - 陈列：书微微转身站成一排，露出封面和一点厚度；窄屏上一组书横着滑
+ * - 书柜：书脊朝外立在书板上，厚薄随字数、高矮略有参差，像真的书架；悬停时书会被"抽出来"一点
+ * - 宫格：封面正对读者，一组里的书全部铺开，不用横着滑
+ * - 列表：一行一本，小封面旁写着作者、字数；在读的书再加一行"读到哪一章"与进度红线
  * 点任意一本书，它会从书架飞到详情页；点"继续读"，书会直接打开并推进到阅读页。
  *
  * 下拉同步（触屏）：书架顶部的小书随下拉逐渐翻开，松手后翻页作为加载动画。
@@ -12,13 +14,22 @@
  *
  * 书架是个人页面：服务端按登录用户渲染（原型用示例书架），缓存头为 private，不进 CDN。
  */
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { BRAND_BOOK, SHELF, getBook, thicknessRatio, type Book, type ShelfEntry, type ShelfGroup } from '@danmo/data/books';
+import {
+  BRAND_BOOK,
+  SHELF,
+  formatWords,
+  getBook,
+  thicknessRatio,
+  type Book,
+  type ShelfEntry,
+  type ShelfGroup,
+} from '@danmo/data/books';
 import { chapterTitle } from '@danmo/data/chapters';
 import { Book3D, POSES } from '@danmo/design/book3d/Book3D';
 import { useTilt } from '@danmo/design/book3d/gestures';
-import { IconButton, Segmented, ThreadProgress } from '@danmo/design/components/ui';
+import { IconButton, ThreadProgress } from '@danmo/design/components/ui';
 import { useToast } from '@danmo/design/components/overlays';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { useClientValue } from '@danmo/design/lib/useClientValue';
@@ -27,6 +38,7 @@ import { seededRandom } from '@danmo/design/lib/util';
 import { useStack, type ScreenHero, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
 import { ensureChapter } from '../reader/chapters';
+import { ShelfFormatPicker, formatFromCookie, useShelfFormat, type ShelfFormat } from './shelfFormats';
 import './shelf.css';
 
 /** 书架上的一本书：用户与书的关系，连同书本身 */
@@ -36,11 +48,13 @@ export interface ShelfItem extends ShelfEntry {
 
 export interface ShelfData {
   items: ShelfItem[];
+  /** 服务端按请求的 cookie 算出的显示格式，只用于服务端渲染与水合；在浏览器里以本机存储为准（见 shelfFormats.tsx） */
+  serverFormat: ShelfFormat;
 }
 
-/** 书架的 loader：原型取示例书架；正式版按登录用户调用 Go 接口 */
-export function loadShelf(): ShelfData {
-  return { items: SHELF.map((e) => ({ ...e, book: getBook(e.bookId) })) };
+/** 书架的 loader：原型取示例书架；正式版按登录用户调用 Go 接口。cookie 是请求的 Cookie 头 */
+export function loadShelf(cookie: string | null): ShelfData {
+  return { items: SHELF.map((e) => ({ ...e, book: getBook(e.bookId) })), serverFormat: formatFromCookie(cookie) };
 }
 
 /** 书架的主角："继续读"的那本（书架是个人页面，不进共享缓存，主角可以是读者自己的书） */
@@ -48,7 +62,6 @@ export function shelfHero({ items }: ShelfData): ScreenHero {
   return { book: items[0].book, slot: 'hero', progress: items[0].progress };
 }
 
-type ShelfView = 'cover' | 'spine';
 const GROUPS: ShelfGroup[] = ['在读', '想读', '读完'];
 
 export function ShelfScreen({ data, screen }: ScreenProps<ShelfData>) {
@@ -57,7 +70,14 @@ export function ShelfScreen({ data, screen }: ScreenProps<ShelfData>) {
   const toast = useToast();
   // 节气日期行只在浏览器里算：服务端与读者所在的时区、日期可能不同（服务端先输出一个空格占住行高）
   const today = useClientValue(() => seasonLine(), ' ');
-  const [view, setView] = useState<ShelfView>('cover');
+  const [format, setFormat] = useShelfFormat(data.serverFormat);
+  // 读者换了格式以后，新的摆法淡入；首次打开书架时不播（页面本身已经有进场动画）
+  const [switched, setSwitched] = useState(false);
+  const changeFormat = (next: ShelfFormat) => {
+    if (next === format) return;
+    setFormat(next);
+    setSwitched(true);
+  };
 
   // 主角书随指针轻轻转向（仅桌面端的精确指针）
   const heroRef = useRef<HTMLDivElement>(null);
@@ -92,15 +112,7 @@ export function ShelfScreen({ data, screen }: ScreenProps<ShelfData>) {
           <p className="shelf-head__date">{today}</p>
         </div>
         <div className="shelf-head__tools">
-          <Segmented
-            label="书架视图"
-            value={view}
-            options={[
-              { value: 'cover', label: '封面' },
-              { value: 'spine', label: '书脊' },
-            ]}
-            onChange={setView}
-          />
+          <ShelfFormatPicker value={format} onChange={changeFormat} />
           {/* 桌面端没有下拉手势，用这个按钮触发同一个同步动画；窄屏由 CSS 隐藏 */}
           <IconButton className="shelf-head__sync" label="同步书架" onClick={pull.trigger} disabled={pull.refreshing}>
             <RefreshCw aria-hidden="true" />
@@ -144,22 +156,27 @@ export function ShelfScreen({ data, screen }: ScreenProps<ShelfData>) {
 
       {GROUPS.map((group) => {
         const entries = data.items.filter((e) => e.group === group);
+        const Item = ITEMS[format];
+        // 陈列与书柜是一排书（窄屏上横着滑）；宫格与列表把一组书全部铺开
+        const row = format === 'display' || format === 'bookcase';
         return (
           <section key={group} className="shelf-group" aria-label={group}>
             <h2 className="section-title">
               {group}
               <small>{entries.length} 本</small>
             </h2>
-            <div className="shelf-row scroll-x" data-view={view}>
-              {entries.map((entry) =>
-                view === 'cover' ? (
-                  <CoverItem key={entry.bookId} entry={entry} sid={screen.sid} onOpen={openDetail} />
-                ) : (
-                  <SpineItem key={entry.bookId} entry={entry} sid={screen.sid} onOpen={openDetail} />
-                ),
-              )}
+            {/* key 随格式变：换格式时整组重新挂载，data-switched 让新的摆法淡入 */}
+            <div
+              key={format}
+              className={row ? 'shelf-row scroll-x' : 'shelf-books'}
+              data-format={format}
+              data-switched={switched || undefined}
+            >
+              {entries.map((entry) => (
+                <Item key={entry.bookId} entry={entry} sid={screen.sid} onOpen={openDetail} />
+              ))}
             </div>
-            {view === 'spine' && <div className="shelf-plank" aria-hidden="true" />}
+            {format === 'bookcase' && <div className="shelf-plank" aria-hidden="true" />}
           </section>
         );
       })}
@@ -174,11 +191,19 @@ interface ItemProps {
   onOpen: (book: Book, slotId: string) => void;
 }
 
-/** 封面视图的一本书 */
-function CoverItem({ entry, sid, onOpen }: ItemProps) {
+/** 正在读（读了一些、还没读完）：这样的书带丝带书签，列表里还有进度红线 */
+const isReading = (entry: ShelfEntry) => entry.progress > 0 && entry.progress < 1;
+
+/** 陈列与宫格里书名下面的一行小字 */
+function shortMeta(entry: ShelfItem): string {
+  if (isReading(entry)) return `读到 ${Math.round(entry.progress * 100)}%`;
+  return entry.group === '读完' ? '已读完' : entry.book.author;
+}
+
+/** 陈列：书微微转身立着，露出封面与一点厚度 */
+function DisplayItem({ entry, sid, onOpen }: ItemProps) {
   const { book } = entry;
   const slotId = `${sid}:row:${book.id}`;
-  const reading = entry.progress > 0 && entry.progress < 1;
   return (
     <button type="button" className="shelf-book" onClick={() => onOpen(book, slotId)} aria-label={`《${book.title}》`}>
       <BookSlot
@@ -186,23 +211,81 @@ function CoverItem({ entry, sid, onOpen }: ItemProps) {
         book={book}
         width={{ base: 84, wide: 104 }}
         {...POSES.shelf}
-        ribbon={reading}
+        ribbon={isReading(entry)}
         progress={entry.progress}
         label={null}
       />
       <span className="shelf-book__title">{book.title}</span>
-      <span className="shelf-book__meta">
-        {reading ? `读到 ${Math.round(entry.progress * 100)}%` : entry.group === '读完' ? '已读完' : book.author}
-      </span>
+      <span className="shelf-book__meta">{shortMeta(entry)}</span>
     </button>
   );
 }
 
 /**
- * 书脊视图的一本书：按书 id 取一个固定的高矮比例，让一排书参差自然。
+ * 宫格：封面正对读者。格子按宽度自动排几列（窄屏三列，很窄的屏两列），书的宽度固定、在格子里居中，
+ * 所以一组书不管多少本都完整地铺开。
+ */
+function GridItem({ entry, sid, onOpen }: ItemProps) {
+  const { book } = entry;
+  const slotId = `${sid}:row:${book.id}`;
+  return (
+    <button type="button" className="grid-book" onClick={() => onOpen(book, slotId)} aria-label={`《${book.title}》`}>
+      <BookSlot
+        slotId={slotId}
+        book={book}
+        width={{ base: 86, wide: 112 }}
+        {...POSES.front}
+        ribbon={isReading(entry)}
+        progress={entry.progress}
+        label={null}
+      />
+      <span className="grid-book__title">{book.title}</span>
+      <span className="grid-book__meta">{shortMeta(entry)}</span>
+    </button>
+  );
+}
+
+/**
+ * 列表：一行一本。整行都能点，但按钮只包住书名——进度红线是读屏器要读出的进度条，不能放进按钮里
+ * （按钮的子元素对读屏器来说只是装饰），所以按钮用一层伸满整行的伪元素接住点击（见 shelf.css）。
+ */
+function ListItem({ entry, sid, onOpen }: ItemProps) {
+  const { book } = entry;
+  const slotId = `${sid}:row:${book.id}`;
+  const reading = isReading(entry);
+  return (
+    <div className="list-book">
+      <BookSlot slotId={slotId} book={book} width={{ base: 46, wide: 54 }} {...POSES.thumb} shadow={false} label={null} />
+      <div className="list-book__text">
+        <button type="button" className="list-book__title" onClick={() => onOpen(book, slotId)}>
+          {book.title}
+        </button>
+        <p className="list-book__meta">
+          {book.author} · {formatWords(book.words)}
+        </p>
+        {reading ? (
+          <>
+            <p className="list-book__note">读到{chapterTitle(book, entry.chapter)}</p>
+            <ThreadProgress
+              className="list-book__thread"
+              value={entry.progress}
+              label={`《${book.title}》阅读进度`}
+              caption={`${Math.round(entry.progress * 100)}%`}
+            />
+          </>
+        ) : (
+          <p className="list-book__note">{entry.group === '读完' ? `已读完 · 共 ${book.chapters} 章` : book.blurb}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 书柜：书脊朝外，按书 id 取一个固定的高矮比例，让一排书参差自然。
  * 窄屏与宽屏的尺寸不同，占位宽度与居中用的外边距都写成 CSS 变量，由 shelf.css 的断点切换。
  */
-function SpineItem({ entry, sid, onOpen }: ItemProps) {
+function BookcaseItem({ entry, sid, onOpen }: ItemProps) {
   const { book } = entry;
   const slotId = `${sid}:row:${book.id}`;
   const scale = 0.9 + seededRandom(book.id)() * 0.18;
@@ -229,13 +312,21 @@ function SpineItem({ entry, sid, onOpen }: ItemProps) {
         {...POSES.spine}
         shadow={false}
         perspective={wide.width * 16}
-        ribbon={entry.progress > 0 && entry.progress < 1}
+        ribbon={isReading(entry)}
         progress={entry.progress}
         label={null}
       />
     </button>
   );
 }
+
+/** 每种格式用哪个组件画一本书 */
+const ITEMS: Record<ShelfFormat, (props: ItemProps) => ReactNode> = {
+  display: DisplayItem,
+  bookcase: BookcaseItem,
+  grid: GridItem,
+  list: ListItem,
+};
 
 /* ------------------------------------------------------------------ */
 /* 下拉同步                                                             */
