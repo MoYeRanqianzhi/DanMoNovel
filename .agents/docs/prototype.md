@@ -142,6 +142,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - `push(to, { flightFrom, book, dive, replace })`：新建 sid，并发起飞行。hop 飞往 `${新sid}:hero`，dive 飞往 VIEWPORT。
   - `back()`：栈里有上一页就 `navigate(-1)`；否则用 `replace` 跳到 `handle.parent(params)`，并带 tab 标记。
   - `retarget(to)`：替换地址、沿用 sid，页面不换（例如阅读器换章）。
+    只更新栈顶的 handle、data 与 params；进栈时记下的 state（fromSlot）与 entry.pathname 不变。所以主角换成另一本书时不能用它：返回时会把新书飞回旧书的书位。审核页手机上的"下一份"因此改用 `push(..., {replace: true})`（第 16 节）。
   - `selectTab(to)`：栈底就是这个标签页时退回栈底，书会飞回去。
   - 其余：`topHandle`、`depth`、`hero`。Esc 键等同于返回。
 - **ScreenHandle**：
