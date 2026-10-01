@@ -43,6 +43,7 @@ import type { Book } from '@danmo/data/books';
 import { useFlight, VIEWPORT } from '../flight/FlightContext';
 import { DIVE, DIVE_REVEAL_MS, SCREEN_ENTER_MS, SCREEN_EXIT_MS } from '../flight/timing';
 import { useTheme } from '../theme/ThemeContext';
+import { useKeepRouteStyles } from './keepStyles';
 
 /* ------------------------------------------------------------------ */
 /* 路由模块与页面组件之间的约定                                          */
@@ -226,6 +227,8 @@ export function PageStack({ missing, children }: PageStackProps) {
   const matches = useMatches();
   const flight = useFlight();
   const { reduced } = useTheme();
+  // 被盖住、正在淡出的页面已经不在路由匹配里，它们的样式表要留着（见 keepStyles.ts）
+  useKeepRouteStyles();
 
   const leaf = matches[matches.length - 1];
   const state = (location.state ?? {}) as NavState;
