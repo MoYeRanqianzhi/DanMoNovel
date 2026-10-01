@@ -26,3 +26,4 @@
 - [Web 框架与 SEO、CDN 事实](memory/web-framework-facts.md) — 比较框架、设计 SSR 与 CDN 缓存、做百度或 Google SEO 时读；附出处，截至 2026-09-27
 - [客户端：Tauri 2](memory/client-shell.md) — 做桌面或移动客户端、打包、原生能力、鸿蒙适配时读；用户已确认 Tauri 2 承载同一套 Web 前端，鸿蒙后续走 ArkWeb
 - [后端语言：Go](memory/backend-language.md) — 写服务端代码、对接国内云服务、设计服务端进程与端口时读；用户已确认用 Go，Rust 只用于 Tauri 客户端
+- [中文输入法与输入框](memory/cjk-input.md) — 写任何输入框的事件处理、字数上限或回车提交时读；组字期间不改输入框的值，组字中的回车是选字，上限很短时不设 maxLength、保存时校验
