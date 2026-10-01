@@ -23,7 +23,7 @@ import {
   type QueueItem,
 } from '@danmo/data/admin';
 import { formatWords } from '@danmo/data/books';
-import { chapterTitle, toChineseNumber } from '@danmo/data/chapters';
+import { chapterTitle } from '@danmo/data/chapters';
 import { Book3D, POSES } from '@danmo/design/book3d/Book3D';
 import { Sheet } from '@danmo/design/components/overlays';
 import { Stamp } from '@danmo/design/components/Stamp';
@@ -31,7 +31,7 @@ import { IconButton, Seal } from '@danmo/design/components/ui';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
-import { ago, formatNumber, sinceLabel, span } from '../format';
+import { ago, dayKai, formatNumber, sinceLabel, span } from '../format';
 import { useIdentity } from '../identity';
 import { NoAccess } from '../NoAccess';
 import {
@@ -124,12 +124,6 @@ function keeperReason(me: Member, a: AuthorEntry): string | null {
   return null;
 }
 
-/** "十月二日" */
-function dayLabel(at: number): string {
-  const d = new Date(at);
-  return `${toChineseNumber(d.getMonth() + 1)}月${toChineseNumber(d.getDate())}日`;
-}
-
 export function AuthorScreen({ data, screen }: ScreenProps<AuthorData>) {
   const { can, me } = useIdentity();
   const { back } = useStack();
@@ -197,7 +191,7 @@ function AuthorBody({ a, me, heroSlot, stamped, onStamp, onMemo, onLetter }: Bod
   /** 落款：日子与写备忘的编辑。这次改过的用改的时刻与经手的人；没改过的按数据里写在几天前，署责任编辑 */
   const memoAt = a.change?.memoAt ?? OPENED_AT - (a.memoDaysAgo ?? 0) * 86_400_000;
   const signer = a.change?.memoBy ? getStaff(a.change.memoBy) : editor;
-  const sign = a.memo && signer ? `${dayLabel(memoAt)} ${signer.name}记` : null;
+  const sign = a.memo && signer ? `${dayKai(memoAt)} ${signer.name}记` : null;
   const justSent = stamped && a.works.find((w) => w.book.id === stamped.book);
 
   return (
@@ -237,7 +231,7 @@ function AuthorBody({ a, me, heroSlot, stamped, onStamp, onMemo, onLetter }: Bod
                 return (
                   <li key={l.at}>
                     <span className="author-letters__when">
-                      {dayLabel(l.at)} {new Date(l.at).toTimeString().slice(0, 5)} · {by}寄出
+                      {dayKai(l.at)} {new Date(l.at).toTimeString().slice(0, 5)} · {by}寄出
                     </span>
                     <span className="author-letters__text">{l.text}</span>
                     <Seal text={by} size={26} variant="outline" className="author-letters__seal" />

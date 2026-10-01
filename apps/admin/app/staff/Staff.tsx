@@ -21,7 +21,7 @@ import { ROLES, STAFF, appointPermission, can, getRole, type Role, type RoleId }
 import { toChineseNumber } from '@danmo/data/chapters';
 import { Seal } from '@danmo/design/components/ui';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
-import { headcount } from '../format';
+import { countKai, headcount } from '../format';
 import { useIdentity } from '../identity';
 import { NoAccess } from '../NoAccess';
 import { appoint, disable, forceLogout, resetTwoFactor, revoke, useRoster, type Member } from '../session';
@@ -146,8 +146,8 @@ export function StaffScreen() {
           <h1 className="page-title">身份</h1>
           <p className="staff-head__lead">印由站长发出：超管只有站长能任命，站长与超管任命其余三种；谁也改不了自己的印。</p>
           <p className="staff-head__count">
-            在册{toChineseNumber(roster.length)}人
-            {roster.length > active.length && `，停用${toChineseNumber(roster.length - active.length)}人`}
+            在册{countKai(roster.length)}人
+            {roster.length > active.length && `，停用${countKai(roster.length - active.length)}人`}
           </p>
         </div>
         {allowed('appoint') ? (

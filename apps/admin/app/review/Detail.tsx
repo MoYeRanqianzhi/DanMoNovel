@@ -14,7 +14,7 @@
  */
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { QUEUE_KINDS, REVIEW_LIMIT_MINUTES, getStaff, type QueueItem, type QueueKind } from '@danmo/data/admin';
+import { QUEUE_KINDS, getStaff, type QueueItem, type QueueKind } from '@danmo/data/admin';
 import type { Book } from '@danmo/data/books';
 import { chapterParagraphs, chapterTitle } from '@danmo/data/chapters';
 import { manuscriptOf, wordCount } from '@danmo/data/manuscripts';
@@ -27,7 +27,7 @@ import { Manuscript, ManuscriptText, ReviewSummary, numberNotes } from '@danmo/d
 import { useStack, type ScreenInfo } from '@danmo/design/shell/stack';
 import { ago, formatNumber, span } from '../format';
 import { useIdentity } from '../identity';
-import { decide, marksOf, setMarks, undo, useAuthors, useSession, type Verdict } from '../session';
+import { decide, marksOf, setMarks, undo, useAuthors, useReviewLimit, useSession, type Verdict } from '../session';
 import { Annotator } from './Annotator';
 
 /** 三方印；驳只给新书（不予上架），章节、封面、简介没通过就是退回修改 */
@@ -104,11 +104,12 @@ export function Detail({ item, screen, next, onNext }: DetailProps) {
   const [status, setStatus] = useState('');
   const sheetRef = useRef<HTMLDivElement>(null);
   const authors = useAuthors();
+  const limit = useReviewLimit();
 
   // 责任编辑从作者名册查（叠上这次打开期间的改动：作者页给新作者盖了"约"，这里也换成接手的编辑）
   const editorId = authors.find((a) => a.penName === item.book.author)?.editor;
   const editor = editorId ? getStaff(editorId) : undefined;
-  const overdue = item.minutesAgo - REVIEW_LIMIT_MINUTES;
+  const overdue = item.minutesAgo - limit;
   const kindName = QUEUE_KINDS.find((k) => k.id === item.kind)?.name;
   // 新书看的是第一章（开篇）；封面与简介没有稿子，用不到
   const [label, name] = chapterLabel(item);

@@ -13,7 +13,7 @@
  * 没选中时右边是一只印盒与一句提示，按钮直接打开等得最久的那一份。
  */
 import { useLayoutEffect, useRef, useState } from 'react';
-import { QUEUE, QUEUE_KINDS, REVIEW_LIMIT_MINUTES, type QueueItem, type QueueKind } from '@danmo/data/admin';
+import { QUEUE, QUEUE_KINDS, type QueueItem, type QueueKind } from '@danmo/data/admin';
 import { chapterTitle } from '@danmo/data/chapters';
 import { POSES } from '@danmo/design/book3d/Book3D';
 import { Seal, TagMark } from '@danmo/design/components/ui';
@@ -23,7 +23,7 @@ import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { ago, span } from '../format';
 import { useIdentity } from '../identity';
 import { NoAccess } from '../NoAccess';
-import { VERDICT_ACT, useSession, type Decision } from '../session';
+import { VERDICT_ACT, useReviewLimit, useSession, type Decision } from '../session';
 import { Detail } from './Detail';
 import './review.css';
 
@@ -49,6 +49,8 @@ const caseName = (id: string) => `case:${id}`;
 export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
   const { can } = useIdentity();
   const session = useSession();
+  // 审核时限是站规第四条：设置页付印之后按新的时限算超时
+  const limit = useReviewLimit();
   const wide = useIsWide();
   const { push, retarget } = useStack();
   const [kind, setKind] = useState<QueueKind | null>(null);
@@ -69,7 +71,7 @@ export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
   );
   /** 按选中的种类筛 */
   const shown = (list: QueueItem[]) => (kind ? list.filter((q) => q.kind === kind) : list);
-  const overdue = pending.filter((q) => q.minutesAgo > REVIEW_LIMIT_MINUTES).length;
+  const overdue = pending.filter((q) => q.minutesAgo > limit).length;
   /** 案卷在这一页里的书位 id（窄屏点开时书从这里飞出去，返回时飞回来） */
   const caseSlot = (q: QueueItem) => screen.slot(caseName(q.id));
 
@@ -103,6 +105,7 @@ export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
           item={q}
           slotId={caseSlot(q)}
           decision={session.decisions[q.id]}
+          limit={limit}
           current={q.id === item?.id}
           onOpen={() => open(q)}
         />
@@ -171,6 +174,8 @@ interface CaseProps {
   item: QueueItem;
   slotId: string;
   decision?: Decision;
+  /** 审核时限（分钟） */
+  limit: number;
   current: boolean;
   onOpen: () => void;
 }
@@ -179,8 +184,8 @@ interface CaseProps {
  * 一份案卷。整张都能点，但按钮只包住书名（书本是 div，不能放进按钮里）：
  * 按钮用一层伸满整张的伪元素接住点击（与小说站书架的列表同一个做法）
  */
-function Case({ item, slotId, decision, current, onOpen }: CaseProps) {
-  const late = !decision && item.minutesAgo > REVIEW_LIMIT_MINUTES;
+function Case({ item, slotId, decision, limit, current, onOpen }: CaseProps) {
+  const late = !decision && item.minutesAgo > limit;
   const kindName = QUEUE_KINDS.find((k) => k.id === item.kind)?.name;
   return (
     <li className="case" data-current={current || undefined} data-late={late || undefined} data-done={decision ? '' : undefined}>
@@ -188,7 +193,7 @@ function Case({ item, slotId, decision, current, onOpen }: CaseProps) {
       <div className="case__text">
         <p className="case__top">
           <span className="case__kind">{kindName}</span>
-          <span className="case__time">{late ? `超时 ${span(item.minutesAgo - REVIEW_LIMIT_MINUTES)}` : ago(item.minutesAgo)}</span>
+          <span className="case__time">{late ? `超时 ${span(item.minutesAgo - limit)}` : ago(item.minutesAgo)}</span>
         </p>
         <button type="button" className="case__title" aria-current={current ? 'true' : undefined} onClick={onOpen}>
           《{item.book.title}》

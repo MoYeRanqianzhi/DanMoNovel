@@ -1,5 +1,6 @@
 /**
- * 管理站的示例数据：身份与权限、工作人员、审核队列、作者名册（编辑照看的作者与签约）、账簿、举报
+ * 管理站的示例数据：身份与权限、工作人员、审核队列、作者名册（编辑照看的作者与签约）、
+ * 设置页的三份（书城推荐位的橱窗、告示、站规，各带最后一次付印的版次）、账簿、举报
  *
  * 管理站是运营团队的内部办公系统（OA）：身份只属于运营团队，读者与作者不在这套体系里（staff-roles 记忆）。
  * 规则：站长唯一，是一切任命的起点；只有站长能任命超管；站长与超管能任命管理员、编辑、审核；
@@ -159,7 +160,10 @@ export const QUEUE_KINDS: readonly { id: QueueKind; name: string }[] = [
   { id: 'blurb', name: '简介' },
 ];
 
-/** 审核时限：送审之后多久之内要审完；超过的在队列里用红线标出（站规第四条，原型固定 24 小时） */
+/**
+ * 审核时限的初值：送审之后多久之内要审完；超过的在队列里用红线标出。
+ * 它就是站规第四条（POLICY 的 deadline 由它换算）；设置页把第四条付印之后，审核页按 session 里的新时限算（session.ts 的 useReviewLimit）
+ */
 export const REVIEW_LIMIT_MINUTES = 24 * 60;
 
 export interface QueueItem {
@@ -520,6 +524,177 @@ export function contractOf(works: readonly AuthorWork[]): ContractState {
   return '未签约';
 }
 
+/* ---------------- 设置：橱窗（推荐位）、告示（公告）、站规 ---------------- */
+
+/**
+ * 书城的橱窗：两处由编辑挑的推荐位（书号）。
+ * - ring：书环"编辑推荐"七本，顺序就是环上的顺序，从正对读者的那本起、往右数（与小说站 Store.tsx 的 RING_IDS 一致）；
+ * - fresh："新书上架"四格（与小说站现在按上架日期取的四本一致；正式版由编辑挑，样例账 l5 阿梨把《盐汽水与蝉》放进了这里）。
+ * 三张榜单按规则自动排，不是推荐位
+ */
+export interface Showcase {
+  ring: readonly string[];
+  fresh: readonly string[];
+}
+
+export const SHOWCASE: Showcase = {
+  ring: [
+    '1002100000010003', // 雨停之前
+    '1003100000010001', // 星轨同行
+    '1002100000010006', // 镜头之外
+    '1002100000010002', // 潮汐来信
+    '1001100000010003', // 折梅寄远
+    '1002100000010001', // 他的第七封信
+    '1001100000010001', // 云岫不归
+  ],
+  fresh: [
+    '1002100000010006', // 镜头之外
+    '1003100000010001', // 星轨同行
+    '1002100000010005', // 雾港无灯
+    '1002100000010004', // 盐汽水与蝉
+  ],
+};
+
+/** 一份校样现在是第几版、最后一次付印是谁、距今几分钟（付印一次加一版） */
+export interface Edition {
+  no: number;
+  by: string;
+  minutesAgo: number;
+}
+
+/** 橱窗最后一次付印：阿梨把《盐汽水与蝉》放进"新书上架"（样例账 l5） */
+export const SHOWCASE_EDITION: Edition = { no: 12, by: 's4', minutesAgo: 3000 };
+
+/** 一张告示：标题、正文、起止（YYYY-MM-DD，含两头）、贴的人与距今几分钟 */
+export interface Notice {
+  id: string;
+  title: string;
+  body: string;
+  from: string;
+  to: string;
+  by: string;
+  minutesAgo: number;
+}
+
+/**
+ * 告示栏上的告示，由近到远。与样例账对得上：十月征文是阿梨贴的（l10），停机维护是晚棠贴的（l1）。
+ * 起止是写死的日子（正文里也写着日子），是否在贴、过没过期按打开时的真实日期算
+ */
+export const NOTICES: readonly Notice[] = [
+  {
+    id: 'n3',
+    title: '十月征文：写一封没寄出的信',
+    body: '十月里写一个关于“没寄出的信”的短篇，三万字以内，完结后送审时在作者的话里写“征文”。入选的作品放进十一月的书环。',
+    from: '2026-10-01',
+    to: '2026-10-31',
+    by: 's4',
+    minutesAgo: 760,
+  },
+  {
+    id: 'n2',
+    title: '十月三日凌晨停机维护',
+    body: '02:00 至 04:00 停机维护，期间不能阅读、送审与审核。定在这两个小时里发布的章节，顺延到维护结束之后。',
+    from: '2026-10-03',
+    to: '2026-10-03',
+    by: 's5',
+    minutesAgo: 4690,
+  },
+  {
+    id: 'n1',
+    title: '九月书单：秋天读什么',
+    body: '编辑部挑了十本适合秋天读的书，从《云岫不归》到《潮汐来信》，在书城的书环里转一整个九月。',
+    from: '2026-09-01',
+    to: '2026-09-30',
+    by: 's4',
+    minutesAgo: 60 * 24 * 32,
+  },
+];
+
+/** 条文里嵌着的控件：几（天、章、小时、位），或从几种说法里选一种 */
+export type PolicyControl =
+  | { kind: 'count'; unit: string; min: number; max: number; step?: number }
+  | { kind: 'choice'; options: readonly string[] };
+
+export type PolicyValue = number | string;
+
+/** 站规的一条：控件前后的两段话、控件、现在的值 */
+export interface PolicyArticle {
+  id: string;
+  /** 第几条后面的小标题 */
+  name: string;
+  before: string;
+  after: string;
+  control: PolicyControl;
+  value: PolicyValue;
+}
+
+/**
+ * 站规（注册与内容策略），第一条到第七条。
+ * 第三条三十小时前由南星修订（样例账 l7、POLICY_EDITION：新作者的前三章都要审核，原为第一章）；
+ * 第四条的时限就是审核队列算"超时"用的时限（初值由 REVIEW_LIMIT_MINUTES 换算）
+ */
+export const POLICY: readonly PolicyArticle[] = [
+  {
+    id: 'signup',
+    name: '注册',
+    before: '读者注册时验证',
+    after: '，验证过的才能收藏、评论与订阅。',
+    control: { kind: 'choice', options: ['手机号', '手机号或邮箱'] },
+    value: '手机号或邮箱',
+  },
+  {
+    id: 'comment',
+    name: '评论',
+    before: '注册满',
+    after: '的读者才能发章评与段评。',
+    control: { kind: 'count', unit: '天', min: 1, max: 30 },
+    value: 3,
+  },
+  {
+    id: 'debut',
+    name: '新作者',
+    before: '新作者的前',
+    after: '都要审核过才能上架。',
+    control: { kind: 'count', unit: '章', min: 1, max: 10 },
+    value: 3,
+  },
+  {
+    id: 'deadline',
+    name: '时限',
+    before: '送审的章节、新书、封面与简介，',
+    after: '之内审完；超过的在审核队列里标出超时。',
+    control: { kind: 'count', unit: '小时', min: 6, max: 72, step: 6 },
+    value: REVIEW_LIMIT_MINUTES / 60,
+  },
+  {
+    id: 'report',
+    name: '举报',
+    before: '同一条评论被',
+    after: '读者举报，先折叠起来，等管理员处理。',
+    control: { kind: 'count', unit: '位', min: 1, max: 10 },
+    value: 3,
+  },
+  {
+    id: 'words',
+    name: '敏感词',
+    before: '评论里有敏感词时',
+    after: '，并告诉读者是哪几个字。',
+    control: { kind: 'choice', options: ['先审后发', '直接拦下'] },
+    value: '先审后发',
+  },
+  {
+    id: 'rotate',
+    name: '推荐位',
+    before: '书环与“新书上架”',
+    after: '换一次，换下来的书写进账簿。',
+    control: { kind: 'choice', options: ['每周一', '每两周', '每月初'] },
+    value: '每周一',
+  },
+];
+
+/** 站规最后一次付印：南星修订第三条（样例账 l7） */
+export const POLICY_EDITION: Edition = { no: 7, by: 's3', minutesAgo: 1800 };
+
 /* ---------------- 举报 ---------------- */
 
 export interface Report {
@@ -588,7 +763,7 @@ export const LEDGER: readonly LedgerEntry[] = [
   { id: 'l8', minutesAgo: 1560, by: 's10', act: '退回', target: '《晚风信号》第三章', note: '两条朱批' },
   { id: 'l7', minutesAgo: 1800, by: 's3', act: '修订', target: '站规第三条', note: '新作者的前三章都要审核（原为第一章）' },
   { id: 'l6', minutesAgo: 2890, by: 's2', act: '任命', target: '霁月为编辑', note: '未来组' },
-  { id: 'l5', minutesAgo: 3000, by: 's4', act: '推荐', target: '《盐汽水与蝉》', note: '"新书上架"，本周' },
+  { id: 'l5', minutesAgo: 3000, by: 's4', act: '推荐', target: '《盐汽水与蝉》', note: '“新书上架”，本周' },
   { id: 'l4', minutesAgo: 3130, by: 's9', act: '驳回', target: '新书《无名之地》', note: '封面用了他人的摄影作品，未获授权' },
   { id: 'l3', minutesAgo: 4410, by: 's2', act: '停用', target: '秋池的账号', note: '离职' },
   { id: 'l2', minutesAgo: 4420, by: 's2', act: '撤销', target: '秋池的审核身份', note: '离职' },

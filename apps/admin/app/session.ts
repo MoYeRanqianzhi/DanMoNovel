@@ -1,29 +1,41 @@
 /**
  * 这次打开管理站期间做过的事（原型没有后端）：审核的决定与朱批、对工作人员的任命与处置、
- * 编辑对作者做的事（寄出合同、备忘、写信）、新记的账
+ * 编辑对作者做的事（寄出合同、备忘、写信）、设置页批在校样上的与付印的、贴的告示、新记的账
  *
  * 只存在内存里，刷新就没了。正式版每一个决定都写进服务端，账簿由服务端追加。
  * 几页靠它对得上：审核页盖了章，案卷挪进"已审"，日志页的账簿当场多一笔，总览的待办少一份；
  * 身份页任命、撤销、停用了谁，名册跟着改，"以某个身份预览"的代表也跟着换（identity.ts）；
- * 作者页给新作者寄出合同，这位作者挪进"洽谈中"、归到经手的编辑名下。
+ * 作者页给新作者寄出合同，这位作者挪进"洽谈中"、归到经手的编辑名下；
+ * 设置页把站规第四条（审核时限）付印之后，审核页按新的时限算超时。
  * 账簿只追加：撤回一个决定也是新记一笔"撤回"，原来那一笔不改不删。
  */
 import { useSyncExternalStore } from 'react';
 import {
   AUTHORS,
+  POLICY,
+  POLICY_EDITION,
   ROLES,
+  SHOWCASE,
+  SHOWCASE_EDITION,
   STAFF,
   getRole,
   type AuthorRecord,
   type AuthorWork,
+  type Edition,
   type EditorGroup,
   type LedgerAct,
+  type Notice,
+  type PolicyArticle,
+  type PolicyValue,
   type QueueItem,
   type RoleId,
+  type Showcase,
   type StaffMember,
 } from '@danmo/data/admin';
 import type { ReviewNote } from '@danmo/data/author';
-import { chapterTitle } from '@danmo/data/chapters';
+import { getBook } from '@danmo/data/books';
+import { chapterTitle, toChineseNumber } from '@danmo/data/chapters';
+import { countKai, rangeLabel } from './format';
 
 /**
  * 这次打开管理站的时刻（毫秒）。示例数据的时间都写"距今几分钟"，要换成具体时刻时（账簿的一行写几点几分）
@@ -111,6 +123,25 @@ export interface AuthorEntry extends AuthorRecord {
   change?: AuthorChange;
 }
 
+/**
+ * 一份校样（设置页的橱窗、站规）在这次打开期间的样子：付印过的（没付印过时取 admin.ts 的样例）、
+ * 批在上面还没付印的（没有批改时没有）、这次付印了几次与最后一次的时刻和经手的人
+ */
+export interface ProofState<T> {
+  printed?: T;
+  draft?: T;
+  prints: number;
+  last?: { at: number; by: string };
+}
+
+/** 站规每一条现在的值（以条目的 id 为键） */
+export type PolicyValues = Readonly<Record<string, PolicyValue>>;
+
+/** 这次贴的告示：与 admin.ts 的 Notice 同样几栏，时刻是具体的毫秒数 */
+export interface PostedNotice extends Omit<Notice, 'minutesAgo'> {
+  at: number;
+}
+
 interface Session {
   marks: Record<string, Marks>;
   decisions: Record<string, Decision>;
@@ -118,13 +149,27 @@ interface Session {
   staff: Record<string, StaffChange>;
   /** 以作者的 id 为键 */
   authors: Record<string, AuthorChange>;
+  /** 设置页的两份校样 */
+  showcase: ProofState<Showcase>;
+  policy: ProofState<PolicyValues>;
+  /** 这次贴的告示，由远到近 */
+  notices: PostedNotice[];
   /** 由远到近 */
   ledger: FreshEntry[];
 }
 
 const EMPTY_MARKS: Marks = { summary: '', notes: [] };
 
-let state: Session = { marks: {}, decisions: {}, staff: {}, authors: {}, ledger: [] };
+let state: Session = {
+  marks: {},
+  decisions: {},
+  staff: {},
+  authors: {},
+  showcase: { prints: 0 },
+  policy: { prints: 0 },
+  notices: [],
+  ledger: [],
+};
 const listeners = new Set<() => void>();
 
 /** 换上新的状态，通知所有订阅者（useSyncExternalStore 靠引用变化重新渲染，所以每次都给新对象） */
@@ -355,4 +400,152 @@ export function writeMemo(id: string, memo: string, by: string) {
 export function sendLetter(id: string, by: string, text: string) {
   const a = authorNow(id);
   changeAuthor(id, { letters: [...(a.change?.letters ?? []), { at: Date.now(), by, text }] });
+}
+
+/* ---------------- 设置：橱窗、站规（批在校样上，付印才生效）与告示 ---------------- */
+
+/** 一份校样现在的样子：付印过的、校样上的（没有批改时与付印过的是同一个）、有没有批改、现在是第几版 */
+export interface ProofView<T> {
+  printed: T;
+  draft: T;
+  marked: boolean;
+  /** 已经付印的这一版：版次、经手的人、付印的时刻 */
+  edition: { no: number; by: string; at: number };
+}
+
+/** 样例的版次（距今几分钟）加上这次付印的次数，换成"现在是第几版、谁、什么时候付印的" */
+function editionOf<T>(proof: ProofState<T>, sample: Edition) {
+  return proof.last
+    ? { no: sample.no + proof.prints, by: proof.last.by, at: proof.last.at }
+    : { no: sample.no, by: sample.by, at: OPENED_AT - sample.minutesAgo * 60_000 };
+}
+
+/** 橱窗的一处批改：哪一处推荐位的第几格，原来是哪本、批成哪本（书号） */
+export interface ShowcaseChange {
+  shelf: keyof Showcase;
+  index: number;
+  was: string;
+  now: string;
+}
+
+/** 两处推荐位在账簿与批注里的叫法，与一格的量词 */
+export const SHELF_NAMES: Record<keyof Showcase, { name: string; unit: string }> = {
+  ring: { name: '书环', unit: '本' },
+  fresh: { name: '“新书上架”', unit: '格' },
+};
+
+/** 校样比付印过的改了哪几格（书环在前，各自从第一格数起）；对调算两格 */
+export function showcaseChanges(printed: Showcase, draft: Showcase): ShowcaseChange[] {
+  return (['ring', 'fresh'] as const).flatMap((shelf) =>
+    draft[shelf].flatMap((now, index) => (now === printed[shelf][index] ? [] : [{ shelf, index, was: printed[shelf][index], now }])),
+  );
+}
+
+/** 橱窗现在的样子（订阅这次打开期间的改动） */
+export function useShowcase(): ProofView<Showcase> {
+  const { showcase } = useSession();
+  const printed = showcase.printed ?? SHOWCASE;
+  return { printed, draft: showcase.draft ?? printed, marked: !!showcase.draft, edition: editionOf(showcase, SHOWCASE_EDITION) };
+}
+
+/** 在橱窗的校样上批一处（换书、对调、恢复）；批完与付印过的一样时，校样上的批改清掉 */
+export function markShowcase(draft: Showcase) {
+  const printed = state.showcase.printed ?? SHOWCASE;
+  const same = showcaseChanges(printed, draft).length === 0;
+  update({ ...state, showcase: { ...state.showcase, draft: same ? undefined : draft } });
+}
+
+/** 撤掉橱窗校样上的全部批改 */
+export function clearShowcase() {
+  update({ ...state, showcase: { ...state.showcase, draft: undefined } });
+}
+
+/**
+ * 付印橱窗：校样上的批改生效，版次加一；改了的每一格记一笔"推荐"，
+ * 写法与样例账 l5 相近：对象是放上去的书，附注写哪一处第几格、换下了哪本
+ */
+export function printShowcase(by: string) {
+  const { draft } = state.showcase;
+  if (!draft) return;
+  const printed = state.showcase.printed ?? SHOWCASE;
+  const lines = showcaseChanges(printed, draft).map((c) => {
+    const { name, unit } = SHELF_NAMES[c.shelf];
+    return entry(by, '推荐', `《${getBook(c.now).title}》`, `${name}第${toChineseNumber(c.index + 1)}${unit}（换下《${getBook(c.was).title}》）`);
+  });
+  update({
+    ...state,
+    showcase: { printed: draft, prints: state.showcase.prints + 1, last: { at: Date.now(), by } },
+    ledger: [...state.ledger, ...lines],
+  });
+}
+
+/** 站规的初值（以条目的 id 为键） */
+const POLICY_VALUES: PolicyValues = Object.fromEntries(POLICY.map((a) => [a.id, a.value]));
+
+/** 条文里那个值的写法：几（汉字数字加单位，"三章""二十四小时"），或选中的那种说法 */
+export function policyText(article: PolicyArticle, value: PolicyValue): string {
+  return article.control.kind === 'count' ? `${countKai(Number(value))}${article.control.unit}` : String(value);
+}
+
+/** 账簿附注里的一条：控件前面那段、新的值、后面那段到第一个逗号或句号为止，再写原来的值 */
+function revisionNote(article: PolicyArticle, was: PolicyValue, now: PolicyValue): string {
+  const rest = article.after.split(/[，；。]/)[0];
+  return `${article.before}${policyText(article, now)}${rest}（原为${policyText(article, was)}）`;
+}
+
+/** 站规现在的样子（订阅这次打开期间的改动） */
+export function usePolicy(): ProofView<PolicyValues> {
+  const { policy } = useSession();
+  const printed = policy.printed ?? POLICY_VALUES;
+  return { printed, draft: policy.draft ?? printed, marked: !!policy.draft, edition: editionOf(policy, POLICY_EDITION) };
+}
+
+/** 在站规的校样上改一条；改完与付印过的一样时，校样上的批改清掉 */
+export function markPolicy(id: string, value: PolicyValue) {
+  const printed = state.policy.printed ?? POLICY_VALUES;
+  const draft = { ...(state.policy.draft ?? printed), [id]: value };
+  const same = POLICY.every((a) => draft[a.id] === printed[a.id]);
+  update({ ...state, policy: { ...state.policy, draft: same ? undefined : draft } });
+}
+
+/** 撤掉站规校样上的全部批改 */
+export function clearPolicy() {
+  update({ ...state, policy: { ...state.policy, draft: undefined } });
+}
+
+/** 付印站规：批改生效，版次加一；改了的每一条记一笔"修订"，写法与样例账 l7 一样（"站规第三条"，附注写新的一句与原来的值） */
+export function printPolicy(by: string) {
+  const { draft } = state.policy;
+  if (!draft) return;
+  const printed = state.policy.printed ?? POLICY_VALUES;
+  const lines = POLICY.flatMap((a, i) =>
+    draft[a.id] === printed[a.id] ? [] : [entry(by, '修订', `站规第${toChineseNumber(i + 1)}条`, revisionNote(a, printed[a.id], draft[a.id]))],
+  );
+  update({
+    ...state,
+    policy: { printed: draft, prints: state.policy.prints + 1, last: { at: Date.now(), by } },
+    ledger: [...state.ledger, ...lines],
+  });
+}
+
+/** 审核时限（分钟）：站规第四条付印过的值；没付印过时是样例的初值（admin.ts 的 REVIEW_LIMIT_MINUTES） */
+export function useReviewLimit(): number {
+  const { policy } = useSession();
+  return Number((policy.printed ?? POLICY_VALUES).deadline) * 60;
+}
+
+let noticeSeq = 0;
+/**
+ * 贴一张告示（钤"站务"就贴出，不走校样），账簿记一笔"公告"，附注写起止（与样例账 l10 一样的写法）。
+ * 返回这张告示的 id（告示栏等面板收起之后，让它"贴上去"一遍）
+ */
+export function postNotice(notice: Pick<Notice, 'title' | 'body' | 'from' | 'to'>, by: string): string {
+  noticeSeq += 1;
+  const posted: PostedNotice = { ...notice, id: `p${noticeSeq}`, by, at: Date.now() };
+  update({
+    ...state,
+    notices: [...state.notices, posted],
+    ledger: [...state.ledger, entry(by, '公告', notice.title, rangeLabel(notice.from, notice.to))],
+  });
+  return posted.id;
 }
