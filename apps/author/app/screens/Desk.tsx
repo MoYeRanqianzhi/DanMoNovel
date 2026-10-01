@@ -36,6 +36,7 @@ import { Inkstone } from '../components/Inkstone';
 import { LetterCard } from '../components/LetterCard';
 import { formatAgo, formatNumber } from '../format';
 import { useLocalBooks } from '../local';
+import { sealVariant, useProfileEdit } from '../profile';
 import './desk.css';
 
 export interface DeskData {
@@ -79,7 +80,9 @@ export function DeskScreen({ data, screen }: ScreenProps<DeskData>) {
   const toast = useToast();
   const date = useClientValue(() => seasonLine(), ' ');
   const local = useLocalBooks();
-  const { author, current, today } = data;
+  // 闲章与每日目标可以在"我"里改（原型存在本机，见 profile.ts）
+  const author = { ...data.author, ...useProfileEdit() };
+  const { current, today } = data;
   const book = local(current.work.book);
   const heroSlot = screen.slot('hero');
   const left = Math.max(0, author.dailyGoal - today);
@@ -97,7 +100,7 @@ export function DeskScreen({ data, screen }: ScreenProps<DeskData>) {
           <p className="desk-head__date">{date}</p>
         </div>
         <button type="button" className="desk-head__seal" onClick={() => push('/me')} aria-label={`${author.penName}的主页`}>
-          <Seal text={author.seal} size={44} />
+          <Seal text={author.seal} size={44} variant={sealVariant(author.sealStyle)} />
         </button>
       </header>
 

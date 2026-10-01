@@ -60,6 +60,7 @@ import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
 import { phasePath } from '../components/moon';
 import { formatAgo, formatNumber } from '../format';
+import { useProfileEdit } from '../profile';
 import { loadDraft, saveDraft } from './drafts';
 import { Outline } from './Outline';
 import { PaperPicker, PublishSheet } from './panels';
@@ -163,6 +164,10 @@ function ChapterDesk({ data, isTop }: { data: WriteData; isTop: boolean }) {
   const words = useMemo(() => wordCount([text]), [text]);
   const baseWords = useRef(words);
   const today = data.today + Math.max(0, words - baseWords.current);
+  /** 打开时今天已经写了多少（算上本机副本里上次多写的字）：写满目标的提示只给这次打开之后写满的 */
+  const openToday = useRef(data.today);
+  // 每日目标可以在"我"里改（原型存在本机，见 profile.ts）
+  const goal = useProfileEdit().dailyGoal ?? data.goal;
   const notes = useMemo(() => (data.review ? numberNotes(data.review.notes) : []), [data.review]);
   const paragraphs = useMemo(() => textToParagraphs(text), [text]);
 
@@ -200,6 +205,7 @@ function ChapterDesk({ data, isTop }: { data: WriteData; isTop: boolean }) {
       setName(local.name);
       setText(local.text);
       setState(local.state);
+      openToday.current = data.today + Math.max(0, wordCount([local.text]) - baseWords.current);
     }
     if ((local?.state ?? origin) !== '草稿') return;
     // 等本机副本换上、稿纸量好尺寸排好版（两帧之后）再滚
@@ -247,13 +253,13 @@ function ChapterDesk({ data, isTop }: { data: WriteData; isTop: boolean }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [isTop, saveNow, toast]);
 
-  /* ---- 写满今天的目标时说一句（只说一次） ---- */
-  const reached = useRef(data.today >= data.goal);
+  /* ---- 这次打开之后写满今天的目标时说一句（只说一次；打开时就已经写满的不说） ---- */
+  const reached = useRef(false);
   useEffect(() => {
-    if (reached.current || today < data.goal) return;
+    if (reached.current || openToday.current >= goal || today < goal) return;
     reached.current = true;
     toast('今天的一池墨研满了');
-  }, [today, data.goal, toast]);
+  }, [today, goal, toast]);
 
   /* ---- 操作 ---- */
   const onText = (next: string) => {
@@ -311,7 +317,7 @@ function ChapterDesk({ data, isTop }: { data: WriteData; isTop: boolean }) {
   const meta =
     state === '草稿' ? (
       <>
-        <MoonMark progress={today / data.goal} label={`今日 ${formatNumber(today)} 字，目标 ${formatNumber(data.goal)} 字`} />
+        <MoonMark progress={today / goal} label={`今日 ${formatNumber(today)} 字，目标 ${formatNumber(goal)} 字`} />
         <span>{formatNumber(words)} 字</span>
         <span aria-hidden="true">·</span>
         <span>{saving ? '保存中' : '已保存'}</span>

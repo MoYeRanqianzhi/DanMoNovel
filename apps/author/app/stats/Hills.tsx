@@ -18,7 +18,7 @@
  */
 import { useId, useState, type PointerEvent } from 'react';
 import { formatCount, formatNumber } from '../format';
-import { hash, q, smooth, type Point } from './curve';
+import { hash, q, smooth, type Point } from '../components/curve';
 
 interface HillsProps {
   /** 每天在读的人，最后一个是今天 */

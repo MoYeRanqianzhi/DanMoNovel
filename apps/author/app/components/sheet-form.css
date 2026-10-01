@@ -1,0 +1,56 @@
+/* ============================================================
+ * 面板里的表单：作品详情的"作品信息"、"我"的"修改资料"共用
+ * 一项一栏：上面一行是名称，右边一行小字（字数、规则）；下面是凹下去的输入框（文楷）。
+ * 最后一个主按钮占满一行。改不了的项（书名、笔名）显示成灰色的禁用输入框，小字说明找谁改。
+ * ============================================================ */
+
+.sheet-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+.sheet-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sheet-form__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--fs-14);
+}
+.sheet-form__label small {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.sheet-form__input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  color: var(--ink);
+  background: var(--sheet-2);
+}
+.sheet-form__input:disabled {
+  color: var(--ink-2);
+  cursor: not-allowed;
+}
+.sheet-form__input:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}
+.sheet-form__area {
+  height: auto;
+  padding: 12px 14px;
+  line-height: 1.8;
+  resize: vertical;
+}
+.sheet-form__save {
+  align-self: stretch;
+}

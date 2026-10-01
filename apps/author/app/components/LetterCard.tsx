@@ -12,6 +12,7 @@ import { chapterTitle } from '@danmo/data/chapters';
 import { Stamp } from '@danmo/design/components/Stamp';
 import { Seal, TagMark } from '@danmo/design/components/ui';
 import { formatAgo, formatNumber } from '../format';
+import { sealVariant, useProfileEdit } from '../profile';
 import './letter.css';
 
 interface LetterCardProps {
@@ -27,6 +28,9 @@ interface LetterCardProps {
 }
 
 export function LetterCard({ letter: l, onOpen, children, focused, stamped = 0 }: LetterCardProps) {
+  // 闲章可以在"我"里改（原型存在本机，见 profile.ts）
+  const author = { ...AUTHOR, ...useProfileEdit() };
+  const seal = { text: author.seal, size: 22, variant: sealVariant(author.sealStyle) } as const;
   const work = WORKS.find((w) => w.book.id === l.bookId);
   const where = work
     ? `《${work.book.title}》${l.chapter !== undefined ? ` · ${chapterTitle(work.book, l.chapter)}` : ''}`
@@ -53,11 +57,7 @@ export function LetterCard({ letter: l, onOpen, children, focused, stamped = 0 }
       {l.reply && (
         <span className="letter__reply">
           <span className="letter__reply-text">{l.reply}</span>
-          {stamped > 0 ? (
-            <Stamp text={AUTHOR.seal} play={stamped} size={22} tilt={-4} className="letter__stamp" />
-          ) : (
-            <Seal text={AUTHOR.seal} size={22} />
-          )}
+          {stamped > 0 ? <Stamp {...seal} play={stamped} tilt={-4} className="letter__stamp" /> : <Seal {...seal} />}
         </span>
       )}
     </>

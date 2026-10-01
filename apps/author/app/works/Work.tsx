@@ -25,6 +25,7 @@ import { useTheme } from '@danmo/design/theme/ThemeContext';
 import { StateMark } from '../components/StateMark';
 import { formatAgo, formatCount, formatNumber } from '../format';
 import { saveWorkInfo, useLocalBooks } from '../local';
+import '../components/sheet-form.css';
 import './work.css';
 
 export interface WorkData {
@@ -243,33 +244,33 @@ function InfoSheet({ open, work, book, onClose }: { open: boolean; work: Work; b
 
   return (
     <Sheet open={open} title="作品信息" onClose={onClose}>
-      <div className="work-form">
-        <label className="work-form__field">
-          <span className="work-form__label">
+      <div className="sheet-form">
+        <label className="sheet-form__field">
+          <span className="sheet-form__label">
             书名<small>改书名要责任编辑同意</small>
           </span>
-          <input className="work-form__input" value={book.title} disabled />
+          <input className="sheet-form__input" value={book.title} disabled />
         </label>
-        <label className="work-form__field">
-          <span className="work-form__label">
+        <label className="sheet-form__field">
+          <span className="sheet-form__label">
             简介<small>{[...blurb].length}/200 · 也印在封底上</small>
           </span>
-          <textarea className="work-form__input work-form__area" value={blurb} maxLength={200} rows={4} onChange={(e) => setBlurb(e.target.value)} />
+          <textarea className="sheet-form__input sheet-form__area" value={blurb} maxLength={200} rows={4} onChange={(e) => setBlurb(e.target.value)} />
         </label>
-        <div className="work-form__field">
-          <span className="work-form__label">
+        <div className="sheet-form__field">
+          <span className="sheet-form__label">
             标签<small>最多六个</small>
           </span>
-          <div className="work-form__tags">
+          <div className="work-tags">
             {tags.map((t) => (
-              <button key={t} type="button" className="work-form__tag" onClick={() => setTags(tags.filter((x) => x !== t))} aria-label={`去掉标签「${t}」`}>
+              <button key={t} type="button" className="work-tags__tag" onClick={() => setTags(tags.filter((x) => x !== t))} aria-label={`去掉标签「${t}」`}>
                 {t}
                 <span aria-hidden="true">×</span>
               </button>
             ))}
             {tags.length < 6 && (
               <input
-                className="work-form__tag-input"
+                className="work-tags__input"
                 value={tag}
                 maxLength={6}
                 placeholder="加一个"
@@ -288,7 +289,7 @@ function InfoSheet({ open, work, book, onClose }: { open: boolean; work: Work; b
         </div>
         <button
           type="button"
-          className="btn btn--primary work-form__save"
+          className="btn btn--primary sheet-form__save"
           onClick={() => {
             const text = blurb.trim();
             if (!text) {

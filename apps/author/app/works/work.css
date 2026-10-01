@@ -243,61 +243,13 @@
   stroke-width: 1.8;
 }
 
-/* ---- 作品信息的面板 ---- */
-.work-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-5);
-}
-.work-form__field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.work-form__label {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: var(--fs-14);
-}
-.work-form__label small {
-  font-size: var(--fs-12);
-  color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
-}
-.work-form__input {
-  width: 100%;
-  height: 46px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: var(--radius-m);
-  font-family: var(--font-kai);
-  font-size: var(--fs-16);
-  color: var(--ink);
-  background: var(--sheet-2);
-}
-.work-form__input:disabled {
-  color: var(--ink-2);
-  cursor: not-allowed;
-}
-.work-form__input:focus-visible,
-.work-form__tag-input:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 1.5px var(--thread);
-}
-.work-form__area {
-  height: auto;
-  padding: 12px 14px;
-  line-height: 1.8;
-  resize: vertical;
-}
-.work-form__tags {
+/* ---- 作品信息的面板：通用的表单样式在 components/sheet-form.css，这里只有标签 ---- */
+.work-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-.work-form__tag {
+.work-tags__tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -309,13 +261,13 @@
   background: var(--sheet-2);
   transition: background-color var(--dur-quick) ease;
 }
-.work-form__tag span {
+.work-tags__tag span {
   color: var(--ink-2);
 }
-.work-form__tag:hover {
+.work-tags__tag:hover {
   background: color-mix(in srgb, var(--sheet-2) 80%, var(--ink));
 }
-.work-form__tag-input {
+.work-tags__input {
   width: 96px;
   height: 34px;
   padding: 0 12px;
@@ -325,8 +277,9 @@
   color: var(--ink);
   background: transparent;
 }
-.work-form__save {
-  align-self: stretch;
+.work-tags__input:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--thread);
 }
 
 @media (min-width: 900px) {

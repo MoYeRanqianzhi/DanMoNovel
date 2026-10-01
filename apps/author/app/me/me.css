@@ -1,0 +1,432 @@
+/* ============================================================
+ * 我（Me.tsx 与 InkLevels.tsx）
+ * 名帖是一幅小条幅：竖写的签名、落款与闲章，笺纸上画着乌丝栏（竖格线）。
+ * 其余几块与别的页一样：文楷的区块标题、细线分隔；红线只给"当前"（等级走到哪里、选中的主题）。
+ * ============================================================ */
+
+.me-body {
+  max-width: 1000px;
+  padding-bottom: var(--sp-12);
+}
+
+/* ---- 头：条幅、名字与几行小字、创作等级 ---- */
+.me-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'scroll info'
+    'level level';
+  align-items: end;
+  gap: var(--sp-8) var(--sp-5);
+  padding-top: var(--sp-2);
+}
+@media (min-width: 900px) {
+  .me-head {
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'scroll info'
+      'scroll level';
+    align-items: start;
+    column-gap: var(--sp-12);
+    padding-top: var(--sp-4);
+  }
+}
+
+/*
+ * 条幅：整张纸竖排（vertical-rl），一列的宽就是行高 --col，乌丝栏按同样的间距画，字正好写在两道线之间。
+ * 正文（签名）从最右一列写起，下一列落款：笔名靠下，下面钤闲章。
+ * 高度按一列八个字定：文楷竖排每个字占 1.31em（字体的竖排字高），20px 时八个字 210px，加上起笔前的留白与天头地脚。
+ * 签名最多十六个字（profile.ts 的 MOTTO_MAX），也就是最多两列；纸的宽度由列数决定。
+ */
+.me-scroll {
+  --col: 48px;
+  --pad-y: 22px;
+  --pad-x: 14px;
+  grid-area: scroll;
+  position: relative;
+  writing-mode: vertical-rl;
+  height: 270px;
+  padding: var(--pad-y) var(--pad-x);
+  border-radius: 3px;
+  background-color: var(--sheet);
+  /* 乌丝栏：每一列左边一道竖线（最右一道由外框画） */
+  background-image:
+    repeating-linear-gradient(to left, transparent 0 calc(var(--col) - 1px), var(--line) calc(var(--col) - 1px) var(--col)),
+    var(--grain);
+  background-size:
+    auto,
+    220px 220px;
+  background-origin: content-box, padding-box;
+  background-clip: content-box, padding-box;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 24px 40px -30px rgb(var(--shadow-rgb) / 0.75);
+}
+/* 外框：围住写字的那一块，上下留出天头地脚 */
+.me-scroll::before {
+  content: '';
+  position: absolute;
+  inset: var(--pad-y) var(--pad-x);
+  border: 1px solid var(--line);
+  pointer-events: none;
+}
+.me-scroll__motto {
+  padding-top: 8px;
+  font-family: var(--font-kai);
+  font-size: 20px;
+  line-height: var(--col);
+}
+/* 落款：比正文小、淡一些，靠下写，写完钤印 */
+.me-scroll__sign {
+  padding-bottom: 6px;
+  font-family: var(--font-kai);
+  font-size: 15px;
+  line-height: var(--col);
+  letter-spacing: 0.2em;
+  text-align: end;
+  color: var(--ink-2);
+}
+.me-scroll__seal {
+  margin-inline-start: 6px;
+  vertical-align: middle;
+}
+@media (min-width: 900px) {
+  /* 26px 时八个字 273px */
+  .me-scroll {
+    --col: 60px;
+    --pad-y: 30px;
+    --pad-x: 20px;
+    height: 360px;
+  }
+  .me-scroll__motto {
+    padding-top: 12px;
+    font-size: 26px;
+  }
+  .me-scroll__sign {
+    font-size: 18px;
+  }
+}
+
+.me-info {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.me-info .page-title {
+  margin-bottom: 6px;
+}
+.me-info__line {
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+}
+.me-info__edit {
+  height: 40px;
+  margin-top: var(--sp-4);
+  padding: 0 18px;
+  font-size: var(--fs-14);
+}
+@media (min-width: 900px) {
+  .me-info {
+    padding-top: var(--sp-6);
+  }
+}
+
+.me-level {
+  grid-area: level;
+}
+@media (min-width: 900px) {
+  .me-level {
+    align-self: end;
+  }
+}
+
+/* ---- 五阶墨色（InkLevels.tsx） ---- */
+.levels {
+  position: relative;
+  margin-top: var(--sp-4);
+}
+.levels__track {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.levels__step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+/* 相邻两阶之间一道细线，从这一滴的墨边到下一滴的墨边；现在这一阶往后的那一段换成红线 */
+.levels__step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: calc(50% + var(--r) + 4px);
+  width: calc(100% - var(--r) - var(--r-next) - 8px);
+  height: 1px;
+  background: color-mix(in srgb, var(--ink) 18%, transparent);
+}
+.levels__step[data-state='ahead']::after {
+  background: none;
+  border-top: 1px dashed color-mix(in srgb, var(--ink) 18%, transparent);
+}
+.levels__step[data-state='now']::after {
+  display: none;
+}
+.levels__ink {
+  width: 40px;
+  height: 40px;
+  overflow: visible;
+  color: var(--ink);
+}
+.levels__blot {
+  fill: currentColor;
+  fill-opacity: var(--level-ink);
+}
+/* 还没到的几阶：只有一圈淡淡的印子 */
+.levels__step[data-state='ahead'] .levels__blot {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.24;
+  stroke-width: 1;
+}
+/* 现在这一阶：外面一圈更淡的墨晕 */
+.levels__bleed {
+  fill: currentColor;
+  fill-opacity: 0.08;
+}
+.levels__name {
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.levels__step[data-state='now'] .levels__name {
+  color: var(--ink);
+}
+/* 红线在墨滴的中线上：ThreadProgress 的轨道高 14px，中线在 7px */
+.levels__thread {
+  position: absolute;
+  top: 13px;
+}
+.levels__thread .thread {
+  width: 100%;
+}
+
+/* ---- 签约与编辑、每日目标、主题、设置：窄屏一栏，宽屏前两块并排 ---- */
+.me-grid {
+  display: grid;
+  gap: var(--sp-10);
+  margin-top: var(--sp-10);
+}
+@media (min-width: 900px) {
+  .me-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-12);
+    margin-top: var(--sp-12);
+  }
+  .me-themes,
+  .me-settings {
+    grid-column: 1 / -1;
+  }
+}
+
+.me-tie {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 4px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.me-ties .section-title {
+  margin-bottom: var(--sp-2);
+}
+button.me-tie {
+  transition: background-color var(--dur-quick) ease;
+}
+button.me-tie:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.me-tie__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.me-tie__title {
+  font-size: var(--fs-16);
+}
+.me-tie__title small {
+  margin-left: 8px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.me-tie__body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: var(--fs-14);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.me-tie__body small {
+  margin-left: 8px;
+  font-size: var(--fs-12);
+}
+.me-tie__chevron {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--ink-2);
+}
+
+/* 每日目标：一轮小月亮（今天写了多少）、目标字数、几档可选 */
+.me-goal__now {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  margin: var(--sp-4) 0;
+}
+.me-goal__moon {
+  flex: none;
+  width: 52px;
+  height: 52px;
+}
+.me-goal__rim {
+  fill: color-mix(in srgb, var(--ink) 5%, transparent);
+  stroke: color-mix(in srgb, var(--ink) 30%, transparent);
+  stroke-width: 1;
+}
+.me-goal__ink {
+  fill: var(--ink);
+  fill-opacity: 0.85;
+}
+.me-goal__now p {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.me-goal__value {
+  font-family: var(--font-kai);
+  color: var(--ink-2);
+}
+.me-goal__value strong {
+  font-size: var(--fs-36);
+  font-weight: 400;
+  line-height: 1.1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.me-goal__note {
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+
+/*
+ * 纸样：每张是那套主题的一小片稿纸（data-theme 让里面的变量都换成那套主题的），
+ * 格线用那套主题自己的线色，格子里竖写主题的名字，左下角一方小印是那套主题的红。
+ * 选中的那张外面一圈红线：红线用当前主题的（圈在按钮上，按钮不在 data-theme 里面）。
+ */
+.me-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-4) var(--sp-3);
+  margin-top: var(--sp-4);
+}
+@media (min-width: 700px) {
+  .me-swatches {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+}
+.me-swatch {
+  display: block;
+  border-radius: 4px;
+}
+.me-swatch[aria-pressed='true'] {
+  outline: 1.5px solid var(--thread);
+  outline-offset: 4px;
+}
+.me-swatch__paper {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 4;
+  border-radius: 3px;
+  /* 稿纸格：从右上角起算，竖写的字正好落在格子里 */
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(to left, var(--line) 1px, transparent 1px),
+    var(--grain);
+  background-size:
+    16px 16px,
+    16px 16px,
+    220px 220px;
+  background-position:
+    right 0 top 0,
+    right 0 top 0,
+    0 0;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 12px 22px -18px rgb(var(--shadow-rgb) / 0.8);
+  transition: transform var(--dur-quick) var(--ease-soft);
+}
+.me-swatch:hover .me-swatch__paper {
+  transform: translateY(-2px);
+}
+/* 一个字占一格：字号 12px 加 4px 字距，正好 16px；上下各让 2px，字在格子正中 */
+.me-swatch__name {
+  position: absolute;
+  top: 18px;
+  right: 16px;
+  writing-mode: vertical-rl;
+  font-family: var(--font-kai);
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 4px;
+  color: var(--ink);
+}
+.me-swatch__seal {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  width: 9px;
+  height: 9px;
+  border-radius: 1.5px;
+  background: var(--thread);
+  transform: rotate(-6deg);
+}
+
+.me-settings {
+  margin-top: 0;
+}
+
+/* ---- 修改资料：闲章的印面跟着字与刻法变 ---- */
+.me-form__seal {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+}
+.me-form__preview {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  border-radius: var(--radius-m);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.me-form__seal-fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
