@@ -1,16 +1,21 @@
 /**
- * 这次打开管理站期间做过的事（原型没有后端）：审核的决定与朱批、对工作人员的任命与处置、新记的账
+ * 这次打开管理站期间做过的事（原型没有后端）：审核的决定与朱批、对工作人员的任命与处置、
+ * 编辑对作者做的事（寄出合同、备忘、写信）、新记的账
  *
  * 只存在内存里，刷新就没了。正式版每一个决定都写进服务端，账簿由服务端追加。
  * 几页靠它对得上：审核页盖了章，案卷挪进"已审"，日志页的账簿当场多一笔，总览的待办少一份；
- * 身份页任命、撤销、停用了谁，名册跟着改，"以某个身份预览"的代表也跟着换（identity.ts）。
+ * 身份页任命、撤销、停用了谁，名册跟着改，"以某个身份预览"的代表也跟着换（identity.ts）；
+ * 作者页给新作者寄出合同，这位作者挪进"洽谈中"、归到经手的编辑名下。
  * 账簿只追加：撤回一个决定也是新记一笔"撤回"，原来那一笔不改不删。
  */
 import { useSyncExternalStore } from 'react';
 import {
+  AUTHORS,
   ROLES,
   STAFF,
   getRole,
+  type AuthorRecord,
+  type AuthorWork,
   type EditorGroup,
   type LedgerAct,
   type QueueItem,
@@ -79,18 +84,47 @@ export interface Member extends StaffMember {
   change?: StaffChange;
 }
 
+/** 编辑写给作者的一封信（原型只记在这次打开期间；正式版出现在作者站书房的编辑消息里） */
+export interface Letter {
+  at: number;
+  /** 写信的编辑（STAFF 的 id） */
+  by: string;
+  text: string;
+}
+
+/** 这次打开期间对一位作者的改动（只记改过的项）；作者名册按它改写 AUTHORS 里的那一位 */
+export interface AuthorChange {
+  /** 改过之后的作品（签约的状态与进度） */
+  works?: AuthorWork[];
+  /** 接手的编辑：还没有编辑的新作者，寄出合同的编辑成为责任编辑 */
+  editor?: string;
+  memo?: string;
+  /** 这次改备忘的时刻与经手的编辑（八行笺上落款的日子与名字；还没有编辑的新作者，写备忘的不一定是责任编辑） */
+  memoAt?: number;
+  memoBy?: string;
+  /** 这次寄出的信，由远到近 */
+  letters?: Letter[];
+}
+
+/** 作者名册上的一位：AUTHORS 里的那一位叠上这次打开期间的改动（没改过的没有 change） */
+export interface AuthorEntry extends AuthorRecord {
+  change?: AuthorChange;
+}
+
 interface Session {
   marks: Record<string, Marks>;
   decisions: Record<string, Decision>;
   /** 以工作人员的 id 为键 */
   staff: Record<string, StaffChange>;
+  /** 以作者的 id 为键 */
+  authors: Record<string, AuthorChange>;
   /** 由远到近 */
   ledger: FreshEntry[];
 }
 
 const EMPTY_MARKS: Marks = { summary: '', notes: [] };
 
-let state: Session = { marks: {}, decisions: {}, staff: {}, ledger: [] };
+let state: Session = { marks: {}, decisions: {}, staff: {}, authors: {}, ledger: [] };
 const listeners = new Set<() => void>();
 
 /** 换上新的状态，通知所有订阅者（useSyncExternalStore 靠引用变化重新渲染，所以每次都给新对象） */
@@ -250,4 +284,75 @@ export function resetTwoFactor(id: string, by: string, note?: string) {
 /** 强制下线：所有设备上的登录都失效，要重新登录 */
 export function forceLogout(id: string, by: string, note?: string) {
   changeStaff(id, { loggedOutAt: Date.now() }, entry(by, '下线', `${memberNow(id).name}的所有设备`, note));
+}
+
+/* ---------------- 作者：寄出合同、备忘、写信 ---------------- */
+
+let authorsFor: Session['authors'] | null = null;
+let authorRoster: AuthorEntry[] = [];
+
+/** 作者名册（按 AUTHORS 的次序），叠上这次打开期间的改动。改动没变时返回同一个数组 */
+export function authorsOf(session: Session): AuthorEntry[] {
+  if (session.authors !== authorsFor) {
+    authorsFor = session.authors;
+    authorRoster = AUTHORS.map((a) => {
+      const change = session.authors[a.id];
+      if (!change) return a;
+      return {
+        ...a,
+        works: change.works ?? a.works,
+        editor: change.editor ?? a.editor,
+        memo: change.memo ?? a.memo,
+        change,
+      };
+    });
+  }
+  return authorRoster;
+}
+
+/** 读作者名册（订阅这次打开期间的改动） */
+export function useAuthors(): AuthorEntry[] {
+  return authorsOf(useSession());
+}
+
+/** 名册上这一位作者现在的样子 */
+function authorNow(id: string): AuthorEntry {
+  return authorsOf(state).find((a) => a.id === id)!;
+}
+
+/** 改一位作者；line 不为空时账簿记一笔 */
+function changeAuthor(id: string, patch: AuthorChange, line?: FreshEntry) {
+  update({
+    ...state,
+    authors: { ...state.authors, [id]: { ...state.authors[id], ...patch } },
+    ledger: line ? [...state.ledger, line] : state.ledger,
+  });
+}
+
+/**
+ * 盖"约"：把这部作品的合同寄给作者，进到"合同寄出"（等作者确认）。还没有编辑的新作者，经手的编辑成为责任编辑。
+ * 账簿记一笔"签约"，写法与样例账 l13 一样
+ */
+export function sendContract(id: string, bookId: string, by: string) {
+  const a = authorNow(id);
+  const work = a.works.find((w) => w.book.id === bookId)!;
+  changeAuthor(
+    id,
+    {
+      works: a.works.map((w) => (w.book.id === bookId ? { ...w, contract: '洽谈中', step: 1 } : w)),
+      editor: a.editor ?? by,
+    },
+    entry(by, '签约', `${a.penName}《${work.book.title}》`, '合同已发给作者，等作者确认'),
+  );
+}
+
+/** 改编辑的备忘，记下经手的编辑与时刻（八行笺的落款用）；不记账：备忘只是编辑自己的笔记 */
+export function writeMemo(id: string, memo: string, by: string) {
+  changeAuthor(id, { memo, memoAt: Date.now(), memoBy: by });
+}
+
+/** 给作者写一封信（不记账：信是编辑与作者之间的往来，不是特权操作） */
+export function sendLetter(id: string, by: string, text: string) {
+  const a = authorNow(id);
+  changeAuthor(id, { letters: [...(a.change?.letters ?? []), { at: Date.now(), by, text }] });
 }

@@ -1,5 +1,5 @@
 /**
- * 管理站的示例数据：身份与权限、工作人员、审核队列、账簿、举报
+ * 管理站的示例数据：身份与权限、工作人员、审核队列、作者名册（编辑照看的作者与签约）、账簿、举报
  *
  * 管理站是运营团队的内部办公系统（OA）：身份只属于运营团队，读者与作者不在这套体系里（staff-roles 记忆）。
  * 规则：站长唯一，是一切任命的起点；只有站长能任命超管；站长与超管能任命管理员、编辑、审核；
@@ -10,11 +10,11 @@
  * - 作者站《晚风信号》第一章 5 小时前送审 → 审核队列的 q1；第三章 26 小时前退回、留了两条朱批 → 账簿里拾遗的一笔；
  * - 《盐汽水与蝉》第六十五章 3 小时前通过、定时明天 20:00 → 账簿里青砚的一笔（作者站书房的审核消息）；
  * - 《盐汽水与蝉》入选"新书上架"推荐位 → 账簿里阿梨的一笔（作者站书房的站务消息）；
- * - 栖迟的责任编辑是现代组的知秋。
+ * - 栖迟的责任编辑是现代组的知秋；《晚风信号》的合同已经寄出（账簿 l13），在作者名册里是"洽谈中"的那一部。
  * 审核意见对作者只署"审核"（author.ts 的 Review）；账簿是编辑部内部的，记下经手的人。
  * 时间都写成"距今几分钟"，页面在浏览器里换成具体的时刻（管理站是 SPA，没有服务端渲染）。
  */
-import { getWork } from './author';
+import { AUTHOR, WORKS, getWork, wordsDaysAgo, type AuthorLevel } from './author';
 import { getBook, type Book } from './books';
 
 /* ---------------- 身份与权限 ---------------- */
@@ -136,25 +136,6 @@ export function getStaff(id: string): StaffMember | undefined {
   return STAFF.find((s) => s.id === id);
 }
 
-/** 作者的责任编辑（按笔名）。新作者还没有签约，也就没有责任编辑 */
-const EDITOR_OF: Record<string, string> = {
-  栖迟: 's6',
-  林间有鹿: 's6',
-  北途: 's6',
-  渡川: 's6',
-  季夏: 's6',
-  知夏: 's6',
-  墨迟迟: 's7',
-  山月: 's7',
-  温酒: 's11',
-  白昼: 's8',
-};
-
-export function editorOf(author: string): StaffMember | undefined {
-  const id = EDITOR_OF[author];
-  return id ? getStaff(id) : undefined;
-}
-
 /**
  * 以某个身份预览（原型专用）时，每种身份由谁来代表：编辑要看"名下的作者"，得是一位具体的编辑。
  * 不预览时是站长砚田。
@@ -255,6 +236,289 @@ export const QUEUE: readonly QueueItem[] = [
     },
   },
 ];
+
+/* ---------------- 作者（编辑的名册） ---------------- */
+
+/**
+ * 签约：作品各自签。作者有一部签了就是签约作者；一部都没签、有一部在谈的是洽谈中；其余是未签约。
+ * 作者的等级、签约状态属于作者站的体系（staff-roles 记忆），管理站的编辑在这里照看，不与身份混在一起
+ */
+export type ContractState = '签约' | '洽谈中' | '未签约';
+
+/** 签约的几步：洽谈（稿酬与更新节奏）→ 合同寄出（编辑盖"约"）→ 作者确认 → 生效（生效就是签约） */
+export const CONTRACT_STEPS = ['洽谈', '合同寄出', '作者确认', '生效'] as const;
+
+export interface AuthorWork {
+  book: Book;
+  contract: ContractState;
+  /** 洽谈中的作品走到了哪一步（CONTRACT_STEPS 的下标，0~2） */
+  step?: number;
+}
+
+export interface AuthorRecord {
+  id: string;
+  penName: string;
+  /** 闲章（一到四个字）与刻法：作者在作者站"我"里刻的那一方 */
+  seal: string;
+  sealStyle: '白文' | '朱文';
+  level: AuthorLevel;
+  /** 入驻（YYYY-MM-DD） */
+  joined: string;
+  /** 责任编辑（STAFF 的 id）；还没有编辑去谈过的新作者没有（第一次盖"约"的编辑接手） */
+  editor?: string;
+  works: AuthorWork[];
+  /** 最近十四天每天写了多少字，下标 0 是今天，0 表示那天没有更新 */
+  days: number[];
+  /** 最后一次更新（送审或发布了新的一章），距今几分钟 */
+  lastMinutesAgo: number;
+  /** 责任编辑的备忘：只在编辑部里看得到 */
+  memo?: string;
+  /** 备忘写在几天前（八行笺上落款的日子），0 是今天 */
+  memoDaysAgo?: number;
+}
+
+/** 洽谈中的新作者枕书的第一本书 */
+const HALF_SUGAR: Book = {
+  id: '1002100000010010',
+  title: '半糖时差',
+  author: '枕书',
+  binding: 'modern',
+  motif: 'window',
+  palette: { from: '#FCE3D8', to: '#F2B5A7', ink: '#5A2E2A', accent: '#FFFFFF', band: '#FFF6F0', bandInk: '#5A2E2A' },
+  words: 86000,
+  chapters: 19,
+  status: '连载',
+  era: '现代',
+  tags: ['异地', '甜文', '时差'],
+  pair: ['温叙', '陆迟'],
+  blurb: '一个在伦敦的清晨，一个在上海的深夜。每天只有一个小时，两个人都醒着。',
+  tagline: '八小时的时差，一小时的我们',
+  heat: 1820,
+  trend: 640,
+  added: '2026-08-15',
+};
+
+/** 还没有编辑的新作者南乔的书 */
+const WILD_GOOSE_PASS: Book = {
+  id: '1001100000010004',
+  title: '落雁关',
+  author: '南乔',
+  binding: 'thread',
+  motif: 'mountains',
+  palette: { from: '#E9E2D0', to: '#B9AD8F', ink: '#3B3326', accent: '#9C3B2E' },
+  words: 54000,
+  chapters: 14,
+  status: '连载',
+  era: '古代',
+  tags: ['边塞', '将军', '慢热'],
+  pair: ['沈却', '谢川'],
+  blurb: '雁门关外三十里有一座废弃的驿站。守关的少年将军每年秋天都去那里，等一个说好要回来的人。',
+  heat: 960,
+  trend: 210,
+  added: '2026-09-08',
+};
+
+/** 栖迟这十四天的字数：与作者站书房的连续更新、每天的字数是同一份（author.ts 的 wordsDaysAgo） */
+const QICHI_DAYS = Array.from({ length: 14 }, (_, i) => wordsDaysAgo(i));
+
+/**
+ * 名册上的作者，与小说站、作者站的书对得上；责任编辑按题材分组（现代组知秋，古代组寒枝与不言，未来组霁月）。
+ * 最后一次更新与审核队列对得上：北途第九十三章 40 分钟前送审（q2），白昼 7 小时前（q3），季夏一天多以前（q4），
+ * 墨迟迟的番外一 130 分钟前（q5），栖迟的《晚风信号》第一章 5 小时前（q1），鹿鸣的新书 9 小时前（q6）
+ */
+export const AUTHORS: readonly AuthorRecord[] = [
+  {
+    id: 'a1',
+    penName: '栖迟',
+    seal: AUTHOR.seal,
+    sealStyle: AUTHOR.sealStyle,
+    level: AUTHOR.level,
+    joined: AUTHOR.joined,
+    editor: 's6',
+    works: [
+      { book: WORKS[0].book, contract: '签约' },
+      { book: WORKS[1].book, contract: '洽谈中', step: 1 },
+      { book: WORKS[2].book, contract: '签约' },
+    ],
+    days: QICHI_DAYS,
+    lastMinutesAgo: 300,
+    memo: '第三卷的大纲约了周二聊。《晚风信号》的合同已经寄出，等回音；开头改了三遍，第一章送审了。',
+    memoDaysAgo: 0,
+  },
+  {
+    id: 'a2',
+    penName: '林间有鹿',
+    seal: '有鹿',
+    sealStyle: '朱文',
+    level: '落墨',
+    joined: '2024-06-21',
+    editor: 's6',
+    works: [{ book: getBook('1002100000010001'), contract: '签约' }],
+    days: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    lastMinutesAgo: 60 * 24 * 21,
+    memo: '完结之后想歇一阵；新书可能写民国，等大纲。',
+    memoDaysAgo: 12,
+  },
+  {
+    id: 'a3',
+    penName: '北途',
+    seal: '北途',
+    sealStyle: '白文',
+    level: '泼墨',
+    joined: '2025-02-09',
+    editor: 's6',
+    works: [{ book: getBook('1002100000010005'), contract: '签约' }],
+    days: [3200, 4100, 0, 3600, 3900, 4200, 0, 3100, 3800, 4000, 3500, 0, 4100, 3700],
+    lastMinutesAgo: 40,
+    memo: '更新很稳，雾港的悬疑线收得好；第九十三章刚送审。',
+    memoDaysAgo: 0,
+  },
+  {
+    id: 'a4',
+    penName: '渡川',
+    seal: '渡川',
+    sealStyle: '朱文',
+    level: '落墨',
+    joined: '2024-11-30',
+    editor: 's6',
+    works: [{ book: getBook('1002100000010002'), contract: '签约' }],
+    days: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    lastMinutesAgo: 60 * 24 * 40,
+    memo: '想给《潮汐来信》换一张夜里的海做完结纪念，封面已经送审。',
+    memoDaysAgo: 2,
+  },
+  {
+    id: 'a5',
+    penName: '季夏',
+    seal: '长夏',
+    sealStyle: '白文',
+    level: '落墨',
+    joined: '2025-05-17',
+    editor: 's6',
+    works: [{ book: getBook('1002100000010006'), contract: '签约' }],
+    days: [0, 3600, 0, 0, 3400, 0, 3900, 0, 0, 3300, 0, 3500, 0, 0],
+    lastMinutesAgo: 1560,
+    memo: '最近卡文，更新断断续续。第九十六章送审一天多了还没审，要跟审核那边说一声。',
+    memoDaysAgo: 0,
+  },
+  {
+    id: 'a6',
+    penName: '知夏',
+    seal: '知夏',
+    sealStyle: '朱文',
+    level: '润笔',
+    joined: '2025-09-03',
+    editor: 's6',
+    works: [{ book: getBook('1002100000010003'), contract: '签约' }],
+    days: [0, 4200, 0, 0, 0, 0, 0, 3800, 0, 0, 0, 0, 0, 0],
+    lastMinutesAgo: 60 * 20,
+    memo: '番外写到第二篇，打算写完第三篇就收。',
+    memoDaysAgo: 3,
+  },
+  {
+    id: 'a7',
+    penName: '墨迟迟',
+    seal: '迟迟',
+    sealStyle: '白文',
+    level: '挥毫',
+    joined: '2023-12-01',
+    editor: 's7',
+    works: [{ book: getBook('1001100000010002'), contract: '签约' }],
+    days: [6100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    lastMinutesAgo: 130,
+    memo: '番外一《初雪》送审了。问起过出实体书的事，先记下。',
+    memoDaysAgo: 0,
+  },
+  {
+    id: 'a8',
+    penName: '山月',
+    seal: '山月',
+    sealStyle: '朱文',
+    level: '挥毫',
+    joined: '2024-02-14',
+    editor: 's7',
+    works: [{ book: getBook('1001100000010001'), contract: '签约' }],
+    days: [0, 5600, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    lastMinutesAgo: 1500,
+    memo: '番外三有一处官制的细节被退回，已经在改。',
+    memoDaysAgo: 1,
+  },
+  {
+    id: 'a9',
+    penName: '温酒',
+    seal: '温酒',
+    sealStyle: '白文',
+    level: '泼墨',
+    joined: '2024-08-08',
+    editor: 's11',
+    works: [{ book: getBook('1001100000010003'), contract: '签约' }],
+    days: [0, 0, 0, 0, 0, 0, 0, 0, 0, 4300, 0, 0, 0, 0],
+    lastMinutesAgo: 60 * 24 * 9,
+    memo: '简介改了一版，等审核。下一本想写江湖。',
+    memoDaysAgo: 2,
+  },
+  {
+    id: 'a10',
+    penName: '白昼',
+    seal: '白昼',
+    sealStyle: '朱文',
+    level: '泼墨',
+    joined: '2025-07-01',
+    editor: 's8',
+    works: [{ book: getBook('1003100000010001'), contract: '签约' }],
+    days: [5200, 0, 4800, 5100, 0, 4900, 5300, 0, 5000, 4700, 0, 5200, 5100, 0],
+    lastMinutesAgo: 420,
+    memo: '九月底从现代组转到霁月这边；第一百三十三章送审了。',
+    memoDaysAgo: 0,
+  },
+  {
+    id: 'a11',
+    penName: '枕书',
+    seal: '枕书',
+    sealStyle: '白文',
+    level: '研墨',
+    joined: '2026-08-15',
+    editor: 's6',
+    works: [{ book: HALF_SUGAR, contract: '洽谈中', step: 0 }],
+    days: [2800, 3100, 2600, 0, 3000, 2900, 0, 2700, 3200, 0, 2500, 2800, 0, 3000],
+    lastMinutesAgo: 300,
+    memo: '稿酬与更新节奏还在谈：想日更三千，先签三个月的试用约。',
+    memoDaysAgo: 1,
+  },
+  {
+    id: 'a12',
+    penName: '鹿鸣',
+    seal: '呦呦',
+    sealStyle: '朱文',
+    level: '研墨',
+    joined: '2026-09-28',
+    works: [{ book: SUNSET_POSTMAN, contract: '未签约' }],
+    days: [3100, 0, 2400, 0, 0, 2800, 0, 0, 0, 0, 0, 0, 0, 0],
+    lastMinutesAgo: 540,
+  },
+  {
+    id: 'a13',
+    penName: '南乔',
+    seal: '南有乔木',
+    sealStyle: '白文',
+    level: '润笔',
+    joined: '2026-09-08',
+    works: [{ book: WILD_GOOSE_PASS, contract: '未签约' }],
+    days: [0, 3900, 0, 3600, 0, 0, 4100, 0, 3800, 0, 0, 0, 0, 0],
+    lastMinutesAgo: 60 * 30,
+  },
+];
+
+export function getAuthor(id: string): AuthorRecord | undefined {
+  return AUTHORS.find((a) => a.id === id);
+}
+
+/** 作者在名册上归哪一组：有一部签了就是签约；一部都没签、有一部在谈，是洽谈中；其余是未签约 */
+export function contractOf(works: readonly AuthorWork[]): ContractState {
+  if (works.some((w) => w.contract === '签约')) return '签约';
+  if (works.some((w) => w.contract === '洽谈中')) return '洽谈中';
+  return '未签约';
+}
 
 /* ---------------- 举报 ---------------- */
 
