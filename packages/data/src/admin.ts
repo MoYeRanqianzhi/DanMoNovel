@@ -77,6 +77,11 @@ export function can(roles: readonly RoleId[], permission: Permission): boolean {
   return roles.some((r) => GRANTS[r].includes(permission));
 }
 
+/** 有某项权限的身份：管不着的一页写明"要拿哪几方印" */
+export function rolesWith(permission: Permission): Role[] {
+  return ROLES.filter((r) => GRANTS[r.id].includes(permission));
+}
+
 /* ---------------- 工作人员 ---------------- */
 
 /** 编辑按题材分组 */
@@ -120,6 +125,25 @@ export const STAFF: readonly StaffMember[] = [
 
 export function getStaff(id: string): StaffMember | undefined {
   return STAFF.find((s) => s.id === id);
+}
+
+/** 作者的责任编辑（按笔名）。新作者还没有签约，也就没有责任编辑 */
+const EDITOR_OF: Record<string, string> = {
+  栖迟: 's6',
+  林间有鹿: 's6',
+  北途: 's6',
+  渡川: 's6',
+  季夏: 's6',
+  知夏: 's6',
+  墨迟迟: 's7',
+  山月: 's7',
+  温酒: 's11',
+  白昼: 's8',
+};
+
+export function editorOf(author: string): StaffMember | undefined {
+  const id = EDITOR_OF[author];
+  return id ? getStaff(id) : undefined;
 }
 
 /**
@@ -246,8 +270,8 @@ export const REPORTS: readonly Report[] = [
 
 /* ---------------- 账簿 ---------------- */
 
-/** 事由：账簿上最显眼的一栏，一两个字 */
-export type LedgerAct = '通过' | '退回' | '驳回' | '任命' | '撤销' | '停用' | '重置' | '推荐' | '公告' | '修订' | '签约';
+/** 事由：账簿上最显眼的一栏，一两个字。撤回：账簿不改不删，收回一个决定也是另记一笔 */
+export type LedgerAct = '通过' | '退回' | '驳回' | '撤回' | '任命' | '撤销' | '停用' | '重置' | '推荐' | '公告' | '修订' | '签约';
 
 /** 账簿的一笔：只追加，不改不删 */
 export interface LedgerEntry {

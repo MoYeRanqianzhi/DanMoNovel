@@ -12,3 +12,25 @@
 .hand-seal:hover .seal {
   transform: rotate(-6deg);
 }
+
+/* 管不着的一页（NoAccess.tsx）：几方要拿的印、一句说明、去"我"换印 */
+.no-access {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  min-height: 70svh;
+  text-align: center;
+}
+.no-access__seals {
+  display: flex;
+  gap: 14px;
+  margin-bottom: var(--sp-2);
+}
+.no-access__text {
+  max-width: 26em;
+  font-size: var(--fs-14);
+  line-height: 1.8;
+  color: var(--ink-2);
+}

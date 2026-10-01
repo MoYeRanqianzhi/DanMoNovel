@@ -1,0 +1,587 @@
+/* ============================================================
+ * 审核（review/）：左边一叠案卷，右边一份稿子与印盒
+ *
+ * 宽屏两栏：案卷一栏吸在屏幕上、自己滚动；稿子一栏随整页滚动。
+ * 窄屏一栏：/review 只有案卷，/review/:id 只有稿子（进栈的另一页）。
+ * 红线色只给信息：超时的案卷、超时多久、朱批与被批的字、添上的字；选中的案卷用墨色描边。
+ * ============================================================ */
+.review {
+  min-height: 100%;
+}
+@media (max-width: 899.98px) {
+  .review[data-has-item] .review-queue,
+  .review:not([data-has-item]) .review-idle {
+    display: none;
+  }
+}
+/* 案卷一栏 300：1280 宽时稿纸（二十格）右边还余下 180 多，浮签贴得下（要 170） */
+@media (min-width: 900px) {
+  .review {
+    display: grid;
+    grid-template-columns: minmax(270px, 300px) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+/* ---------------- 案卷 ---------------- */
+.review-queue {
+  padding: var(--sp-5) var(--sp-5) 0;
+}
+@media (min-width: 900px) {
+  .review-queue {
+    position: sticky;
+    top: 0;
+    max-height: 100svh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--sp-10) var(--sp-5) var(--sp-8) var(--sp-8);
+    box-shadow: 1px 0 0 var(--line);
+  }
+}
+.review-queue__count {
+  margin-top: 4px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.review-queue__late {
+  color: var(--thread-ink);
+}
+.review-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--sp-5);
+}
+/* 书签形的筛选小一号：案卷一栏只有三百宽，五个书签排两行 */
+.review-kinds .tag {
+  height: 28px;
+  padding: 0 12px 0 18px;
+  font-size: 13px;
+}
+.review-kinds .tag::before {
+  left: 7px;
+}
+.review-queue__sub {
+  margin-top: var(--sp-8);
+  font-family: var(--font-kai);
+  font-weight: 400;
+  font-size: var(--fs-16);
+  color: var(--ink-2);
+}
+.review-queue__empty {
+  margin-top: var(--sp-5);
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+
+.cases {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: var(--sp-4);
+}
+/* 一份案卷：一张纸条，左边是书，右边三行字；超时的左边一道红线 */
+.case {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px 10px 12px;
+  border-radius: var(--radius-m);
+  background-color: var(--sheet);
+  background-image: var(--grain);
+  background-size: 220px 220px;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 8px 18px -16px rgb(var(--shadow-rgb) / 0.6);
+  transition:
+    transform var(--dur-quick) var(--ease-soft),
+    box-shadow var(--dur-quick) ease;
+}
+.case:hover {
+  transform: translateY(-1px);
+}
+.case[data-current] {
+  box-shadow:
+    0 0 0 1.5px var(--ink),
+    0 12px 22px -16px rgb(var(--shadow-rgb) / 0.7);
+}
+.case[data-late]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--thread);
+}
+.case__text {
+  min-width: 0;
+}
+.case__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.case__kind {
+  letter-spacing: 0.12em;
+}
+.case[data-late] .case__time {
+  color: var(--thread-ink);
+}
+.case__title {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-kai);
+  font-size: 17px;
+  line-height: 1.4;
+  text-align: left;
+  color: var(--ink);
+}
+/* 按钮的伪元素伸满整张案卷：整张都能点，读屏只读书名 */
+.case__title::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.case__title:focus-visible {
+  outline: none;
+}
+.case__title:focus-visible::after {
+  outline: 2px solid var(--thread);
+  outline-offset: 2px;
+}
+.case__what {
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* 审过的：字淡一些，右边钤着那方印 */
+.case[data-done] .case__title,
+.case[data-done] .case__what {
+  color: var(--ink-2);
+}
+.case__seal {
+  margin-right: 2px;
+}
+
+/* ---------------- 空着的右栏：一只印盒 ---------------- */
+.review-idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-5);
+  min-height: 80svh;
+  padding: var(--sp-10);
+  text-align: center;
+}
+.review-idle__box {
+  display: flex;
+  gap: 18px;
+  padding: 22px 26px;
+  border-radius: var(--radius-m);
+  background-color: var(--sheet);
+  background-image: var(--grain);
+  background-size: 220px 220px;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 18px 30px -24px rgb(var(--shadow-rgb) / 0.7);
+}
+.review-idle__text {
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+
+/* ---------------- 一份稿子 ---------------- */
+.review-detail {
+  min-width: 0;
+  padding: 0 var(--sp-5) var(--sp-10);
+}
+@media (min-width: 900px) {
+  .review-detail {
+    padding: var(--sp-10) var(--sp-8) var(--sp-12);
+  }
+  .review-detail__bar {
+    display: none;
+  }
+}
+
+/* 案由：书、种类、书名与哪一章、作者与编辑、字数、等了多久 */
+.review-case {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.review-case__text {
+  min-width: 0;
+}
+.review-case__kind {
+  font-size: var(--fs-12);
+  letter-spacing: 0.2em;
+  color: var(--ink-2);
+}
+.review-case__title {
+  font-family: var(--font-kai);
+  font-weight: 400;
+  font-size: 1.6rem;
+  line-height: 1.3;
+}
+/* 案由（第几章、换一张封面）整段一起折行：放不下时整段换到书名下面，不在章名中间断开 */
+.review-case__title span {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: var(--fs-16);
+  color: var(--ink-2);
+}
+.review-case__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.review-case__late {
+  color: var(--thread-ink);
+}
+/* 封面与简介没有稿纸：印盖在案由的右上角 */
+.review-case__stamp {
+  position: absolute;
+  right: 0;
+  top: -8px;
+}
+@media (min-width: 900px) {
+  .review-case__title {
+    font-size: var(--fs-36);
+  }
+}
+
+/* 作者写给审核的话：一张小签，宽度随话的长短；署名像信尾一样另起一行靠右 */
+.review-note {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: var(--sp-5);
+  padding: 10px 14px;
+  border-radius: var(--radius-s);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.7;
+  background: var(--sheet-2);
+}
+.review-note__from {
+  display: block;
+  text-align: right;
+  font-family: var(--font-sans);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+
+.review-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin-top: var(--sp-8);
+}
+
+/* 新书：立着的书、资料、包封展开图 */
+.review-book {
+  display: grid;
+  gap: var(--sp-6);
+}
+@media (min-width: 1200px) {
+  .review-book {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+  }
+  .review-book__jacket {
+    grid-column: 1 / -1;
+  }
+}
+.review-book__stand {
+  display: grid;
+  place-items: center;
+  padding: 18px 40px 30px;
+}
+.review-book__info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.review-book__row {
+  display: grid;
+  grid-template-columns: 3em minmax(0, 1fr);
+  gap: 12px;
+  font-size: var(--fs-14);
+  line-height: 1.8;
+}
+.review-book__row dt {
+  color: var(--ink-2);
+}
+.review-book__row dd {
+  margin: 0;
+}
+.review-book__jacket,
+.review-compare figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+.review-book__jacket figcaption,
+.review-compare figcaption {
+  font-size: var(--fs-12);
+  letter-spacing: 0.12em;
+  color: var(--ink-2);
+}
+
+/* 新旧对照：放得下就并排，放不下就上下 */
+.review-compare {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-8);
+}
+.review-compare--text figure {
+  flex: 1 1 280px;
+  align-items: stretch;
+}
+.review-compare--text figcaption {
+  text-align: center;
+}
+.review-blurb {
+  padding: 14px 16px;
+  border-radius: var(--radius-s);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.9;
+  background: var(--sheet);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.review-blurb del {
+  color: var(--ink-2);
+  text-decoration: line-through;
+  text-decoration-color: var(--thread);
+}
+.review-blurb ins {
+  text-decoration: none;
+  background: color-mix(in srgb, var(--thread) 12%, transparent);
+  box-shadow: inset 0 -1.5px 0 var(--thread);
+}
+
+/* ---------------- 印盒：总批、常用语、三方印 ---------------- */
+.tray {
+  margin-top: var(--sp-10);
+  padding: 16px;
+  border-radius: var(--radius-m);
+  background-color: var(--sheet);
+  background-image: var(--grain);
+  background-size: 220px 220px;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 18px 30px -26px rgb(var(--shadow-rgb) / 0.7);
+}
+.tray__summary {
+  display: block;
+  width: 100%;
+  min-height: 3.6em;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius-s);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.7;
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--line);
+  resize: vertical;
+}
+.tray__summary:focus-visible {
+  outline: 2px solid var(--thread);
+  outline-offset: 1px;
+}
+.tray__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px 20px;
+  margin-top: 12px;
+}
+.tray__phrases {
+  flex: 1 1 16em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tray__phrase {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  background: var(--sheet-2);
+  transition:
+    color var(--dur-quick) ease,
+    background-color var(--dur-quick) ease;
+}
+.tray__phrase:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--blush) 45%, var(--sheet-2));
+}
+.tray__seals {
+  display: flex;
+  gap: 18px;
+  margin-left: auto;
+}
+.tray__slot {
+  position: relative;
+}
+.tray__seal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.tray__seal .seal {
+  transition: transform var(--dur-quick) var(--ease-soft);
+}
+/* 拿起来：印微微一转、抬起 */
+.tray__seal:not([aria-disabled]):hover .seal {
+  transform: rotate(-8deg) translateY(-3px);
+}
+.tray__seal[aria-disabled] {
+  cursor: not-allowed;
+}
+/* 盖不了的理由：指着或聚焦时浮在印的上方 */
+.tray__why {
+  position: absolute;
+  right: -6px;
+  bottom: calc(100% + 10px);
+  z-index: 3;
+  width: 13em;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  font-size: var(--fs-12);
+  line-height: 1.6;
+  text-align: left;
+  color: var(--paper);
+  background: var(--ink);
+  opacity: 0;
+  translate: 0 4px;
+  pointer-events: none;
+  transition:
+    opacity var(--dur-quick) ease,
+    translate var(--dur-quick) var(--ease-soft);
+}
+.tray__slot:hover .tray__why,
+.tray__seal:focus-visible + .tray__why {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* 盖过之后：一方印、一句结果、撤回与下一份 */
+.tray--done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 16px;
+}
+.tray__outcome {
+  flex: 1 1 14em;
+  font-size: var(--fs-14);
+  line-height: 1.7;
+}
+.tray__after {
+  display: flex;
+  gap: 10px;
+}
+
+/* ---------------- 下朱批 ---------------- */
+/* 选区旁边浮起的"批"字小印（Annotator.tsx 给出视口坐标） */
+.annotate-pin {
+  position: fixed;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-left: -18px;
+  border-radius: 6px;
+  font-family: var(--font-brush);
+  font-size: 20px;
+  line-height: 1;
+  color: var(--paper);
+  background: var(--thread);
+  rotate: -6deg;
+  box-shadow: 0 8px 16px -8px rgb(var(--shadow-rgb) / 0.8);
+  animation: annotate-pin-in 180ms var(--ease-soft);
+}
+.annotate-pin:disabled {
+  color: var(--ink-2);
+  background: var(--sheet-2);
+  cursor: not-allowed;
+}
+@keyframes annotate-pin-in {
+  from {
+    opacity: 0;
+    scale: 0.8;
+  }
+}
+.annotate {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.annotate__quote {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 2px solid var(--thread);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.7;
+  background: var(--sheet-2);
+}
+.annotate__text {
+  display: block;
+  width: 100%;
+  min-height: 92px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius-s);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.7;
+  color: var(--ink);
+  background: var(--sheet);
+  box-shadow: inset 0 0 0 1px var(--line);
+  resize: vertical;
+}
+.annotate__text:focus-visible {
+  outline: 2px solid var(--thread);
+  outline-offset: 1px;
+}
+.annotate__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.annotate__count {
+  margin-right: auto;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
