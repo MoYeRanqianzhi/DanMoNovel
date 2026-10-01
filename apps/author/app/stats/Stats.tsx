@@ -4,7 +4,7 @@
  * 从上往下讲一件事：
  * - 选哪本书：只列发布过章节的书（筹备中的书还没有数据）；旁边立着这本书。
  * - 三个总数：收藏（带本周新增）、追读（已完结的书是"读完"）、订阅的章节。
- * - 最近 30 天：两重远山（Hills），远山是每天在读的人，近山是新收藏，今天是一轮红日。
+ * - 最近 30 天：两重远山（packages/design 的 Hills，管理站总览也用），远山是每天在读的人，近山是新收藏，今天是一轮红日。
  * - 跟读：一笔越写越细的墨（FollowStroke），粗细是跟读率；写明读到最新一章的还有多少，哪几章读的人比前一章多。
  * - 读者什么时候读：十二时辰的一圈墨点（HourDial），旁边一句定时发布的建议。
  * 图都在服务端画好；只有指着某一天、某一章、某个时辰时显示的数在浏览器里算（日期要按作者当地的今天）。
@@ -14,12 +14,12 @@ import { useState } from 'react';
 import { WORKS, statsOf, volumesOf, type WorkStats } from '@danmo/data/author';
 import { chapterTitle, toChineseNumber } from '@danmo/data/chapters';
 import { Book3D, POSES } from '@danmo/design/book3d/Book3D';
+import { Hills, HillsLegend } from '@danmo/design/charts/Hills';
 import { Segmented } from '@danmo/design/components/ui';
 import type { ScreenProps } from '@danmo/design/shell/stack';
 import { formatCount, formatNumber } from '../format';
 import { useLocalBooks } from '../local';
 import { FollowStroke, type VolumeSpan } from './FollowStroke';
-import { Hills } from './Hills';
 import { BRANCHES, HourDial, shichenRange, toShichen } from './HourDial';
 import './stats.css';
 
@@ -139,15 +139,16 @@ export function StatsScreen({ data }: ScreenProps<StatsData>) {
           <h2 className="section-title" id="stats-days">
             最近 30 天
           </h2>
-          <p className="stats-legend" aria-hidden="true">
-            <span className="stats-legend__far">在读的人</span>
-            <span className="stats-legend__near">新收藏</span>
-          </p>
+          <HillsLegend far="在读的人" near="新收藏" />
         </div>
         <p className="stats-lead">
           今天 {formatCount(today)} 人在读，最多的一天 {formatCount(Math.max(...reads))}
         </p>
-        <Hills reads={reads} collects={stats.collects} />
+        <Hills
+          far={reads}
+          near={stats.collects}
+          tip={(i) => `在读 ${formatCount(reads[i])} · 新收藏 ${formatNumber(stats.collects[i])}`}
+        />
       </section>
 
       <section className="stats-section" aria-labelledby="stats-follow">

@@ -9,7 +9,7 @@
  * - SVG 等比缩放（不拉伸），字直接写在 SVG 里。
  */
 import { useState } from 'react';
-import { q } from '../components/curve';
+import { q } from '@danmo/design/lib/curve';
 
 interface HourDialProps {
   /** 24 个钟点各自的阅读占比，第 0 个是 0 点到 1 点 */

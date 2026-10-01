@@ -13,7 +13,7 @@
 import type { CSSProperties } from 'react';
 import { AUTHOR_LEVELS, type AuthorLevel } from '@danmo/data/author';
 import { ThreadProgress } from '@danmo/design/components/ui';
-import { hash, q } from '../components/curve';
+import { hash, q } from '@danmo/design/lib/curve';
 
 /** 每一阶墨滴的半径（px，画布 40×40、圆心在正中）与浓淡 */
 const RADIUS = [7, 9, 11, 13, 15];

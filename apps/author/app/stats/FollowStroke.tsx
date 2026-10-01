@@ -14,7 +14,7 @@
  * - 同一页只有一笔，但仍不用 defs 与 id：飞白用 evenodd 挖空，不需要遮罩。
  */
 import { useState, type PointerEvent } from 'react';
-import { hash, q, smooth, type Point } from '../components/curve';
+import { hash, q, smooth, type Point } from '@danmo/design/lib/curve';
 
 export interface VolumeSpan {
   title: string;

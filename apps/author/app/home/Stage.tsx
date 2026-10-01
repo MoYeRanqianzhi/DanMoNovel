@@ -20,7 +20,7 @@ import type { Book } from '@danmo/data/books';
 import { Book3D } from '@danmo/design/book3d/Book3D';
 import { Stamp } from '@danmo/design/components/Stamp';
 import { Seal, TagMark } from '@danmo/design/components/ui';
-import { hash, q, smooth, type Point } from '../components/curve';
+import { hash, q, smooth, type Point } from '@danmo/design/lib/curve';
 
 /* ---------------- 书 ---------------- */
 

@@ -1,30 +1,37 @@
 /**
- * 远山：最近 30 天每天在读的人与新收藏，画成两重水墨山
+ * 远山：最近 30 天的两组数，画成两重水墨山（三站共用；作者站数据页、管理站总览）
  *
- * - 远山是每天在读的人（淡墨、高），近山是每天新收藏（浓墨、矮）。两重山各按自己的最大值定高低，
- *   山高从 0 起算（不截掉山脚），起伏不会被放大。
+ * - 远山（淡墨、高）与近山（浓墨、矮）各是一组每天的数，最后一个是今天：
+ *   作者站是一本书每天在读的人与新收藏，管理站是全站每天在读的人与新发布的章节。
+ *   两重山各按自己的最大值定高低，山高从 0 起算（不截掉山脚），起伏不会被放大。
  * - 每一天是山脊上的一个点；两天之间加一个小起伏，看起来像山脊而不像折线。
  *   小起伏只在两点连线上下偏一点，任何一天的高度都不变。
  * - 今天：远山的山脊上一轮红日，日心就在今天那一点（红色标"当前位置"，属于信息）。
  *   红日排在远山后面，下半轮隔着一层淡墨，像落在山后。
- * - 指着某一天（鼠标移动；手指按下或按住拖动）：一道竖线、两重山脊上各一个点，竖线下端挂一张小纸条写日期与两个数。
+ * - 指着某一天（鼠标移动；手指按下或按住拖动）：一道竖线、两重山脊上各一个点，竖线下端挂一张小纸条写日期与两个数
+ *   （两个数怎么写由调用方的 tip 给出，各站的数字写法不同）。
  *   纸条落在坐标轴那一行（这时坐标轴的字隐去）：放在山上方会盖住标题下那句话，放在山里会盖住山脊上的点。
- *   日期只在浏览器里算（作者所在的时区可能与服务端不同），服务端只画山。
+ *   日期只在浏览器里算（看的人所在的时区可能与服务端不同），服务端只画山。
  *   手指松开后标记留着，方便看清；鼠标移出就收起。
  * - 山比数据宽：第一天之前、今天之后各有一段山脚，再用遮罩让左右两端淡进纸里（像山隐进雾里），
  *   今天的红日落在不淡的地方。
  * - SVG 横向拉伸（preserveAspectRatio="none"）：山怎么拉都还是山；圆点与文字不能拉，用 HTML 叠在上面。
- * - 渐变要用 id：一页只有一张远山，用 useId 取不重复的 id（去掉 id 里不能出现在 url() 中的字符）。
+ * - 渐变要用 id：一页可能不止一张远山，用 useId 取不重复的 id（去掉 id 里不能出现在 url() 中的字符）。
+ * - 作者站服务端渲染：路径的坐标与起伏都按 lib/curve.ts 的规矩算（一位小数、整数哈希），水合时一字不差。
+ *
+ * 图例 HillsLegend：两座小山，浓淡与图里的两重山一样，放在标题旁边（读屏不读，两组数的名字由纸条与标题下那句话说）。
  */
-import { useId, useState, type PointerEvent } from 'react';
-import { formatCount, formatNumber } from '../format';
-import { hash, q, smooth, type Point } from '../components/curve';
+import { useId, useState, type PointerEvent, type ReactNode } from 'react';
+import { hash, q, smooth, type Point } from '../lib/curve';
+import './hills.css';
 
 interface HillsProps {
-  /** 每天在读的人，最后一个是今天 */
-  reads: number[];
-  /** 每天新收藏，与 reads 一一对应 */
-  collects: number[];
+  /** 远山：每天一个数，最后一个是今天 */
+  far: readonly number[];
+  /** 近山：与 far 一一对应 */
+  near: readonly number[];
+  /** 指着第 i 天（0 是最早的一天）时，纸条上日期后面写的两个数 */
+  tip: (i: number) => ReactNode;
 }
 
 /** 画布宽 1000、高 240：横向随容器拉伸，纵向按 CSS 高度等比缩放 */
@@ -58,7 +65,7 @@ interface Ridge {
  * 一重山。top 是最大值的山顶，base 是值为 0 时的高度（都是画布纵坐标）；
  * rough 是两天之间小起伏的幅度，seed 让两重山的起伏不一样
  */
-function ridge(values: number[], top: number, base: number, rough: number, seed: number): Ridge {
+function ridge(values: readonly number[], top: number, base: number, rough: number, seed: number): Ridge {
   const n = values.length;
   const max = Math.max(...values);
   const ys = values.map((v) => base - (v / max) * (base - top));
@@ -86,12 +93,12 @@ function dayLabel(daysAgo: number): string {
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
-export function Hills({ reads, collects }: HillsProps) {
+export function Hills({ far: farValues, near: nearValues, tip }: HillsProps) {
   const uid = useId().replace(/[^\w-]/g, '');
-  const n = reads.length;
+  const n = farValues.length;
   const today = n - 1;
-  const far = ridge(reads, 34, 236, 14, 3);
-  const near = ridge(collects, 124, 244, 10, 11);
+  const far = ridge(farValues, 34, 236, 14, 3);
+  const near = ridge(nearValues, 124, 244, 10, 11);
   const [probe, setProbe] = useState<number | null>(null);
 
   const pick = (e: PointerEvent<HTMLDivElement>) => {
@@ -137,7 +144,7 @@ export function Hills({ reads, collects }: HillsProps) {
             <span className="hills__dot hills__dot--near" style={{ top: top(near.ys[probe]) }} />
             <span className="hills__tip">
               <b>{dayLabel(today - probe)}</b>
-              在读 {formatCount(reads[probe])} · 新收藏 {formatNumber(collects[probe])}
+              {tip(probe)}
             </span>
           </div>
         )}
@@ -150,5 +157,15 @@ export function Hills({ reads, collects }: HillsProps) {
         ))}
       </div>
     </div>
+  );
+}
+
+/** 图例：远山、近山各是什么（放在标题旁边） */
+export function HillsLegend({ far, near }: { far: string; near: string }) {
+  return (
+    <p className="hills-legend" aria-hidden="true">
+      <span className="hills-legend__far">{far}</span>
+      <span className="hills-legend__near">{near}</span>
+    </p>
   );
 }
