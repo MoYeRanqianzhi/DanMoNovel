@@ -43,7 +43,7 @@ packages/design/src/
   book3d/       Book3D.tsx + book3d.css、faces.tsx + faces.css（各面平面内容）、motifs.tsx（封面纹样）、barcode.ts（Code 128C）、
                 BookLoader.tsx + loader.css、gestures.ts（useTilt、useSpin）
   flight/       FlightContext.tsx（飞行引擎与 BookSlot）、timing.ts、flight.css
-  shell/        stack.tsx（页面栈，第 4 节）、nav.tsx + nav.css（TabBar、SideRail、RailLink）、not-found.tsx（notFoundHandle）
+  shell/        stack.tsx（页面栈，第 4 节）、keepStyles.ts（留住栈里页面的样式表）、nav.tsx + nav.css（TabBar、SideRail、RailLink）、not-found.tsx（notFoundHandle）
   components/   ui.tsx（IconButton/ThreadProgress/TagMark/Seal/PairLine/Segmented/Logo）、overlays.tsx（Sheet、Toast）、ErrorPage.tsx、
                 Stamp.tsx + stamp.css（盖章：落下与印泥洇开，still 直接显示盖好的样子）
   manuscript/   稿纸（第 14 节）：Manuscript.tsx + manuscript.css、danmo-grid.woff2（方格补字字体）与 danmo-grid-OFL.txt
@@ -148,6 +148,12 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 客户端跳转时数据经过序列化，所以用 `isMissing` 按字段判断，不比较引用。
   - 管理站是 SPA，在 `clientLoader` 里返回 MISSING。
 - **书位 id**：`screen.slot('hero')` 得到 `${sid}:hero`。启动页的书位固定为 `splash:book`。
+- **留住样式表**（shell/keepStyles.ts，PageStack 调用 useKeepRouteStyles）：
+  - React Router 的 `<Links>` 只为当前匹配到的路由输出样式表，地址一变就撤掉上一页路由的。被盖住的页面、正在淡出的页面已经不在匹配里，样式一撤版式就散了。开发模式下 Vite 用 `<style>` 注入、从不撤，只有生产构建会出现。2026-10-01 在作者站生产构建里逐帧看到："我"淡出时竖写的条幅变成横排，被"我"盖住的书房 `.desk-head` 从 flex 变成 block。
+  - 办法：叶子路由的样式表第一次出现时，在 `<Links>` 输出的那个 `<link>` 后面紧挨着插一份副本（`data-kept`），以后原件被撤，副本还在原处，层叠次序不变；副本早已加载好，撤的那一帧不闪。根路由与布局路由的不复制（一直都在；字体的 @font-face 复制一份可能重复下载字体）。
+  - 哪些样式表属于哪个路由，看 `UNSAFE_FrameworkContext` 里的路由清单（`<Links>` 自己也用它）。升级 React Router 时要核对这个导出与 `manifest.routes[id].css` 还在。
+  - 副本一直留着，所以各页的样式不能写会漏到别的页的全局规则（html、body、.app 之类不带本页限定的选择器、重名的 @keyframes）。2026-10-01 查过三站与 paper、manuscript、fonts 的样式，都带本页或本组件的限定。
+  - 验证（生产构建，逐帧取样）：作者站"我"淡出 13 帧条幅都是竖排，被盖住与返回时书房每一帧都有样式；小说站阅读页逆向浮出的 20 帧都有阅读页样式。
 
 ## 5. 主题系统
 
@@ -622,6 +628,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 全量类型检查与三个站的生产构建通过，没有警告；控制台无报错（小说站第一次载入有 3 条 Vite "504 Outdated Optimize Dep"，是开发服务器的依赖预构建过期，刷新后没有）。
 - **"我"未验收**：真机输入法（闲章不设 maxLength、输入时不去空格，都是按道理这样写，没在真机上组过字）；读屏软件实际朗读；Safari 与 Firefox 上的竖排条幅与乌丝栏（文楷竖排每字 1.31em 是在 Chromium 里量的）；减少动效下的盖章。
 - **测试注意**：
+  - 页面切换、淡出、被盖住的页面要在生产构建上看一遍：开发模式下样式从不撤，生产构建里路由的样式表随地址撤换（第 4 节"留住样式表"）。临时起一个生产服务：在 `apps/<站>` 下 `PORT=<空闲端口> npx react-router-serve ./build/server/index.js`，用完按端口找到进程停掉。
   - Vite 会缓存"解析失败"：先写了 `import './x.css'`、后建文件时，这个站的开发服务器一直报 500 "Failed to load url"，文件建好也不恢复。先建文件再写 import；已经卡住了就 `touch apps/<站>/vite.config.ts`，那个站的开发服务器会重启。
   - Playwright 截图的文件名写成 `.playwright-mcp/<名字>.png`（已忽略）。只写文件名会存到仓库根目录，混进未跟踪文件。
   - Windows 上 Playwright 的浏览器窗口被遮挡时，Chrome 会暂停 requestAnimationFrame，动画卡在半途，看起来像代码有问题。测动效前先 `page.bringToFront()`。
