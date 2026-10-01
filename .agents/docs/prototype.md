@@ -36,7 +36,7 @@ packages/data/src/
   posts.ts      发现页的示例帖子 POSTS、帖子类别 POST_KINDS、formatPostTime
   author.ts     作者站的示例数据（第 13 节）：AUTHOR、WORKS、volumesOf、MESSAGES、LETTERS、statsOf、FANS、REVIEWS（朱批）、今日字数
   manuscripts.ts 写作页与审核页的示例稿件：manuscriptOf、wordCount、draftWords、hasDraft
-  admin.ts      管理站的示例数据（第 16 节）：身份与权限、工作人员、责任编辑、审核队列、举报、账簿
+  admin.ts      管理站的示例数据（第 16 节）：身份与权限、工作人员、审核队列、作者名册、设置页的三份（橱窗、告示、站规）、举报、全站三十天的数、账簿
 packages/design/src/
   styles/       index.ts（按顺序引入字体与 tokens → themes → base → transitions → layout）、tokens.css（@property 注册）、
                 themes.css（8 套主题）、base.css、transitions.css（墨晕与页面进出场）、layout.css（.app/.stage/.screen、版心、按钮、设置列表与"关于"）
@@ -49,7 +49,9 @@ packages/design/src/
   components/   ui.tsx（IconButton/ThreadProgress/TagMark/Seal/PairLine/Segmented/Logo）、overlays.tsx（Sheet、Toast；Sheet 打开时把焦点移进面板，内容已自己拿了焦点（autoFocus）时不抢；Sheet 是 aria-modal，面板开着时要播报的话放在面板里面，面板外的 role="status" 与 Toast 有的读屏不念）、ErrorPage.tsx、
                 Stamp.tsx + stamp.css（盖章：落下与印泥洇开，still 直接显示盖好的样子）
   manuscript/   稿纸（第 14 节）：Manuscript.tsx + manuscript.css、danmo-grid.woff2（方格补字字体）与 danmo-grid-OFL.txt
-  lib/          util.ts（cls、seededRandom、clamp、lerp）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts
+  charts/       Hills.tsx + hills.css（远山与图例 HillsLegend，第 13 节；作者站数据页、管理站总览共用）
+  lib/          util.ts（cls、seededRandom、clamp、lerp）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts、
+                curve.ts（q、smooth、hash：服务端与浏览器画得一字不差的曲线工具，第 13 节）
   fonts/        catalog.ts（平台字体目录、系统字体、字体 id 与字体栈）、imported.ts（导入字体：IndexedDB 与 FontFace）、
                 client.ts（模拟客户端的字体下载）、FontList.tsx + font-list.css（字体列表）、sfnt.ts（格式识别、读字体名、拆合集）
   paper/        阅读纸张（第 10 节"背景"）：papers.ts（十种纸张的 id 与名称）、PaperTexture.tsx（纹理层）、
@@ -72,17 +74,21 @@ apps/author/app/       作者站（SSR，第 13、15 节）：公开首页 /、�
   home/         公开首页（第 13 节末）：Home.tsx（文字与"读到哪一步"）、Stage.tsx（舞台：一本书从无到有）、home.css
   screens/      Desk.tsx（书房）
   components/   砚台 Inkstone、月相 moon.ts、墨迹日历 InkCalendar、信笺 LetterCard、一笔墨迹 InkStroke、章节状态 StateMark、
-                curve.ts（平滑曲线与整数哈希）、sheet-form.css（面板里的表单）
+                sheet-form.css（面板里的表单）；画图的 curve.ts 与远山搬进了 packages/design（lib/、charts/）
   works/ cover/ 作品列表与详情、封面工作室与裁剪器（第 15 节）
   write/        写作页：Write.tsx（页面与 loadWrite）、Outline.tsx（目录）、panels.tsx（发布、选纸）、drafts.ts（本机副本）、paper.ts（稿纸偏好）
   readers/ stats/ me/   互动、数据、我（第 13 节）
   local.ts      本机改过的封面与作品信息；profile.ts 本机改过的签名、闲章与每日目标
-apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false，第 16 节）：总览 /、审核 /review、身份 /staff、日志 /audit、我 /me、404
-  identity.ts   以某个身份预览（原型专用）；session.ts 这次打开期间的决定、名册的改动与新记的账；NoAccess.tsx 管不着的一页；format.ts 时长、数字、入职、人数
+apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false，第 16 节）：总览 /、审核 /review、作者 /authors、身份 /staff、日志 /audit、设置 /settings、我 /me、404
+  identity.ts   以某个身份预览（原型专用）；session.ts 这次打开期间的决定、处理过的举报、名册与作者的改动、校样与新记的账；NoAccess.tsx 管不着的一页；
+                format.ts 时长、数字（千分位与几万）、入职、人数、量词前的汉字数字与日子
   review/       审核：Review.tsx（案卷与两栏）、Detail.tsx（一份案卷）、Annotator.tsx（选字下朱批）、review.css
   staff/        身份：Staff.tsx（印谱与名帖）、Dossier.tsx（面板：印的释文、名帖、札子）、rules.ts（谁能对谁做什么、理由）、staff.css
   audit/        日志：Audit.tsx（一卷流水账）、audit.css
-  me/ overview/ 我、总览（总览暂时只有页头）
+  authors/      作者：Authors.tsx（信封的名册）、Author.tsx（拆开的信：八行笺、作品与签约）、authors.css
+  settings/     设置：Settings.tsx（三份校样）、proof.tsx（校样与批注栏）、Showcase.tsx（橱窗）、Notices.tsx（告示）、Policy.tsx（站规）、settings.css
+  overview/     总览：Overview.tsx（案头）、Pile.tsx（一摞稿子）、Reports.tsx（举报的面板）、overview.css
+  me/           我
 ```
 
 ## 3. 框架约定、路由与服务端渲染
@@ -722,8 +728,9 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - loadStats：遍历 WORKS 调 statsOf，没有数据的书不列；分卷只数"已发布"的章，与 retention 一一对应。缓存头 PRIVATE_CACHE，标题 privateMeta('数据')。
   - Stats.tsx：多本书时 Segmented 选书（选项是带 aria-pressed 的 .segmented__opt 按钮，不是 radio）；Book3D 加 key={book.id}，换书时重新挂载。三个总数用 formatCount 拆成数与单位；`<dd>` 要 margin-inline-start: 0（浏览器默认缩进 40px）。
   - 回升的章：比前一章高 RISE = 0.015 以上，列在跟读那句话的第二行，并在笔上打圈点。发布时间的建议 = 最多的时辰开始前一个钟点（`(first × 2 + 22) % 24`）。
-  - components/curve.ts（原在 stats/，"我"的五阶墨色也用，挪到 components/）：q（保留一位小数）、smooth（Catmull-Rom 转三次贝塞尔，只输出 C 段）、hash（Math.imul 的整数哈希，0~1）。图在服务端画好，水合时路径要一字不差，所以随机数不用 Math.sin。
-- **远山 Hills**（stats/Hills.tsx）：
+  - curve.ts（原在 stats/，"我"的五阶墨色也用，挪到 components/；2026-10-02 随远山搬进 packages/design/src/lib/）：q（保留一位小数）、smooth（Catmull-Rom 转三次贝塞尔，只输出 C 段）、hash（Math.imul 的整数哈希，0~1）。图在服务端画好，水合时路径要一字不差，所以随机数不用 Math.sin。
+- **远山 Hills**（原在 stats/，2026-10-02 搬进 packages/design/src/charts/Hills.tsx 与 hills.css，管理站总览也用，见第 16 节"总览"）：
+  - 搬家时改成通用的：`{far, near, tip}`，两组数是 readonly 数组，tip(i) 是纸条上日期后面写的字（各站的数字写法不同，作者站写"在读 1.2 万 · 新收藏 937"）；图例 HillsLegend `{far, near}`（原 .stats-legend，改名 .hills-legend）；.hills 加 isolation: isolate，指着时纸条的 z-index: 1 只在图里比。
   - 画布 1000×240，`preserveAspectRatio="none"` 横向拉伸；第一天与今天离左右边 56（PAD），山脚伸出画布 12，再用 mask 让左右各 5% 淡进纸里。第一版数据贴着两边，山像被竖着切断。
   - 两重山各按自己的最大值、从 0 起算：远山（在读的人）top 34、base 236，近山（新收藏）top 124、base 244。两天之间加一个带抖动的中点，只在连线上下偏一点，不改任何一天的高度。渐变末端的透明度必须是 0，否则山底有一道淡边。
   - 红日：`--thread` 16px 的 HTML 圆点，排在 SVG 前面，所以下半轮被远山的淡墨盖住，像落在山后。
@@ -739,7 +746,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 每个时辰一笔毛笔的"点"，长 12~54、宽 7~16、浓淡 0.32~0.9，都按"占比 / 最大的占比"取。每笔外面套一个透明扇形（±0.26rad、半径 108），方便指中。
   - 圈心写时辰；第二行没指着时写钟点范围，指着时写占比。内圈半径 27，字缩小到不压线。role="img"，aria-label 写最多的时辰。
   - 旁边那句话：时辰与钟点范围整块不断行（.stats-hours__when）；这一段 `text-wrap: wrap`，因为 pretty 会把最后那一整块当成孤字，再拉一个"是"下来拆开"其次是"。
-- **数据页已知不足**：图里每一天、每一章、每个时辰的数只有指针看得到，键盘与读屏只拿得到每段的文字说明与时辰盘的 aria-label；远山、墨迹两种画法目前只有作者站用，管理站要用时再搬进 packages/design。
+- **数据页已知不足**：图里每一天、每一章、每个时辰的数只有指针看得到，键盘与读屏只拿得到每段的文字说明与时辰盘的 aria-label；跟读的一笔墨与时辰盘只有作者站用；远山已搬进 packages/design（管理站总览也用）。
 - **我 /me**（me/Me.tsx，不是标签页；handle parent '/desk'）：
   - 入口：书房右上角的闲章、侧栏底部的"我"（RailLink，普通进栈）。loadMe：AUTHOR、作品数与总字数（WORKS 汇总）、签约作品的书名、MESSAGES 里第一条编辑的消息、TODAY_WORDS。缓存头 PRIVATE_CACHE，标题 privateMeta('我')。
   - 名帖是一幅条幅（figure.me-scroll）：整张纸 vertical-rl，一列的宽就是行高 --col（窄屏 48px，≥900px 60px）；乌丝栏是 content-box 上按 --col 重复的竖线，字正好写在两道线之间。签名从最右一列写起，下一列落款：笔名靠下、钤闲章（Seal 34px；保存资料后换成 Stamp 重新盖一次）。
@@ -900,13 +907,14 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - kind：chapter、book、cover、blurb（QUEUE_KINDS）。title 给番外这类不按"第几章"编号的；next 是封面、简介改成的样子。
     - REVIEW_LIMIT_MINUTES = 1440，超过即超时：q4《镜头之外》等了 1560 分钟。它只是站规第四条的初值，审核页用 session 的 useReviewLimit（设置页付印过的时限）。
     - 与另两站对得上：q1 是作者站《晚风信号》5 小时前送审的第一章；q6 是新作者鹿鸣的新书《落日邮差》（书号 1002100000010009，章名在 chapters.ts 的 NAMED_CHAPTERS）。
-  - 举报 REPORTS（r1~r4）。
+  - 举报 REPORTS（r1~r4）：`Report {id, kind, excerpt, reason, count, minutesAgo}`，由总览的举报面板处理（见下面"总览"）。
+  - 全站的数（总览的"今日"）：SITE_DAYS `{reads, chapters}` 各三十个数，最后一个是今天（读的人周末多、昨天放假第一天最多；章节每天一千二上下，周日少一点）；SITE_NEWCOMERS 今天新来的读者。
   - 设置页（见下面"设置"）：
     - 橱窗 SHOWCASE `{ring, fresh}`：ring 七本与小说站 Store.tsx 的 RING_IDS 同序；fresh 四格与小说站现在按上架日期取的四本一致。SHOWCASE_EDITION `{no: 12, by: 's4', minutesAgo: 3000}` 对得上 l5。
     - 告示 NOTICES（n3 十月征文 10-01~10-31、n2 停机维护 10-03、n1 九月书单 09-01~09-30），起止是写死的 YYYY-MM-DD；n3、n2 对得上 l10、l1。
     - 站规 POLICY 七条 `PolicyArticle {id, name, before, after, control, value}`；control 是 count `{unit, min, max, step?}` 或 choice `{options}`。
       第四条（deadline）的值是 REVIEW_LIMIT_MINUTES / 60，步长六小时、六到七十二。POLICY_EDITION `{no: 7, by: 's3', minutesAgo: 1800}` 对得上 l7。
-  - 账簿 LEDGER（l1~l15，数组由近到远，编号越大越晚）。LedgerAct 含"撤回"与"下线"（强制退出所有设备上的登录，身份页记的）。
+  - 账簿 LEDGER（l1~l15，数组由近到远，编号越大越晚）。LedgerAct 含"撤回"与"下线"（强制退出所有设备上的登录，身份页记的），以及处理举报的"删除""保留"。ALERT_ACTS（驳回、删除、撤销、停用）是查账时要一眼看到的事由，日志页与总览的账簿摘录都用红线色。
   - appointPermission(role)：任命这种身份要的权限（超管 appoint.super，其余 appoint，站长 null）。身份页的红线、能不能给某方印都由它与 can 推出。
     - 与作者站对得上的几笔：l12 青砚通过《盐汽水与蝉》第六十五章（定时明天 20:00）、l8 拾遗退回《晚风信号》第三章（两条朱批）、l5 阿梨的"新书上架"推荐、l13 知秋发起的签约、l6 长庚任命霁月。
     - 链值：CHAIN_SEED 起，chainNext(上一笔之后的值, 这一笔) 用 FNV-1a 串下去，给日志页的骑缝章用。内容不含时刻（样例账的时刻每次打开都不同，含了链值就会变）；正式版由服务端连同时刻用加密哈希算。
@@ -925,7 +933,30 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 代表的人：名章、身份、职责、入职、两步验证。
   - 印谱：五方印，按钮带 aria-pressed；手里那方白文（满底朱红），盒里的朱文，外圈一道红线。
   - ThemeSwatches（默认墨白）、动效 Segmented、关于 Sheet；换印后 role="status" 播报。
-- **总览**（overview/）：暂时只有页头（节气日期、右上角手里的印进 /me），其余放在 C1 最后做。
+- **总览**（overview/，/ 标签页，谁都能看）：编辑部的案头。从上往下：页头、待办、今日、账簿；1240px 起账簿挪到右边一栏（340px），窄一些时竖着排。
+  - **页头**：标题，问候与节气日期；右上角手里的印进 /me。问候按看的人那里的钟点（夜深了、早、午安、下午好、晚上好；useClientValue 在浏览器里算），称呼是代表这方印的人 me.name。
+  - **待办**：每种待办一摞稿子，只摆手里的印管得着的。几摞排成网格，一格至少 `min(96px, 30%)`：1240px 刚分两栏时左栏只有六百五十几，六摞仍在一行；360 宽的手机再让出滚动条，取 30% 才排得下三摞一行。
+    - review：章节、新书、封面、简介四摞（QUEUE 里还没盖章的，按种类；单位份、本、张、段）。第二行写超时几份（红，按 useReviewLimit），没有超时写"最久的等了 …"（只有一份时"等了 …"）。点一摞 `navigate('/review?kind=…', {state: {tab: true}})`：与点导航条一样清空页面栈，审核页先按这一种筛好。
+    - operate：举报（REPORTS 里还没处理的，单位条），第二行"最多十四人举报"；点开举报的面板（举报没有自己的一页）。
+    - authors：签约（看得到的作者里洽谈中的作品，单位部，"两部在谈"），点进 /authors。visibleAuthors 从 Authors.tsx 挪进 session.ts：总览也要用，而 Authors.tsx 是页面模块、引入着作者页的样式，总览不该为一个函数引入它。
+    - 一份都没有时写"清了"（签约写"没有在谈的"），画一圈虚线。按钮的读屏名称是 aria-label"章节：五份，一份超时"（与看得见的字一致，加了标点）。
+  - **一摞稿子的画法**（Pile.tsx 的 PileArt，SVG）：
+    - 平行投影，不用透视（几摞的高低要能比）：仰角 36°（纸面前后压成 sin、竖直缩成 cos），整摞朝右转 24°，每一叠再歪 ±4.5°、错开 ±3（hash 取固定的小随机数，种子按种类）。朝前、朝右两个切口总是看得见，只画这两个侧面。没用 CSS 3D：浮签、纸面上的字要按次序叠，几个平面相交时浏览器的深度排序会闪。
+    - 一叠是厚 10 的长方体：两个切口（纸色叠 9%、20% 的 rgb(--shadow-rgb)，长夜里切口也是暗的）、切口上两道细线（一页一页的纸）、纸面。从下往上画，上面的盖住下面的（画家算法）。
+    - 最上面那张纸面上的东西画在纸自己的坐标里（u 向右、v 向前），用 SVG matrix 贴上去：平行投影下纸面到画布正好是仿射变换。章节是方格稿纸（六列八行，前五行一格一个字，每个字两三笔短画）；新书是最新那一份的封面（配色渐变、腰封）；封面是要换上的那一张（next.palette、一轮月）；简介是几行字；举报是窄纸条（58×32）；签约是合同、右下角一方"约"。
+    - 超时：最下面几叠（最早送来的）从朝右的切口伸出红色浮签，只画伸出来的一截，画在切口之后、纸面之前。
+    - 画布宽 120，高按案头上最高的一摞留（rows，几摞传同一个数，最多九叠）：底边对齐，矮的那几摞上面不空出一大截。原点（底面中心）放在每一叠的 Slab.cy 上，不用模块级变量。
+    - 悬停或键盘聚焦：最上面那一叠（.pile-art__lift）上提 6，像要拿起来看。
+  - **今日**：三个数（在读的人 13.3 万、新章节 1,285、新来的读者 2,364），名目在上、楷书的数在下（与作者站数据页的三个总数一样，dd 的默认缩进清掉），数字边上洇一点墨（text-shadow）。下面是远山（far = SITE_DAYS.reads、near = SITE_DAYS.chapters），纸条写"在读 … · 新章节 …"，标题旁边是图例。
+  - **账簿**：样例账（OPENED_AT − minutesAgo）与 session.ledger 合在一起，由近到远取五笔。有 audit 的（站长、超管）标题"账簿"、每笔带名章、"翻开账簿"进 /audit；其余身份标题"我经手的"，只取 by 是自己的，没有名章那一栏；一笔都没有时写"还没有经手的事"。
+    - 一笔两行（名章 | 对象、事由 | 附注、时刻），与日志页手机上的排法一样；640~1239px 账簿铺满一栏宽，一笔排成一行（栏宽都定死：每一行各是一个网格，时刻那一栏用 auto 时，"昨天 22:20"那一行的附注会往左错开）。
+    - 时刻：今天写几点几分，昨天"昨天 22:20"，再早"9月30日"。这次新记、一分钟之内的墨迹未干（ov-wet）。
+  - **举报的面板**（Reports.tsx）：Sheet 挂在 body 下，样式不能靠 .overview 上的变量。一条一张纸条（种类、理由、几人举报、多久以前，被举报内容的开头加引号），交替歪 −0.4°、0.3°。
+    - 两方印：删（白文）、留（朱文），印下写"删去""留下"，与审核页的印盒同一个样子。盖了印 settleReport 记一笔"删除"（附注"剧透，十四人举报"）或"保留"（附注"举报不成立（广告）"）；纸条上的字划掉（删）或淡下去（留），右下角落印，写"已删去 / 已留下"与"撤回"。
+    - 撤回：reopenReport 删掉处理，另记一笔"撤回"（附注 `撤回“删除”`），原来那一笔不动。
+    - 印的 key 是处理的时刻：这次打开面板之前处理过的（at 早于打开的时刻）直接在纸上（still），撤回再盖是新的一方。
+    - 印的定位写在外面一层 span.report__stamp 上，不写在 Stamp 的 className 上：生产构建里共用的 stamp.css 排在总览的样式后面，同样分量的 `.stamp { position: relative }` 会盖掉它（route-styles 记忆第 4 条）。
+    - 焦点：盖印后到同一张纸条的"撤回"，撤回后回到这张纸条的"删"；播报放在面板里的 role="status"（Sheet 是 aria-modal）。
 - **管不着的一页**（NoAccess.tsx）：
   - 标签页里本来就没有这一页，只有直接打开地址、或换了印再返回时才走到这里。
   - 列出 rolesWith(need) 的空心印，写"这一页要拿……的印。你手里是……的印。"，按钮"换一方印"进 /me。
@@ -936,9 +967,11 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - decide 记下决定并记一笔账：附注取总批；没有总批时写"N 条朱批"。
   - undo 删掉决定，另记一笔"撤回"（附注如 `撤回"通过"`），原来那一笔不动。
   - describe(item) 是账簿上写的对象。日志页把 LEDGER 与 session 的 ledger 合起来显示。
+  - reports：处理过的举报（`ReportDecision {verdict: '删' | '留', at, by}`），settleReport、reopenReport 见上面"总览"；REPORT_ACT 把印文换成事由（删除、保留）。
   - staff：对工作人员的改动（StaffChange：roles、group、appointed[身份] 的时刻、disabledAt、resetAt、loggedOutAt）。rosterOf(session) 把它叠到 STAFF 上，改动没变时返回同一个数组；useRoster() 订阅。
   - appoint、revoke、disable、resetTwoFactor、forceLogout 各改一项并记一笔账：任命"某某为某身份"（附注先写组）；撤销"某某的某身份"（本人撤自己的，附注先写"主动卸任"）；停用"某某的账号"；重置"某某的两步验证"；下线"某某的所有设备"。
   - authors：对作者的改动（AuthorChange：works、editor、memo、memoAt、letters）。authorsOf(session) 叠到 AUTHORS 上，改动没变时返回同一个数组；useAuthors() 订阅。
+    visibleAuthors(authors, all, me)：这个身份看得到的作者（站长、超管看全部；编辑看自己名下的与还没有编辑的），作者页与总览的"签约"共用。
   - sendContract 把一部作品推到"合同寄出"、还没有编辑的作者归到经手的编辑名下，并记一笔"签约"；writeMemo、sendLetter 不记账（备忘是编辑自己的笔记，信是往来，都不是特权操作）。
   - showcase、policy：两份校样，`ProofState<T> {printed?, draft?, prints, last?}`。printed 缺省是样例数据；draft 是批改过的样张，改回与 printed 一样时清掉（markShowcase、markPolicy），
     所以"有没有批改"就看 draft 在不在。useShowcase、usePolicy 返回 `{printed, draft, marked, edition: {no, by, at}}`：付印过的版次是样例版次加 prints。
@@ -947,7 +980,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - policyText(article, value)：几用 countKai 写成汉字加单位（两天、十二小时），选的照原样。useReviewLimit 是付印过的第四条乘六十。
   - notices：这次贴出的告示（id p1、p2……），postNotice 记一笔"公告"：对象是标题，附注 rangeLabel（"10 月 2 日至 7 日"）。
   - update 一律 `{...state, ...}`：新加的字段不会被别的动作丢掉。
-- **审核**（review/）：/review 与 /review/:id 两个路由共用 ReviewScreen，data 是 `{id}`。/review/:id 的 handle 是 back 'hop'、book 取案卷的书、parent 回 /review。
+- **审核**（review/）：/review 与 /review/:id 两个路由共用 ReviewScreen，data 是 `{id, kind?}`：/review?kind=… 先按那一种筛好（clientLoader 对着 QUEUE_KINDS 校验，不认得的当作没筛；总览点一摞进来），之后由页面上的筛选自己管。/review/:id 的 handle 是 back 'hop'、book 取案卷的书、parent 回 /review。
   - **版面**（review.css）：
     - < 900px：/review 只显示案卷；/review/:id 只显示详情，案卷 display: none 但仍渲染，所以每一页里都有一份书位。
     - ≥ 900px：两栏 `minmax(270px, 300px) minmax(0, 1fr)`。案卷 sticky、max-height 100svh、自己滚动；详情 padding `var(--sp-10) var(--sp-8) var(--sp-12)`。
@@ -955,7 +988,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - **打开一份**：
     - 宽屏用 retarget，还是同一页；useLayoutEffect 随 data.id 把 .screen 滚回顶上，左边的案卷不动。
     - 窄屏 push：书从案卷的 BookSlot（`${sid}:case:<id>`，宽 40、POSES.thumb）飞进详情页头的 hero。
-  - **下一份**：待审里等得最久的另一份。
+  - **下一份**：先在筛着的种类里找等得最久的另一份，这一种审完了再找全部里等得最久的（从总览点"封面"那一摞进来的，接着审封面）。宽屏换到别的种类时放下筛选（setKind(null)），左边才看得到它。窄屏点开的每一份是新的一页，筛选靠地址带过去：点开与"下一份"的地址在这一份属于筛着的种类时带 ?kind=（pathOf），/review/:id 的 clientLoader 也读它（kindParam，两个路由共用）。没选中时右边的"打开等得最久的一份"也按筛着的种类；这一种审完了写"这一类都审完了"，不给按钮。
     - 宽屏 retarget。
     - 窄屏 `push(..., {replace: true, flightFrom})`：替换栈顶，栈不加深；不带 book，进场不飞书。
     - flightFrom 由 screen.fromSlot 换算：把结尾的 `case:<当前>` 换成 `case:<下一份>`，返回时书飞回下面那页案卷里下一份的那一格。直接打开地址进来的没有 fromSlot，返回时不飞。
@@ -987,11 +1020,11 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - **版面**（audit.css）：
     - 整卷是一张 .sheet 纸（.ledger），一天一页（.ledger-page）：页头是"十月二日"（toChineseNumber）、星期与节气（season.ts 的 seasonOf）、今天的墨色小签、"第 N 页 · M 笔"（第一页是最早的一天）。
     - 栏目与行用同一个 grid：`--ledger-cols: 64px 60px 80px minmax(0, 1.25fr) minmax(0, 1fr)`（时刻、经手、事由、对象、附注）。栏目上面一道双线，格线颜色与稿纸的格线相同（主色调 58% 加墨，长夜更淡）。
-    - 经手是名章（Seal 34px 朱文）；事由是一枚墨色小戳（.ledger-stamp，歪 −4°），驳回、撤销、停用用红线色（查账时要一眼看到）。
+    - 经手是名章（Seal 34px 朱文）；事由是一枚墨色小戳（.ledger-stamp，歪 −4°），驳回、删除、撤销、停用（admin.ts 的 ALERT_ACTS）用红线色（查账时要一眼看到）。
     - 页末两行空行（.ledger-blank）：竖线用一条多段的 linear-gradient 画，段位必须与 --ledger-cols 对上（三段定宽，第四道在余下宽度的 1.25/2.25 处）。过去的页划一道从左上到右下的斜线（`to top right` 的 50% 等值线就是这条对角线），"以下空白"顺着斜线写：容器是 inline-size，转角是 `atan2(高, 100cqw)`，斜线在字底下用 mask 断开。今天这一页的第一行空行淡淡写"下一笔记在这里"。
     - 骑缝（.ledger-seam）：高 0，左右负外边距铺满整张纸。::before 是一排齿孔（桌面色的小孔加一圈淡影），盖在骑缝章上面，像打穿了印泥；::after 是两侧的半圆缺口。骑缝章"耽墨账簿"58px 靠右、歪着压在线上，旁边写较早那天结账时的链值（"十月一日结 8650 1691"）。
     - 宽屏右边是书口索引：一排小签从纸的右边沿底下伸出来（.ledger 的 z-index 盖住小签左边一截；.audit-body 是 isolation: isolate，这个 z-index 只在这一卷里比，见第 4 节），正在看的那天多伸出一点、外沿一道红线。窄屏隐藏索引，一笔改成两行（名章在左；对象与事由一行，附注与时刻一行），没有竖线。
-  - **筛选**：拿起一方名章（只看这个人经手的，aria-pressed，拿起的变白文）、按事由的类别（审核、人事、推荐与公告、站规、签约）。筛掉的行不显示，页脚写"另有几笔 / 都不在筛选里"；链值与骑缝照旧。工具下面写"筛出 n 笔，共 N 笔"。
+  - **筛选**：拿起一方名章（只看这个人经手的，aria-pressed，拿起的变白文）、按事由的类别（审核与举报、人事、推荐与公告、站规、签约；审核与举报合成一类，两样都是对内容下的决定，撤回是共用的事由，分开了按事由筛也分不清撤回的是哪一样）。筛掉的行不显示，页脚写"另有几笔 / 都不在筛选里"；链值与骑缝照旧。工具下面写"筛出 n 笔，共 N 笔"。
   - **核对**：从最早的那道骑缝起，每 480ms 核一道（印重新按一下、写"对得上"），最后 role="status" 给结论"核对完毕：N 笔账，几道骑缝的链值都对得上"；减少动效时一次核完。离开页面时清掉计时器。播报区空着时用 `position: absolute` 让出位置，不能 display:none：不在无障碍树里的播报区，填进文字时读屏不念。**导出**：Toast 提示原型未接入。
   - **墨迹未干**：打开这一页之前不到一分钟记下的（WET_MS）、打开之后新记的，文字有模糊与晕开的影子、名章更艳，3.2 秒内干透。审核页盖章、撤回后切到日志就能看到。干透时（ledger-wet 的 animationend）记进 AuditScreen 的 dried：筛掉的行会卸载，筛回来时不能在挂载时重新判断，否则一分钟之内会再湿一遍。
   - **书口索引的当前页**：滚动时取开头已过屏幕上方 140px 的最后一页；滚到底取最后一页（短页的开头到不了那条线）。点书口翻页时直接标在点的那一天，1 秒内不按滚动改（平滑滚动还没停）；jumpedAt 的初值是负无穷，新开的页面 performance.now() 从 0 起算，初值 0 会挡掉第一次计算。
@@ -1151,14 +1184,23 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
       选书后收起的那一会儿面板仍是《雨停之前》、没有"原为"一行、表单 inert；付印后焦点在"批注"；付印后再批再撤销，"付印"data-still、没有动画；
       两处批改撤销第一处后焦点在剩下那张的撤销上，全部撤销后在"批注"，播报都有字；第四条连点四下"+"按钮横坐标不变；
       站长批了站规后在"我"换成管理员，回来撤销、全部撤销、付印都 aria-disabled、指向理由，点了批改还在；结束的日子已经过了时写明；长夜里日期框的 color-scheme 是 dark。
+  - 总览（2026-10-02）：
+    - 宽度：1440、1300、1280、1240（刚分两栏，六摞仍在一行）、1239、1100、900、768（一栏，账簿一笔一行）、390、360、320（三摞一行）与长夜（1440、390）都看过；横向没有溢出。
+    - 站长：点"章节"进 /review?kind=chapter，章节筛好、五份、导航是审核、栈里一页。举报面板：盖删 → 焦点到撤回，播报"删去了这条段评，账簿记了一笔“删除”。"，"三条待处理"；撤回 → 焦点回到删，"四条待处理"；留下第二条后 Esc → 焦点回到那一摞，举报"三条"，账簿摘录最上面三笔墨迹未干、删除是红戳；翻开账簿 → 日志今天那页末尾三笔，"审核与举报"筛得出删除、撤回、保留。
+    - 关上再打开面板，盖过的印 data-still，不再落一遍；四条都处理完，举报那一摞只剩一圈虚线、写"清了"。悬停时最上面那一叠上提 6（matrix(1, 0, 0, 1, 0, -6)）。
+    - 审核页盖准 q4（超时的那一份）后回到总览：章节"四份"、"最久的等了 7 小时"、浮签没了、四叠。编辑知秋给鹿鸣盖约后回到总览：签约"三部在谈"，"我经手的"最上面是这一笔、墨迹未干。
+    - 各身份：超管同站长（问候"早，长庚"）；管理员只有举报一摞、"我经手的"两笔（l10、l5）；编辑只有签约、一笔（l13）；审核四摞、三笔（l15、l12、l4）。
+    - 减少动效：提起、印、墨迹都是 1ms。控制台无报错（HMR 改到一半时的报错，重新载入后不再出现）。
+    - 远山搬家后作者站数据页照旧：开发服务器与生产构建（react-router-serve）的 /stats 服务端画出远山，水合无警告，纸条"9月14日在读 1.2 万 · 新收藏 937"；/（舞台）、/me（五阶墨色）、/stats 另两张图都没有报错。类型检查与三站构建通过。
+    - 代码审查（2026-10-02）的修正都核过：举报的印在生产构建（静态托管）里是 absolute、离纸条右边 18px，纸条不再被撑高（修之前同一个构建里复现过：relative、150px 撑到 189px）；宽屏从"封面"那一摞进来，"打开等得最久的一份"打开 q7（不再是全部里最久的 q4），盖准后"下一份"换到 q4、筛选放回"全部"；章节筛着时盖完 q4，"下一份"是章节 q3 而不是更久的新书 q6；手机上章节筛着点开是 /review/q4?kind=chapter，"下一份"是 /review/q3?kind=chapter、栈里仍是两页，返回后案卷仍筛着章节、已审一份；漏写的函数注释补上，挪错位置的注释挪回 .ov-stamp 上面。
 - **已知不足**：
   - 决定与朱批只在内存里，刷新就没了。
   - 日志只有样例账与这次新记的几笔，没有按日期范围筛（样例只有几天）；更早的账写"已经归档"。
   - 跨段选中只批第一段那一截。
-  - 举报还没有页面（等总览的待办与日志）。
   - 身份：还不在名册里的人（新同事）不能在这里开账号，原型没有邀请；转让站长只有提示；停用之后没有"启用"；重置两步验证之后，本人重新开好的过程没有模拟。
   - 新书只给第一章的稿纸。
   - 作者：盖约只走到"合同寄出"，作者确认与生效没有模拟；信与备忘只在这次打开期间，作者站的编辑消息里看不到（两站不共享状态）；备忘只留最新一条。作者的等级与签约状态属于作者站的体系，这里只读。
   - 设置：付印之后小说站的书城不跟着换、告示不出现在小说站（两站不共享状态）；贴出的告示不能撤下或改；
     样例告示的日子写死在 2026 年 9、10 月，过了 10 月 31 日再打开三张都是"已过期"；站规只有七条样例，第四条以外的条文不连到别的页面；
     书环的候选只有样例的十本书，没有搜索。
+  - 总览：今日的数与远山是写死的样例，不随这次的审核、发布变；举报的处理只记在这次打开期间，小说站看不到被删的内容少了；待办只有审核、举报、签约三类（推荐位、告示到期这类运营上的事没有摞）；一摞最多画九叠，再多的只写在字里；图里每一摞的样子只是示意，读屏只念按钮上的字。
