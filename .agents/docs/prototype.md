@@ -38,7 +38,7 @@ packages/data/src/
   manuscripts.ts 写作页与审核页的示例稿件：manuscriptOf、wordCount、draftWords、hasDraft
 packages/design/src/
   styles/       index.ts（按顺序引入字体与 tokens → themes → base → transitions → layout）、tokens.css（@property 注册）、
-                themes.css（8 套主题）、base.css、transitions.css（墨晕与页面进出场）、layout.css（.app/.stage/.screen、版心、按钮）
+                themes.css（8 套主题）、base.css、transitions.css（墨晕与页面进出场）、layout.css（.app/.stage/.screen、版心、按钮、设置列表与"关于"）
   theme/        themes.ts（主题元数据）、ThemeContext.tsx（偏好存储、themeBootScript、墨晕切换）
   book3d/       Book3D.tsx + book3d.css、faces.tsx + faces.css（各面平面内容）、motifs.tsx（封面纹样）、barcode.ts（Code 128C）、
                 BookLoader.tsx + loader.css、gestures.ts（useTilt、useSpin）
@@ -66,9 +66,14 @@ apps/novel/app/        小说站（SSR）
   http.ts       缓存头、站名、pageTitle、NOT_FOUND_META
   seo.ts        NOVEL_ORIGIN（环境变量 VITE_NOVEL_ORIGIN，默认 http://localhost:5173）、canonical()
   novel.css     小说站共用样式（章节列表的锁；.toc-list 本身在 layout.css）
-apps/author/app/       作者站（SSR，第 13 节）：首页 /（占位）、书房 /desk、写作 /write/:bookId/:chapter?、404
-  screens/      Desk.tsx；components/ 砚台 Inkstone、月相 moon.ts、墨迹日历 InkCalendar、信笺 LetterCard
+apps/author/app/       作者站（SSR，第 13、15 节）：首页 /（占位）、书房、作品与封面工作室、写作、互动、数据、我、404（地址见 routes.ts 头部注释）
+  screens/      Desk.tsx（书房）、Home.tsx（公开首页，占位）
+  components/   砚台 Inkstone、月相 moon.ts、墨迹日历 InkCalendar、信笺 LetterCard、一笔墨迹 InkStroke、章节状态 StateMark、
+                curve.ts（平滑曲线与整数哈希）、sheet-form.css（面板里的表单）
+  works/ cover/ 作品列表与详情、封面工作室与裁剪器（第 15 节）
   write/        写作页：Write.tsx（页面与 loadWrite）、Outline.tsx（目录）、panels.tsx（发布、选纸）、drafts.ts（本机副本）、paper.ts（稿纸偏好）
+  readers/ stats/ me/   互动、数据、我（第 13 节）
+  local.ts      本机改过的封面与作品信息；profile.ts 本机改过的签名、闲章与每日目标
 apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false）：总览 /、404；页面还是占位
 ```
 
@@ -606,6 +611,16 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 长夜：远山是浅色的山，红日是粉色的（--thread 在长夜里的颜色），像月亮。
   - 类型检查与作者站生产构建通过；控制台无报错（改代码途中热更新的中间状态报过一次，刷新后没有）。
 - **数据页未验收**：键盘与读屏（图里每一天、每一章、每个时辰的数只有指针看得到，见第 13 节）；Safari 与 Firefox 上的 mask 与拉伸的 SVG；平板宽度只截图看了布局，没有逐项测指着的交互。
+- **"我"已在浏览器验收**（2026-10-01，390×844、768×1024、960×800、1440×900 缃叶；390×844 与 1440×900 长夜）：
+  - 状态码 200、缓存头 `private, no-store`、标题"我 - 耽墨作者站"；从书房右上角的闲章进来，左上角返回。
+  - 修改资料：笔名不能改；15 个字的签名在条幅上排成两列；闲章改成"听雨"朱文，保存后条幅上重新盖章，localStorage 写进 motto、seal、sealStyle，role="status" 播报"资料已保存"。
+  - 闲章校验（手机）："ab"保存不了，提示"闲章只刻一到四个汉字"，面板不关，预览的印面空着（提示条会压住预览的右下角，消失后正常）；三个字竖排一列；四个字"栖迟之印"右列栖迟、左列之印。
+  - 改动跟着走：每日目标改成 1,000，"我"写"还差 69"，书房砚台写"目标 1,000，还差 69"；书房的闲章、互动页回信的闲章都换成"听雨"朱文。
+  - 写作页（目标 1,000，打开时 931 字）：没有本机副本时写到 1,011 字提示"今天的一池墨研满了"，再写不重复；本机副本已比服务端多 120 字时，打开与继续写都不提示（提示条从页面脚本运行前开始记录）。
+  - 主题：点长夜的纸样，`data-theme` 变成 changye、这张纸样 aria-pressed；"关于"面板。退出登录回到公开首页 /，页面栈只剩一页。
+  - 小说站"我的"在设置列表挪进 layout.css 之后不变（四行、行高 56px、细线分隔）。
+  - 全量类型检查与三个站的生产构建通过，没有警告；控制台无报错（小说站第一次载入有 3 条 Vite "504 Outdated Optimize Dep"，是开发服务器的依赖预构建过期，刷新后没有）。
+- **"我"未验收**：真机输入法（闲章不设 maxLength、输入时不去空格，都是按道理这样写，没在真机上组过字）；读屏软件实际朗读；Safari 与 Firefox 上的竖排条幅与乌丝栏（文楷竖排每字 1.31em 是在 Chromium 里量的）；减少动效下的盖章。
 - **测试注意**：
   - Vite 会缓存"解析失败"：先写了 `import './x.css'`、后建文件时，这个站的开发服务器一直报 500 "Failed to load url"，文件建好也不恢复。先建文件再写 import；已经卡住了就 `touch apps/<站>/vite.config.ts`，那个站的开发服务器会重启。
   - Playwright 截图的文件名写成 `.playwright-mcp/<名字>.png`（已忽略）。只写文件名会存到仓库根目录，混进未跟踪文件。
@@ -617,8 +632,9 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 - **骨架**：root.tsx（默认主题缃叶）；shell.tsx 四个标签页：书房 /desk、作品 /works、互动 /readers、数据 /stats，侧栏底部是"我" /me（窄屏从书房右上角的闲章进入）；写作页不是标签页。
   - http.ts：PUBLIC_CACHE、PRIVATE_CACHE、privateMeta（标题加 noindex）、NOT_FOUND_META。
   - format.ts：formatNumber 自己拼千分位（服务端与浏览器的区域数据可能不同，toLocaleString 会水合不匹配）、formatCount（万）、formatAgo。
-  - 我、首页还没做：/me 被侧栏底部与书房右上角的闲章用到。作品与封面工作室见第 15 节。
+  - 公开首页还没做：screens/Home.tsx 是迁移时的占位，"我"里退出登录会回到这里。作品与封面工作室见第 15 节。
 - **数据**：packages/data/src/author.ts 与 manuscripts.ts。
+  - AuthorProfile 的 sealStyle 是闲章的刻法：白文（满底朱红、字留白，Seal 的 solid）或朱文（红字红边，outline）；示例是白文"栖迟"。签名、闲章、刻法与每日目标可以在"我"里改（本机覆盖，见下文 profile.ts）。
   - 登录的作者是《盐汽水与蝉》的栖迟；另有筹备中的《晚风信号》`1002100000010007`（三章：待审核、草稿、退回）与完结的《青苔与猫》`1002100000010008`。界面称呼作者一律用"你"，不用性别代词。
   - 有单独稿件的章节（manuscripts.ts 的 DRAFTS）字数按稿件算：第六十六章草稿 931 字，也就是今日字数 TODAY_WORDS；《晚风信号》三章 721、533、542 字，书的总字数由此算出。其余章节借用小说站的试读正文（章首带"示例正文"说明），字数仍是 volumesOf 给的随机值，两者对不上。
   - REVIEWS 以"书号:章序号"为键；ReviewNote 的 paragraph/start/length 相对段落正文（不含缩进），改稿件时要重新核对偏移。
@@ -642,7 +658,8 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 顶栏第二行：草稿写小月亮（今日字数/目标）、本章字数、保存中/已保存；待审核"审核中 · N 小时前提交"（ChapterRecord.when 在待审核时是提交距今的小时数）；定时"已过审 · 明天 20:00 发布"；已发布"已发布 · N 天前"；退回"退回修改 · N 处批注"。
   - 保存：drafts.ts 把 {name, text, state, savedAt} 存进 localStorage 的 `danmo-author:draft:<书号>:<章序号>`，读时逐项校验；停笔 700ms 保存，卸载与换章前立刻保存，Ctrl/⌘+S 立刻保存（拦下浏览器的另存网页）。稿纸偏好在 paper.ts（`danmo-author:paper`，服务端快照是方格）。
   - 打开时：layout effect 把 .screen 滚回顶；effect 里换上本机副本；如果是草稿，两帧之后按 .ms__mirror 的底边把文末滚到视口 55% 处，`pointer: fine` 时再把光标放到文末（触屏不自动弹键盘）。
-  - 今日字数 = TODAY_WORDS + max(0, 当前字数 - 打开时的字数)；跨过每日目标时提示一次。
+  - 今日字数 = TODAY_WORDS + max(0, 当前字数 − 服务端稿子的字数)，本机副本里上次多写的字也算在内。每日目标先取"我"里改过的（profile.ts），没改过用 AUTHOR.dailyGoal。
+  - 写满目标的提示只说一次，并且只给这次打开之后写满的：换上本机副本时把当时的今日字数记进 openToday，openToday 已经不少于目标就不提示。只比较服务端的 TODAY_WORDS 不够：目标改成 1,000 后（TODAY_WORDS 是 931），副本多写 69 字，一打开就会提示。
   - 打字时 `.write[data-typing]`，顶栏与左栏淡到 0.22，pointermove 或 pointerdown 恢复。
   - 目录 Outline：分卷，行用共用的 .toc-list 加状态标记；宽屏（≥1200px）是左栏（sticky，自己滚动），其余收进顶栏按钮打开的 Sheet。当前章滚到中间时只滚最近一层可滚动的祖先；目录不可见时（窄屏上隐藏的左栏）跳过，否则找到的祖先是整页。
   - 面板 panels.tsx：发布（立即或定时：今天、明天、后天 × 08/12/18/20/22 点；作者的话最多 300 字）；提交后盖章，结果用 role="status" 播报。选纸是三张卡片加示意图。
@@ -668,7 +685,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - loadStats：遍历 WORKS 调 statsOf，没有数据的书不列；分卷只数"已发布"的章，与 retention 一一对应。缓存头 PRIVATE_CACHE，标题 privateMeta('数据')。
   - Stats.tsx：多本书时 Segmented 选书（选项是带 aria-pressed 的 .segmented__opt 按钮，不是 radio）；Book3D 加 key={book.id}，换书时重新挂载。三个总数用 formatCount 拆成数与单位；`<dd>` 要 margin-inline-start: 0（浏览器默认缩进 40px）。
   - 回升的章：比前一章高 RISE = 0.015 以上，列在跟读那句话的第二行，并在笔上打圈点。发布时间的建议 = 最多的时辰开始前一个钟点（`(first × 2 + 22) % 24`）。
-  - curve.ts：q（保留一位小数）、smooth（Catmull-Rom 转三次贝塞尔，只输出 C 段）、hash（Math.imul 的整数哈希，0~1）。三张图在服务端画好，水合时路径要一字不差，所以随机数不用 Math.sin。
+  - components/curve.ts（原在 stats/，"我"的五阶墨色也用，挪到 components/）：q（保留一位小数）、smooth（Catmull-Rom 转三次贝塞尔，只输出 C 段）、hash（Math.imul 的整数哈希，0~1）。图在服务端画好，水合时路径要一字不差，所以随机数不用 Math.sin。
 - **远山 Hills**（stats/Hills.tsx）：
   - 画布 1000×240，`preserveAspectRatio="none"` 横向拉伸；第一天与今天离左右边 56（PAD），山脚伸出画布 12，再用 mask 让左右各 5% 淡进纸里。第一版数据贴着两边，山像被竖着切断。
   - 两重山各按自己的最大值、从 0 起算：远山（在读的人）top 34、base 236，近山（新收藏）top 124、base 244。两天之间加一个带抖动的中点，只在连线上下偏一点，不改任何一天的高度。渐变末端的透明度必须是 0，否则山底有一道淡边。
@@ -686,6 +703,27 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 圈心写时辰；第二行没指着时写钟点范围，指着时写占比。内圈半径 27，字缩小到不压线。role="img"，aria-label 写最多的时辰。
   - 旁边那句话：时辰与钟点范围整块不断行（.stats-hours__when）；这一段 `text-wrap: wrap`，因为 pretty 会把最后那一整块当成孤字，再拉一个"是"下来拆开"其次是"。
 - **数据页已知不足**：图里每一天、每一章、每个时辰的数只有指针看得到，键盘与读屏只拿得到每段的文字说明与时辰盘的 aria-label；远山、墨迹两种画法目前只有作者站用，管理站要用时再搬进 packages/design。
+- **我 /me**（me/Me.tsx，不是标签页；handle parent '/desk'）：
+  - 入口：书房右上角的闲章、侧栏底部的"我"（RailLink，普通进栈）。loadMe：AUTHOR、作品数与总字数（WORKS 汇总）、签约作品的书名、MESSAGES 里第一条编辑的消息、TODAY_WORDS。缓存头 PRIVATE_CACHE，标题 privateMeta('我')。
+  - 名帖是一幅条幅（figure.me-scroll）：整张纸 vertical-rl，一列的宽就是行高 --col（窄屏 48px，≥900px 60px）；乌丝栏是 content-box 上按 --col 重复的竖线，字正好写在两道线之间。签名从最右一列写起，下一列落款：笔名靠下、钤闲章（Seal 34px；保存资料后换成 Stamp 重新盖一次）。
+  - 条幅尺寸按一列八个字定。Chromium 里霞鹜文楷竖排每个字占 1.31em（20px 时 26.2px），letter-spacing 还会叠加上去，所以签名不加字距：20px 八个字 210px、26px 八个字 273px，加上起笔前的留白与天头地脚，纸高 270px、360px。签名最多 16 个字（MOTTO_MAX），最多两列。第一版按横排字宽估、又加了字距，签名折成好几列。
+  - 右边：笔名与三行小字（签约、入驻第几天、作品与字数），`white-space: pre`，手机上不折行。入驻天数只在浏览器里算（useClientValue），服务端在那一行写一个空格占住高度。字数满一万写"45 万字"（"字"紧跟），不满写"9,800 字"。
+  - 创作等级 InkLevels（me/InkLevels.tsx）：AUTHOR_LEVELS 五阶（研墨、润笔、落墨、泼墨、挥毫）各一滴墨，半径 7~15、浓淡 0.2~0.9。轮廓沿圆周取十个点，角度与半径用 hash 抖动，二次贝塞尔经过相邻两点的中点闭合。到过的实心；现在这一阶外面多一圈 1.5 倍、0.08 的墨晕；没到的只描 0.24 的边。相邻两阶之间的细线用 ::after 从墨边画到墨边（--r、--r-next），没到的是虚线；现在这一阶到下一阶换成 ThreadProgress（红线，线头的结在 levelProgress 处）。ThreadProgress 不收 style，外面包一层定位的 span。
+  - 签约与编辑：签约（"约"朱文小印）列出签约的作品；责任编辑（"编"朱文小印）引最近的一句话，去处与书房的消息一样（提到某一章打开那一章的稿纸，只提到书打开作品页），没有去处时不是按钮。
+  - 每日目标：小月亮（phasePath，与书房砚台、写作页的小月亮同一个月相）、目标字数、"今天写了 N 字，还差 M"或"这一池墨已经研满了"；Segmented 五档（DAILY_GOALS 1,000~8,000），点一下就存。
+  - 主题：八张纸样。每张是那套主题的一小片稿纸（`.paper[data-theme]` 让里面的变量换成那套主题的），16px 的格从右上角起算，主题名 12px 加 4px 字距竖写，正好一格一字；左下一方小印是那套主题的红。选中的那圈红线用当前主题的（outline 在按钮上，按钮不在 data-theme 里）。点一下 `setTheme(id, originOf(e))`，墨晕从指尖晕开。
+  - 设置：动效（跟随系统、完整、减少）、关于（Sheet：Logo 与字体许可）、退出登录（原型没有登录：`navigate('/', { state: { tab: true } })` 回到公开首页并清空页面栈）。
+  - 修改资料 ProfileSheet：笔名禁用（改笔名要责任编辑同意，与书名一样）；签名带字数（n/16）；闲章边改边看（Seal 76px，不是一到四个汉字时印面空着），刻法白文、朱文。每次打开从保存过的内容开始。
+    - 闲章的输入框不设 maxLength、输入时不 trim。拼音组字时字母很容易超过四个，各浏览器在组字途中怎样执行 maxLength 并不一致（[Mozilla 1164361](https://bugzilla.mozilla.org/show_bug.cgi?id=1164361)）：Firefox 与 Chrome 组字时允许超出，多出来的字之后才去掉（Mozilla 说这是有意的）；IE 11 在组字中的拼音超出时就不让再组，maxlength 2 时打"zhongwen"只得到"zh"；报告者说 Safari 也守住了上限，组字途中是否同样挡住没有说清。组字途中改输入框的值会打断组字（[Mozilla 1167095](https://bugzilla.mozilla.org/show_bug.cgi?id=1167095) 的结论：isComposing 为真时不要改 value）。所以保存时再 trim 与校验，不合规用提示条说、面板不关。
+    - 保存后条幅上重新盖章；role="status" 播报"资料已保存"，连着保存两次时在"资料已保存"与"资料已保存。"之间换，读屏才会再报一次。
+  - 宽屏（≥900px）：条幅在左、跨两行，右边上面是名字、下面是等级；签约与编辑、每日目标两栏，主题与设置跨两栏。
+- **本机资料**（profile.ts）：
+  - localStorage `danmo-author:profile`，只存改过的几项（签名、闲章、刻法、每日目标），读时逐项校验：签名不超过 16 个字、闲章一到四个汉字、刻法两种之一、目标是五档之一，不合规的那一项丢掉。
+  - useProfileEdit：useSyncExternalStore，服务端快照是同一个空对象（没改过），挂载后换上本机的；另一个标签页改了跟着变（storage 事件）。用法 `{ ...author, ...useProfileEdit() }`：书房（闲章与刻法、砚台的目标）、写作页（小月亮与写满目标的提示）、LetterCard（回信落款的闲章）、"我"。sealVariant 把刻法换成 Seal 的 variant。
+- **面板里的表单**（components/sheet-form.css）：.sheet-form、__field、__label（small 靠右）、__input（:disabled、:focus-visible）、__area、__save。从作品详情的"修改作品信息"抽出来与"修改资料"共用，work.css 只剩标签（.work-tags）。
+- **这一步对共享层的改动**（packages/design）：
+  - 设置列表 .settings-list 与"关于" .about 从小说站 profile.css 挪进 layout.css，小说站"我的"与作者站"我"共用。
+  - Seal 加 `letter-spacing: 0`：外面的字距（比如条幅落款的 0.2em）会被印面继承，两个字的印被挤成两列。三个字（data-len 3）竖排一列、字号 0.28 倍。
 
 ## 14. 稿纸（packages/design/src/manuscript/）
 
