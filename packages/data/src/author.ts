@@ -38,8 +38,10 @@ export type AuthorLevel = (typeof AUTHOR_LEVELS)[number];
 
 export interface AuthorProfile {
   penName: string;
-  /** 闲章上的字（两个字），出现在书房右上角与"我"的页面 */
+  /** 闲章上的字（一到四个汉字），出现在书房右上角、"我"的页面与回过的读者来信上 */
   seal: string;
+  /** 闲章的刻法：白文是满底朱红、字留白，朱文是红字红边 */
+  sealStyle: '白文' | '朱文';
   /** 个人签名 */
   motto: string;
   /** 入驻日期（YYYY-MM-DD） */
@@ -57,6 +59,7 @@ export interface AuthorProfile {
 export const AUTHOR: AuthorProfile = {
   penName: '栖迟',
   seal: '栖迟',
+  sealStyle: '白文',
   motto: '把夏天写长一点。',
   joined: '2024-03-12',
   signed: true,
