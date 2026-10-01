@@ -474,38 +474,63 @@ export const HOT_QUOTES: HotQuote[] = [
 /* ---------------- 数据 ---------------- */
 
 export interface WorkStats {
-  /** 最近 30 天每天的阅读人数，最后一个是今天 */
+  /** 最近 30 天每天在读的人数，最后一个是今天 */
   reads: number[];
-  /** 最近 30 天每天新增的收藏 */
+  /** 最近 30 天每天新增的收藏；最后 7 天加起来等于书的 trend（小说站显示的"本周新增收藏"） */
   collects: number[];
-  /** 每一章的跟读率：读到这一章的读者占读过第一章的读者的比例（0~1） */
+  /** 每一章的跟读率：读到这一章的读者占读过第一章的读者的比例（0~1），已发布的每一章一个数 */
   retention: number[];
-  /** 一天里各个钟点的阅读占比（24 个数，加起来是 1） */
+  /** 一天里各个钟点的阅读占比（24 个数，第 0 个是 0 点到 1 点，加起来是 1） */
   hours: number[];
-  /** 累计收藏、追读、订阅章节数 */
-  totals: { collects: number; followers: number; subscriptions: number };
+  /**
+   * 累计：收藏（等于书的 heat）、订阅的章节数，
+   * 以及 readers：连载中的书是追读的人（等于 Work.followers），已完结的书是读完的人
+   */
+  totals: { collects: number; readers: number; subscriptions: number };
 }
 
-/** 《盐汽水与蝉》的数据（示例）。趋势缓慢上升，周末高一些 */
-export function statsOf(bookId: string): WorkStats {
+/**
+ * 各作品数据的样子（示例）：
+ * 连载中的《盐汽水与蝉》每天读的人多、慢慢上涨，前几章流失最快，几处高潮章节略有回升；
+ * 完结的短篇《青苔与猫》人少、慢慢回落，篇幅短，跟读率掉得慢、落点也高。
+ */
+const STATS_SHAPE: Record<
+  string,
+  { reads: number; slope: number; spread: number; floor: number; fall: number; bumps: number[]; finished: number; subscriptions: number }
+> = {
+  '1002100000010004': { reads: 8200, slope: 120, spread: 1400, floor: 0.46, fall: 9, bumps: [12, 29, 47, 63], finished: 0, subscriptions: 486200 },
+  '1002100000010008': { reads: 1500, slope: -6, spread: 260, floor: 0.58, fall: 6, bumps: [6, 15, 22], finished: 21300, subscriptions: 162300 },
+};
+
+/** 一本书的数据（示例）。筹备中的书没有发布过章节，没有数据，返回 undefined */
+export function statsOf(bookId: string): WorkStats | undefined {
+  const work = getWork(bookId);
+  const shape = STATS_SHAPE[bookId];
+  if (!work || !shape) return undefined;
+  const { book } = work;
   const r = seeded(Number(bookId.slice(-4)) * 7 + 3);
+  // 周末读的人多一些
   const reads = Array.from({ length: 30 }, (_, i) => {
     const weekend = (i + 2) % 7 >= 5 ? 1.18 : 1;
-    return Math.round((8200 + i * 120 + r() * 1400) * weekend);
+    return Math.round((shape.reads + i * shape.slope + r() * shape.spread) * weekend);
   });
-  const collects = reads.map((v) => Math.round(v * (0.055 + r() * 0.03)));
-  // 前几章流失最快，之后慢慢放缓；中间几处高潮章节略有回升
-  const retention = Array.from({ length: 64 }, (_, i) => {
-    const base = 0.46 + 0.54 * Math.exp(-i / 9);
-    const bump = [12, 29, 47, 63].includes(i) ? 0.035 : 0;
+  // 新收藏大致跟着读的人走；整体缩放到最后 7 天加起来正好是 book.trend
+  const rawCollects = reads.map((v) => v * (0.05 + r() * 0.03));
+  const week = rawCollects.slice(-7).reduce((a, b) => a + b, 0);
+  const collects = rawCollects.map((v) => Math.round((v * book.trend) / week));
+  collects[29] += book.trend - collects.slice(-7).reduce((a, b) => a + b, 0);
+  const retention = Array.from({ length: book.chapters }, (_, i) => {
+    const base = shape.floor + (1 - shape.floor) * Math.exp(-i / shape.fall);
+    const bump = shape.bumps.includes(i) ? 0.05 : 0;
     return Math.min(1, base + bump + (r() - 0.5) * 0.012);
   });
   retention[0] = 1;
-  // 午休与睡前两个高峰，凌晨最低。睡前的高峰跨过午夜，按钟面上的距离算
+  // 睡前与午休两个高峰，加一个早上通勤的小峰，凌晨最低。
+  // 睡前的高峰跨过午夜，按钟面上的距离算；两个高峰的中心偏开半点，最多的时辰才不会与相邻的打平
   const raw = Array.from({ length: 24 }, (_, h) => {
-    const d = Math.min(Math.abs(h - 22.5), 24 - Math.abs(h - 22.5));
+    const d = Math.min(Math.abs(h - 22.2), 24 - Math.abs(h - 22.2));
     const night = Math.exp(-(d ** 2) / 6);
-    const noon = 0.55 * Math.exp(-((h - 12.5) ** 2) / 2.5);
+    const noon = 0.55 * Math.exp(-((h - 12.3) ** 2) / 2.5);
     const commute = 0.3 * Math.exp(-((h - 8) ** 2) / 2);
     return 0.04 + night + noon + commute;
   });
@@ -515,7 +540,11 @@ export function statsOf(bookId: string): WorkStats {
     collects,
     retention,
     hours: raw.map((v) => v / sum),
-    totals: { collects: 203100, followers: 12840, subscriptions: 486200 },
+    totals: {
+      collects: book.heat,
+      readers: work.state === '已完结' ? shape.finished : work.followers,
+      subscriptions: shape.subscriptions,
+    },
   };
 }
 
