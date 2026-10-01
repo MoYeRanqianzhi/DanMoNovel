@@ -94,6 +94,20 @@
     gap: 36px;
     padding: 30px 0 22px;
     box-shadow: 1px 0 0 var(--line);
+    transition:
+      opacity var(--dur-base) ease,
+      translate var(--dur-base) var(--ease-soft),
+      visibility 0s;
+  }
+  /* 落地页在栈顶（外壳在 .app 上标 data-bare）：访客还没有登录，侧栏往左让开、淡出；离开落地页时淡入 */
+  .app[data-bare] .rail {
+    opacity: 0;
+    translate: -12px 0;
+    visibility: hidden;
+    transition:
+      opacity var(--dur-base) ease,
+      translate var(--dur-base) var(--ease-soft),
+      visibility 0s var(--dur-base);
   }
 
   .rail__items {

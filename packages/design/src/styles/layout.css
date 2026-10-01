@@ -40,6 +40,11 @@
   .screen[data-root] {
     padding-bottom: var(--sp-12);
   }
+  /* 落地页（handle.bare）：外壳收起了侧栏（见 nav.css），这一页往左铺到侧栏的位置。
+   * 不挪舞台本身：离开落地页时它还要在原处淡出，舞台一挪就会跳一下 */
+  .screen[data-bare] {
+    left: calc(-1 * var(--rail-w));
+  }
 }
 
 /* 页面内容的版心 */

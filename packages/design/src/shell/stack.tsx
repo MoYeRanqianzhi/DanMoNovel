@@ -84,6 +84,11 @@ export interface ScreenHandle<D = unknown> {
   name?: string;
   /** 标签页（根页面）：显示底部导航，从导航切换过来时清空页面栈 */
   tab?: boolean;
+  /**
+   * 落地页（访客还没有登录，例如作者站的公开首页）：这一页在栈顶时，外壳收起站点导航（侧栏与底部导航），
+   * 这一页在宽屏上铺满整个宽度、盖住侧栏的位置。外壳按 topHandle.bare 在 .app 上标 data-bare（样式见 nav.css、layout.css）。
+   */
+  bare?: boolean;
   /** 返回时书怎么回去：hop（大书飞回原书位）、surface（阅读页逆向浮出） */
   back?: 'hop' | 'surface';
   /** 返回时飞回去的是哪本书 */
@@ -406,7 +411,7 @@ export function PageStack({ missing, children }: PageStackProps) {
  * 书飞回原书位时原书位仍然可以被测量；inert 让键盘焦点不会跑进被盖住的页面。
  */
 function Screen({ entry, isTop, covered }: { entry: Entry; isTop: boolean; covered: boolean }) {
-  const { Screen: Page, tab, name } = entry.handle;
+  const { Screen: Page, tab, bare, name } = entry.handle;
   const inactive = covered || entry.phase === 'exit';
 
   const info = useMemo<ScreenInfo>(
@@ -423,6 +428,7 @@ function Screen({ entry, isTop, covered }: { entry: Entry; isTop: boolean; cover
       className="screen paper"
       data-page={name}
       data-root={tab || undefined}
+      data-bare={bare || undefined}
       data-phase={entry.phase}
       data-enter={entry.enter}
       inert={inactive}
