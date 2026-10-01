@@ -8,9 +8,9 @@
  *   /authors/:id  一位作者：八行笺上的备忘、往来的信、作品与签约的进度（进栈）
  *   /staff        身份：印谱（谁能任命谁）与名册，任命与处置都是钤印的札子
  *   /audit        日志：账簿，一天一页、骑缝章上写链值，只往后记
+ *   /settings     设置：橱窗（书城的推荐位）、告示、站规三份校样，批改之后付印才生效
  *   /me           我：手里的印、换一方印（以某个身份预览，原型专用）、主题与动效（不是标签页）
  *   *             其余地址：在页面栈里显示"找不到这一页"
- * 站点设置在管理站原型的后续步骤中加入，见 .agents/plan/2026-10-02-admin-site.md。
  */
 import { type RouteConfig, index, layout, route } from '@react-router/dev/routes';
 
@@ -23,6 +23,7 @@ export default [
     route('authors/:id', 'routes/author.tsx'),
     route('staff', 'routes/staff.tsx'),
     route('audit', 'routes/audit.tsx'),
+    route('settings', 'routes/settings.tsx'),
     route('me', 'routes/me.tsx'),
     route('*', 'routes/not-found.tsx'),
   ]),
