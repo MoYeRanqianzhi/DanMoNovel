@@ -1,12 +1,22 @@
 /**
- * 这次打开管理站期间做过的事（原型没有后端）：审核的决定与朱批、新记的账
+ * 这次打开管理站期间做过的事（原型没有后端）：审核的决定与朱批、对工作人员的任命与处置、新记的账
  *
  * 只存在内存里，刷新就没了。正式版每一个决定都写进服务端，账簿由服务端追加。
- * 几页靠它对得上：审核页盖了章，案卷挪进"已审"，日志页的账簿当场多一笔，总览的待办少一份。
+ * 几页靠它对得上：审核页盖了章，案卷挪进"已审"，日志页的账簿当场多一笔，总览的待办少一份；
+ * 身份页任命、撤销、停用了谁，名册跟着改，"以某个身份预览"的代表也跟着换（identity.ts）。
  * 账簿只追加：撤回一个决定也是新记一笔"撤回"，原来那一笔不改不删。
  */
 import { useSyncExternalStore } from 'react';
-import type { LedgerAct, QueueItem } from '@danmo/data/admin';
+import {
+  ROLES,
+  STAFF,
+  getRole,
+  type EditorGroup,
+  type LedgerAct,
+  type QueueItem,
+  type RoleId,
+  type StaffMember,
+} from '@danmo/data/admin';
 import type { ReviewNote } from '@danmo/data/author';
 import { chapterTitle } from '@danmo/data/chapters';
 
@@ -45,16 +55,42 @@ export interface FreshEntry {
   note?: string;
 }
 
+/**
+ * 这次打开期间对一位工作人员的改动（只记改过的项）。名册按它改写 STAFF 里的那一位；
+ * 各项的时刻留着，名帖要知道哪一项是刚改的（墨迹未干）
+ */
+export interface StaffChange {
+  /** 改过之后的全部身份（按 ROLES 的次序） */
+  roles?: RoleId[];
+  /** 任命为编辑时分到的组 */
+  group?: EditorGroup;
+  /** 每一方印任命的时刻 */
+  appointed?: Partial<Record<RoleId, number>>;
+  /** 停用的时刻 */
+  disabledAt?: number;
+  /** 重置两步验证的时刻：此后两步验证未开，要本人重新开好 */
+  resetAt?: number;
+  /** 强制下线的时刻 */
+  loggedOutAt?: number;
+}
+
+/** 名册上的一位：STAFF 里的那一位叠上这次打开期间的改动（没改过的没有 change） */
+export interface Member extends StaffMember {
+  change?: StaffChange;
+}
+
 interface Session {
   marks: Record<string, Marks>;
   decisions: Record<string, Decision>;
+  /** 以工作人员的 id 为键 */
+  staff: Record<string, StaffChange>;
   /** 由远到近 */
   ledger: FreshEntry[];
 }
 
 const EMPTY_MARKS: Marks = { summary: '', notes: [] };
 
-let state: Session = { marks: {}, decisions: {}, ledger: [] };
+let state: Session = { marks: {}, decisions: {}, staff: {}, ledger: [] };
 const listeners = new Set<() => void>();
 
 /** 换上新的状态，通知所有订阅者（useSyncExternalStore 靠引用变化重新渲染，所以每次都给新对象） */
@@ -116,7 +152,7 @@ export function decide(item: QueueItem, verdict: Verdict, by: string) {
   const summary = marks.summary.trim();
   const note = summary || (marks.notes.length ? `${marks.notes.length} 条朱批` : undefined);
   update({
-    marks: state.marks,
+    ...state,
     decisions: { ...state.decisions, [item.id]: { ...marks, summary, verdict, at: Date.now(), by } },
     ledger: [...state.ledger, entry(by, VERDICT_ACT[verdict], describe(item), note)],
   });
@@ -129,8 +165,89 @@ export function undo(item: QueueItem, by: string) {
   const decisions = { ...state.decisions };
   delete decisions[item.id];
   update({
-    marks: state.marks,
+    ...state,
     decisions,
     ledger: [...state.ledger, entry(by, '撤回', describe(item), `撤回"${VERDICT_ACT[decision.verdict]}"`)],
   });
+}
+
+/* ---------------- 名册：任命与处置 ---------------- */
+
+let rosterFor: Session['staff'] | null = null;
+let roster: Member[] = [];
+
+/** 名册（按 STAFF 的次序），叠上这次打开期间的改动。改动没变时返回同一个数组 */
+export function rosterOf(session: Session): Member[] {
+  if (session.staff !== rosterFor) {
+    rosterFor = session.staff;
+    roster = STAFF.map((s) => {
+      const change = session.staff[s.id];
+      if (!change) return s;
+      return {
+        ...s,
+        roles: change.roles ?? s.roles,
+        group: change.group ?? s.group,
+        disabled: s.disabled || change.disabledAt !== undefined,
+        twoFactor: change.resetAt === undefined && s.twoFactor,
+        change,
+      };
+    });
+  }
+  return roster;
+}
+
+/** 读名册（订阅这次打开期间的改动） */
+export function useRoster(): Member[] {
+  return rosterOf(useSession());
+}
+
+/** 名册上这一位现在的样子 */
+function memberNow(id: string): Member {
+  return rosterOf(state).find((m) => m.id === id)!;
+}
+
+/** 改一位工作人员：把改动并进这次打开期间的记录，账簿记一笔 */
+function changeStaff(id: string, patch: StaffChange, line: FreshEntry) {
+  update({
+    ...state,
+    staff: { ...state.staff, [id]: { ...state.staff[id], ...patch } },
+    ledger: [...state.ledger, line],
+  });
+}
+
+/** 任命：添一方印，编辑另分一个组。账簿记"任命 某某为某身份"，附注先写组 */
+export function appoint(id: string, role: RoleId, by: string, opts: { group?: EditorGroup; note?: string } = {}) {
+  const m = memberNow(id);
+  const group = role === 'editor' ? opts.group : undefined;
+  changeStaff(
+    id,
+    {
+      roles: ROLES.map((r) => r.id).filter((r) => r === role || m.roles.includes(r)),
+      ...(group ? { group } : {}),
+      appointed: { ...m.change?.appointed, [role]: Date.now() },
+    },
+    entry(by, '任命', `${m.name}为${getRole(role).name}`, [group, opts.note].filter(Boolean).join('；') || undefined),
+  );
+}
+
+/** 撤销一方印；本人撤自己的就是卸任（规矩第四条的例外），附注先写"主动卸任" */
+export function revoke(id: string, role: RoleId, by: string, note?: string) {
+  const m = memberNow(id);
+  const text = [by === id ? '主动卸任' : undefined, note].filter(Boolean).join('；') || undefined;
+  changeStaff(id, { roles: m.roles.filter((r) => r !== role) }, entry(by, '撤销', `${m.name}的${getRole(role).name}身份`, text));
+}
+
+/** 停用账号：不能再登录，身份留在记录里但不生效（名册上挪到"印谱之外"） */
+export function disable(id: string, by: string, note?: string) {
+  changeStaff(id, { disabledAt: Date.now() }, entry(by, '停用', `${memberNow(id).name}的账号`, note));
+}
+
+/** 重置两步验证：本人重新开好之前，特权暂停（规矩第七条） */
+export function resetTwoFactor(id: string, by: string, note?: string) {
+  changeStaff(id, { resetAt: Date.now() }, entry(by, '重置', `${memberNow(id).name}的两步验证`, note));
+}
+
+/** 强制下线：所有设备上的登录都失效，要重新登录 */
+export function forceLogout(id: string, by: string, note?: string) {
+  changeStaff(id, { loggedOutAt: Date.now() }, entry(by, '下线', `${memberNow(id).name}的所有设备`, note));
 }

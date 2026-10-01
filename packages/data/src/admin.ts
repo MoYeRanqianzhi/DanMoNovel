@@ -82,6 +82,15 @@ export function rolesWith(permission: Permission): Role[] {
   return ROLES.filter((r) => GRANTS[r.id].includes(permission));
 }
 
+/**
+ * 任命（与撤销、处置）这种身份要有的权限：超管要"任命超管"，管理员、编辑、审核要"任命"。
+ * 站长不经任命（部署时用服务端命令创建），返回 null。身份页印谱上的红线就由它推出：rolesWith(这项权限) 连到这方印
+ */
+export function appointPermission(role: RoleId): Permission | null {
+  if (role === 'owner') return null;
+  return role === 'super' ? 'appoint.super' : 'appoint';
+}
+
 /* ---------------- 工作人员 ---------------- */
 
 /** 编辑按题材分组 */
@@ -270,8 +279,24 @@ export const REPORTS: readonly Report[] = [
 
 /* ---------------- 账簿 ---------------- */
 
-/** 事由：账簿上最显眼的一栏，一两个字。撤回：账簿不改不删，收回一个决定也是另记一笔 */
-export type LedgerAct = '通过' | '退回' | '驳回' | '撤回' | '任命' | '撤销' | '停用' | '重置' | '推荐' | '公告' | '修订' | '签约';
+/**
+ * 事由：账簿上最显眼的一栏，一两个字。撤回：账簿不改不删，收回一个决定也是另记一笔。
+ * 人事的几种：任命、撤销（身份）、停用（账号）、重置（两步验证）、下线（强制退出所有设备上的登录）
+ */
+export type LedgerAct =
+  | '通过'
+  | '退回'
+  | '驳回'
+  | '撤回'
+  | '任命'
+  | '撤销'
+  | '停用'
+  | '重置'
+  | '下线'
+  | '推荐'
+  | '公告'
+  | '修订'
+  | '签约';
 
 /** 账簿的一笔：只追加，不改不删 */
 export interface LedgerEntry {

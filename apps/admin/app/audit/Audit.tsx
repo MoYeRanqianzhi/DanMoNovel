@@ -28,7 +28,7 @@ import './audit.css';
 /** 事由的类别（筛选用） */
 const ACT_GROUPS: readonly { name: string; acts: readonly LedgerAct[] }[] = [
   { name: '审核', acts: ['通过', '退回', '驳回', '撤回'] },
-  { name: '人事', acts: ['任命', '撤销', '停用', '重置'] },
+  { name: '人事', acts: ['任命', '撤销', '停用', '重置', '下线'] },
   { name: '推荐与公告', acts: ['推荐', '公告'] },
   { name: '站规', acts: ['修订'] },
   { name: '签约', acts: ['签约'] },

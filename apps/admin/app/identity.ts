@@ -1,7 +1,7 @@
 /**
  * 以某个身份预览（原型专用）：换一方印拿在手里，整站按那个身份显示
  *
- * 原型没有登录：打开管理站的人是站长砚田。在"我"里换一方身份印，就以那个身份的一位代表（admin.ts 的 PREVIEW_AS）
+ * 原型没有登录：打开管理站的人是站长砚田。在"我"里换一方身份印，就以那个身份的一位代表（representative）
  * 来看管理站——标签页只留这个身份管得着的，各页的按钮按它的权限可用或禁用，禁用的写明为什么。
  * 正式版没有这个开关：身份随账号走，权限一律由服务端校验，界面只负责显示或隐藏。
  *
@@ -10,17 +10,8 @@
  * 另一个标签页换了印也跟着变（storage 事件）。
  */
 import { useSyncExternalStore } from 'react';
-import {
-  PREVIEW_AS,
-  ROLES,
-  can as roleCan,
-  getRole,
-  getStaff,
-  type Permission,
-  type Role,
-  type RoleId,
-  type StaffMember,
-} from '@danmo/data/admin';
+import { PREVIEW_AS, ROLES, can as roleCan, getRole, getStaff, type Permission, type Role, type RoleId } from '@danmo/data/admin';
+import { useRoster, type Member } from './session';
 
 const STORAGE_KEY = 'danmo-admin:as';
 /** 不预览时：站长 */
@@ -68,11 +59,22 @@ function subscribe(onChange: () => void) {
   };
 }
 
+/**
+ * 代表某种身份的人：PREVIEW_AS 定的那一位；这次打开期间他被撤了这方印、停用了账号或重置了两步验证（身份页），
+ * 就换名册里第一位还拿着这方印、两步验证开着的人（两步验证没开好的人特权暂停，规矩第七条，代表不了这方印）。
+ * 一个都没有了（例如两位超管都被撤销），仍用 PREVIEW_AS 那一位在 STAFF 里的原样：预览的是这方印管得着什么，总得有人拿着它
+ */
+export function representative(role: RoleId, roster: readonly Member[]): Member {
+  const holds = (m: Member) => m.roles.includes(role) && !m.disabled && m.twoFactor;
+  const chosen = roster.find((m) => m.id === PREVIEW_AS[role]);
+  return (chosen && holds(chosen) ? chosen : roster.find(holds)) ?? getStaff(PREVIEW_AS[role])!;
+}
+
 export interface Identity {
   /** 手里的那方印（当前预览的身份） */
   role: Role;
   /** 代表这个身份的人（编辑要看"名下的作者"，得是一位具体的编辑） */
-  me: StaffMember;
+  me: Member;
   /** 没在预览，就是站长本人 */
   previewing: boolean;
   /** 能不能做某件事：按"我"的全部身份取并集（不言既是审核又是编辑） */
@@ -81,7 +83,7 @@ export interface Identity {
 
 export function useIdentity(): Identity {
   const roleId = useSyncExternalStore(subscribe, read, () => OWNER);
-  const me = getStaff(PREVIEW_AS[roleId])!;
+  const me = representative(roleId, useRoster());
   return {
     role: getRole(roleId),
     me,

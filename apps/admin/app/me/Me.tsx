@@ -10,25 +10,22 @@
  */
 import { useState } from 'react';
 import { ArrowLeft, ChevronRight, Info, Sparkles } from 'lucide-react';
-import { PREVIEW_AS, ROLES, getRole, getStaff, type RoleId } from '@danmo/data/admin';
+import { ROLES, getRole, type RoleId } from '@danmo/data/admin';
 import { Sheet } from '@danmo/design/components/overlays';
 import { Stamp } from '@danmo/design/components/Stamp';
 import { IconButton, Logo, Seal, Segmented } from '@danmo/design/components/ui';
 import { useStack } from '@danmo/design/shell/stack';
 import { useTheme, type MotionPref } from '@danmo/design/theme/ThemeContext';
 import { ThemeSwatches } from '@danmo/design/theme/ThemeSwatches';
-import { previewAs, useIdentity } from '../identity';
+import { sinceLabel } from '../format';
+import { previewAs, representative, useIdentity } from '../identity';
+import { useRoster } from '../session';
 import './me.css';
-
-/** 入职日期写成"2024 年 5 月" */
-const sinceLabel = (since: string) => {
-  const [y, m] = since.split('-').map(Number);
-  return `${y} 年 ${m} 月`;
-};
 
 export function MeScreen() {
   const { back } = useStack();
   const { role, me, previewing } = useIdentity();
+  const roster = useRoster();
   const { motionPref, setMotionPref } = useTheme();
   const [aboutOpen, setAboutOpen] = useState(false);
   /** 换印之后大印重新盖一次：每换一次加一 */
@@ -39,7 +36,7 @@ export function MeScreen() {
     if (id === role.id) return;
     previewAs(id);
     setStamped((n) => n + 1);
-    const who = getStaff(PREVIEW_AS[id])!;
+    const who = representative(id, roster);
     setStatus(id === 'owner' ? '放下了别的印，现在是站长砚田本人' : `现在以${getRole(id).name}${who.name}的身份预览`);
   };
 
@@ -95,7 +92,7 @@ export function MeScreen() {
                       <Seal text={r.seal} size={48} variant={held ? 'solid' : 'outline'} />
                     </span>
                     <span className="me-seal__name">{r.name}</span>
-                    <span className="me-seal__who">{getStaff(PREVIEW_AS[r.id])!.name}</span>
+                    <span className="me-seal__who">{representative(r.id, roster).name}</span>
                   </button>
                 </li>
               );
