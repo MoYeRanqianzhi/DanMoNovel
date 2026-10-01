@@ -1,7 +1,7 @@
 # 三站前端原型实现说明（面向代理）
 
 > 记录 UI 原型的实现细节与不显而易见的决定，后续代理不必通读源码就能接着开发。
-> 状态以 2026-09-29 的作者站写作页提交为准（React Router v8 的 pnpm workspace，三站结构）。继续工作前，用 `git log` 与当前文件核对，本文可能已经落后。
+> 状态以 2026-10-02 的作者站公开首页提交为准（React Router v8 的 pnpm workspace，三站结构）。继续工作前，用 `git log` 与当前文件核对，本文可能已经落后。
 > 设计方向与已定决策见 ../MEMORY.md，待办见 ../TODO.md，当前计划与进度见 ../plan/。
 
 ## 1. 概况
@@ -66,8 +66,9 @@ apps/novel/app/        小说站（SSR）
   http.ts       缓存头、站名、pageTitle、NOT_FOUND_META
   seo.ts        NOVEL_ORIGIN（环境变量 VITE_NOVEL_ORIGIN，默认 http://localhost:5173）、canonical()
   novel.css     小说站共用样式（章节列表的锁；.toc-list 本身在 layout.css）
-apps/author/app/       作者站（SSR，第 13、15 节）：首页 /（占位）、书房、作品与封面工作室、写作、互动、数据、我、404（地址见 routes.ts 头部注释）
-  screens/      Desk.tsx（书房）、Home.tsx（公开首页，占位）
+apps/author/app/       作者站（SSR，第 13、15 节）：公开首页 /、书房、作品与封面工作室、写作、互动、数据、我、404（地址见 routes.ts 头部注释）
+  home/         公开首页（第 13 节末）：Home.tsx（文字与"读到哪一步"）、Stage.tsx（舞台：一本书从无到有）、home.css
+  screens/      Desk.tsx（书房）
   components/   砚台 Inkstone、月相 moon.ts、墨迹日历 InkCalendar、信笺 LetterCard、一笔墨迹 InkStroke、章节状态 StateMark、
                 curve.ts（平滑曲线与整数哈希）、sheet-form.css（面板里的表单）
   works/ cover/ 作品列表与详情、封面工作室与裁剪器（第 15 节）
@@ -140,6 +141,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 其余：`topHandle`、`depth`、`hero`。Esc 键等同于返回。
 - **ScreenHandle**：
   - `Screen`、`name`（写在 `<section data-page>` 上）、`tab`（显示底部导航）。
+  - `bare`（落地页，访客还没有登录）：这一页在栈顶时，外壳在 `.app` 上标 `data-bare`，侧栏淡出（nav.css）；不是 tab，所以也没有底部导航。宽屏上 `.screen[data-bare]` 往左铺到侧栏的位置（layout.css）。目前只有作者站公开首页用。
   - `back: 'hop'|'surface'` 与 `book(data)`：返回时哪本书、怎么飞回 `state.fromSlot`。
   - `parent(params)`：深链接进入时，返回去哪里。
   - `hero(data) → { book, slot, progress? }`：这一页的主角，启动页据此决定片头的书与降落的书位。公开页面的主角只能取公开数据。
@@ -224,6 +226,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 - **Provider 顺序**（root.tsx）：ThemeProvider → ToastProvider → FlightProvider → Outlet（shell.tsx）。飞行引擎需要 `reduced`。
 - **shell.tsx**：`<PageStack missing={NOT_FOUND}>{(stage) => <Chrome stage={stage} />}</PageStack>`。
   - Chrome 包含：SideRail（宽屏）、stage、TabBar（只在栈顶是 tab 时显示）。
+  - 作者站的 Chrome 在栈顶是落地页（handle.bare）时给 `.app` 标 `data-bare`，侧栏淡出（第 4 节 ScreenHandle）。
   - 小说站另有 `<SplashGate>`：只在从标签页打开网站、而且本会话第一次时播放。
 - **导航**（nav.tsx）：
   - 移动端是底部纸条导航，列数与丝带位置由 `--tab-count`、`--tab` 计算；丝带需要 `z-index: 1`。
@@ -627,19 +630,37 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 小说站"我的"在设置列表挪进 layout.css 之后不变（四行、行高 56px、细线分隔）。
   - 全量类型检查与三个站的生产构建通过，没有警告；控制台无报错（小说站第一次载入有 3 条 Vite "504 Outdated Optimize Dep"，是开发服务器的依赖预构建过期，刷新后没有）。
 - **"我"未验收**：真机输入法（闲章不设 maxLength、输入时不去空格，都是按道理这样写，没在真机上组过字）；读屏软件实际朗读；Safari 与 Firefox 上的竖排条幅与乌丝栏（文楷竖排每字 1.31em 是在 Chromium 里量的）；减少动效下的盖章。
+- **作者站公开首页已在浏览器验收**（2026-10-02，缃叶；九种视口：手机 390×844、平板 768×1024、横放手机 844×390、667×375、932×430，桌面 900×760、960×800、1280×800、1440×900）：
+  - 九种视口都能从第 0 步滚到第 5 步，舞台跟着换步，没有横向溢出，控制台无报错。第 1~4 步舞台一直吸在屏幕顶上；第 5 步时两栏的舞台已被故事的末尾往上带了一点（舞台顶 −27 到 −63，场景仍在屏幕里），一栏时仍是 0。
+  - 栏数：390 与 768 一栏，其余七种两栏（横放手机按矮屏条件也是两栏）。场景大小与书宽：390 上 390×422、书 112；768 上 560×512、书 184；桌面两栏 387×640~538×640、书 184；横放手机 301×345~409×396、书 112。方格标题的右沿不超出文字栏（900 上 406/406）。
+  - 矮屏：667×375 上"往下读"的下沿 348，844×390 上 336，都在第一屏里。
+  - 长夜（1440×900 与 390×844）：第 0、2、4、5 步与约稿函都看过。约稿函的字在 css 比例截图里显得发粗发糊，按设备像素截局部是清楚的、字重正常。读者来信的书签形标签在长夜里是深色（共用的 .tag 用 --sheet-2），与书房一致。
+  - 减少动效（1440×900）：字一下子写完，书不多转一圈。第 2 步 300ms 时浮签、两段朱批都已到位，印泥的光晕已经是 0；第 4 步 300ms 时三封信都已到位。正常动效下次序不变：第 2 步 300ms 时第一段朱批画了约三分之一、第二段未开始，浮签还没出来；第 4 步 300ms 时三封信的透明度依次是 0.73、0.28、0。
+  - 页面衔接（开发服务器）：首页 → "开始写作" → 书房，侧栏透明度 0 → 1，栈里只剩一页；"我" → 退出登录 → 首页，侧栏淡出，栈里只剩一页；首页按 Esc 不动。手机上首页没有底部导航，进书房后出现。
+  - 生产构建（1440×900，逐帧取样）：首页 ⇄ 书房切换的每一帧，两页各自的样式都在（首页格子有边框、舞台是 sticky，书房有上边距），透明度过渡正常；回到首页后往下读，舞台照常换到第 2 步；控制台无报错。
+  - 状态码 200、缓存头 `public, max-age=60, s-maxage=600`、标题"耽墨作者站 - 在这里写下你的故事"与 description。全量类型检查与三个站的生产构建通过。
+  - 审查后修正（2026-10-02）：独立审查指出四处，先在浏览器里复现，再修正、复验：
+    - 一栏时"往下读"把第 1 步停在舞台底下：390×844 上第 1 步在 211~633，印与标题被舞台挡住，舞台却换到了第 2 步。修正后第 1 步正好铺满舞台下面那一截（422~844），印、标题、正文都露着，舞台是第 1 步。
+    - 点在舞台上会点到被盖住的"开始写作"（elementFromPoint 命中那个按钮）。修正后命中舞台本身。键盘焦点移到"已经在写？登录"时，它停在舞台下面（622）。
+    - 又矮又窄的屏幕上舞台吃掉整屏：400×360 上只剩 30px 给文字，568×320 上舞台比整屏还高。修正后舞台 223、198，两个视口加进回归，五步都走得通，没有横向溢出；第 5 步书的顶边在舞台里，第 4 步三封信不再互相遮字。
+    - 标题六个字是六个块：修正后无障碍树里 h1 与 section 的名称都是整句"从第一格写起"。
+    - 九种视口回归：场景大小、书宽、标题右沿与修正前完全一致；类型检查通过。
+- **作者站公开首页未验收**：真机（iOS Safari 的 svh 与地址栏伸缩、横放手机的刘海，见第 13 节已知不足）；Safari 与 Firefox（容器查询的 size 容器、@property 的墨晕、mask）；读屏软件实际朗读；系统层面的减少动效只按 `data-motion` 的结果测过（偏好设为"减少"），没有直接开系统设置。
 - **测试注意**：
   - 页面切换、淡出、被盖住的页面要在生产构建上看一遍：开发模式下样式从不撤，生产构建里路由的样式表随地址撤换（第 4 节"留住样式表"）。临时起一个生产服务：在 `apps/<站>` 下 `PORT=<空闲端口> npx react-router-serve ./build/server/index.js`，用完按端口找到进程停掉。
   - Vite 会缓存"解析失败"：先写了 `import './x.css'`、后建文件时，这个站的开发服务器一直报 500 "Failed to load url"，文件建好也不恢复。先建文件再写 import；已经卡住了就 `touch apps/<站>/vite.config.ts`，那个站的开发服务器会重启。
   - Playwright 截图的文件名写成 `.playwright-mcp/<名字>.png`（已忽略）。只写文件名会存到仓库根目录，混进未跟踪文件。
   - Windows 上 Playwright 的浏览器窗口被遮挡时，Chrome 会暂停 requestAnimationFrame，动画卡在半途，看起来像代码有问题。测动效前先 `page.bringToFront()`。
   - 连续的测试脚本要先确认工具栏是开是关，不要无条件点击，否则会把上一个脚本留下的状态切反。
+  - 探针判断"样式在不在"时，不要拿边框宽度和字面量比（`borderTopWidth === '1px'`）：Chrome 会把边框宽度吸附到设备像素，读出来的值随测试环境变。2026-10-02 在 Windows 上 Playwright 的 Chrome 154 里（devicePixelRatio 读出来是 1），连新建的 `<div style="border:1px solid red">` 也读出 0.8px，首页的探针因此每一帧都误报"没有样式"。改成看 `borderTopStyle` 与宽度大于 0，或者看不受吸附影响的属性（position、display）。
+  - 判断深底浅字的字重、清晰度要用设备像素的局部截图（`scale: 'device'`）：deviceScaleFactor 为 2 的上下文里，`scale: 'css'` 的截图按 CSS 像素缩小了一半，长夜里的浅色字会显得发粗发糊（2026-10-02 首页约稿函：css 比例截图像糊了，设备像素截图清楚、字重正常）。
 
 ## 13. 作者站（apps/author/app/）
 
 - **骨架**：root.tsx（默认主题缃叶）；shell.tsx 四个标签页：书房 /desk、作品 /works、互动 /readers、数据 /stats，侧栏底部是"我" /me（窄屏从书房右上角的闲章进入）；写作页不是标签页。
   - http.ts：PUBLIC_CACHE、PRIVATE_CACHE、privateMeta（标题加 noindex）、NOT_FOUND_META。
   - format.ts：formatNumber 自己拼千分位（服务端与浏览器的区域数据可能不同，toLocaleString 会水合不匹配）、formatCount（万）、formatAgo。
-  - 公开首页还没做：screens/Home.tsx 是迁移时的占位，"我"里退出登录会回到这里。作品与封面工作室见第 15 节。
+  - 公开首页 / 是落地页（handle.bare），见本节末尾；"我"里退出登录回到这里。作品与封面工作室见第 15 节。
 - **数据**：packages/data/src/author.ts 与 manuscripts.ts。
   - AuthorProfile 的 sealStyle 是闲章的刻法：白文（满底朱红、字留白，Seal 的 solid）或朱文（红字红边，outline）；示例是白文"栖迟"。签名、闲章、刻法与每日目标可以在"我"里改（本机覆盖，见下文 profile.ts）。
   - 登录的作者是《盐汽水与蝉》的栖迟；另有筹备中的《晚风信号》`1002100000010007`（三章：待审核、草稿、退回）与完结的《青苔与猫》`1002100000010008`。界面称呼作者一律用"你"，不用性别代词。
@@ -728,9 +749,41 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - localStorage `danmo-author:profile`，只存改过的几项（签名、闲章、刻法、每日目标），读时逐项校验：签名不超过 16 个字、闲章一到四个汉字、刻法两种之一、目标是五档之一，不合规的那一项丢掉。
   - useProfileEdit：useSyncExternalStore，服务端快照是同一个空对象（没改过），挂载后换上本机的；另一个标签页改了跟着变（storage 事件）。用法 `{ ...author, ...useProfileEdit() }`：书房（闲章与刻法、砚台的目标）、写作页（小月亮与写满目标的提示）、LetterCard（回信落款的闲章）、"我"。sealVariant 把刻法换成 Seal 的 variant。
 - **面板里的表单**（components/sheet-form.css）：.sheet-form、__field、__label（small 靠右）、__input（:disabled、:focus-visible）、__area、__save。从作品详情的"修改作品信息"抽出来与"修改资料"共用，work.css 只剩标签（.work-tags）。
-- **这一步对共享层的改动**（packages/design）：
+- **"我"对共享层的改动**（packages/design）：
   - 设置列表 .settings-list 与"关于" .about 从小说站 profile.css 挪进 layout.css，小说站"我的"与作者站"我"共用。
   - Seal 加 `letter-spacing: 0`：外面的字距（比如条幅落款的 0.2em）会被印面继承，两个字的印被挤成两列。三个字（data-len 3）竖排一列、字号 0.28 倍。
+- **公开首页 /**（home/，2026-10-02）：
+  - 路由 routes/home.tsx：handle `{ Screen: HomeScreen, name: 'home', bare: true }`（落地页，不是标签页）；缓存头 PUBLIC_CACHE（`public, max-age=60, s-maxage=600`，页面里没有任何个人的东西）；标题"耽墨作者站 - 在这里写下你的故事"与 description。
+  - 内容：不罗列功能，讲一本书怎么写成。页头（Logo、"登录"）→ 开头一段（方格标题"从第一格写起"、最后空一格停着红色光标；导语；"开始写作"、"已经在写？登录"；"往下读"）→ 五步（写·一格一字、审·一章一印、装·一书三面、回·一信一回、望·一日一峰）→ 约稿函 → 页脚（AGPL-3.0、UI 原型 0.1.0-alpha.1）。说法上不承诺还没定下来的事（稿酬、分成、签约条件），只讲原型里已经有的东西。
+  - 原型没有登录："开始写作"与两处"登录"都是 `{ to: '/desk', state: { tab: true } }`：进示例作者的书房，清空页面栈。
+  - **两栏条件**：`(min-width: 900px), (min-width: 640px) and (max-height: 540px)`，即宽屏，或横着拿的手机（那么矮的屏幕上一栏的舞台占了上半屏，下面只剩一两行字）。CSS 不能给媒体查询起名，home.css 里逐字写了 6 处（.home-story、.home-stage、.home-scene、.home-steps、.home-hero、.home-step），Home.tsx 里是 TWO_COLUMN，改时一起改。"大一号"的字号与留白只看 `min-width: 900px`：横放手机是两栏，字还是手机的字。
+    - 一栏：舞台 sticky 在屏幕上部，高 `--home-stage-h: max(50svh, min(330px, 62svh))`：半屏，最少 330px（再矮装不下书与稿纸），但最多占到 62%。只写"最少 330px"时，400×360 的分屏上文字只剩 30px，568×320 上舞台比整屏还高（2026-10-02 审查发现）。这个变量写在滚动容器 `.screen[data-page='home']` 上，开头一段与五步的高度也从它算。
+    - 一栏的舞台铺纸色底与按视口固定的纹理，挡住从下面滚过的文字；下沿 28px 是同一张纸用遮罩渐隐（只铺纯色会在纹理上留出一道光滑的带子）。每一段文字 min-height `calc(100svh − var(--home-stage-h))`，正好是舞台下面的文字区。600~899.98px（竖放平板）文字收窄到 560px 居中，与场景同宽。
+    - 一栏时滚动容器设 `scroll-padding-top: var(--home-stage-h)`（两栏时 auto）："往下读"的 `scrollIntoView({ block: 'center' })` 与键盘焦点的滚动都落在舞台下面那一截里。不设时第 1 步居中在屏幕 25%~75%，印与标题停在舞台底下，下沿又正好压着判断线，舞台换到了第 2 步。
+    - 舞台本身接住指针，里面的 .home-scene 是 `pointer-events: none`。整个舞台都不接收指针时，一栏里点书会点到被舞台盖住的"开始写作"。
+    - 两栏：网格 1fr / 1.08fr，舞台在右栏，sticky、100svh、没有底色；每一段 min-height 86svh、最宽 30em。
+    - 开头一段与页头一起正好铺满第一屏：min-height 一栏 `calc(100svh − var(--home-stage-h) − var(--home-bar-h))`，两栏 `calc(100svh − var(--home-bar-h))`；--home-bar-h 64px，≥900px 时 88px。`max-height: 540px` 时开头一段的间距收紧，"往下读"留在第一屏（667×375 上原来露出一半）。
+    - `.home { overflow-x: clip }`：还没飞进来的信、稿纸停在版面外，横向裁掉，不撑宽页面。用 clip 不用 hidden：clip 不是滚动容器，舞台照样吸在 .screen 上。
+  - **读到哪一步**（Home.tsx）：IntersectionObserver 看哪一段文字压在一条横线上，rootMargin `-${line}% 0px -${100 − line}% 0px`。两栏 line 为 60；一栏为 75：舞台半屏时正是文字区的正中，每段正好铺满文字区，线压在它中间；矮屏上舞台最多占 62%，线偏上一点，仍在文字区里。matchMedia(TWO_COLUMN) 变化时（转屏）换线、重建观察器。只观察 `.home-steps > [data-step]`：舞台的 .home-scene 也带 data-step，那是给样式用的。服务端渲染第 0 步，往下滚的变化都在浏览器里。
+  - **舞台**（Stage.tsx，aria-hidden，只是插图）：每一步的样子由 `.home-scene[data-step]` 决定，往回滚时同样的过渡倒着走。
+    - 书：两本 Book3D 叠在同一格、摆同一个姿势。下面是空白的"无题 · 你 著"（BLANK），书皮用 --sheet、--ink-2 等主题变量，随主题变；纹样只能是 none（SVG 属性里写不了 var()）；封底不印简介（两本一起转圈时会与写成那本的简介重影）。上面是写成的"未完待续"（MADE：星河配色、宋体竖排、腰封）。两本同一书号与字数，厚度一样才叠得严丝合缝。
+    - 写成的那本用 `@property --home-bloom` 的径向遮罩从中间晕开（1800ms）。遮罩加在包装层 .home-book__made 上，不加在 Book3D 的 3D 层上（否则书被压扁）；它不画地面投影（`shadow={false}`），免得两层投影叠深。
+    - 姿势 POSE 每一步一个；第 3 步起 ry 再减 360，从第 2 步到第 3 步书转一整圈、往回滚倒着转（减少动效时不转）。过渡放慢到 1800ms。第 1、2 步书往右让开 --book-shift（86px，大一号 124px），第 5 步升高浮在山上。
+    - 书宽 `{ base: 112, wide: 184 }`，用哪一个由 home.css 按场景大小挑：`.home-book .book3d { --wn: var(--wn-base) }`，场景够大时换 `--wn-wide`。不按 Book3D 自带的 900px 屏幕断点，竖放的平板也用大的。
+    - 稿纸 MiniSheet：十格四行，与写作页的稿纸同一个样子；第一句话"雨下到第三天，他终于把伞往我这边偏了偏。"段首空两格。useTyping：开始后先停 500ms，再每 80ms 写一个字；减少动效时一下子写完。第 1 步下一格有红色光标。稿纸 z-index 1 叠在书上面：右栏窄的桌面上浮签会压到书的一点边。
+    - 第 2 步：朱批波浪线用 clip-path 从左往右画，第二行晚 600ms（`--order`）；浮签"偏得好，留着。"1100ms 后贴上；`reviewed` 时才挂载"准"（Stamp play=1，挂载即盖下）。盖章动画在 .stamp 上用 scale，所以印的缩放加在包装层 .home-sheet__stamp 上（0.68 / 0.83 / 不缩，以右下角为准）。
+    - 第 4 步：三封信 NOTES（段评·橘子汽水引着稿纸上那句、章评·阿昼、你的回信钤"你"）从三个方向围过来，第 2、3 封晚 120ms、240ms，让开书名。
+    - 第 5 步：远山 600×200 画布横向拉伸，三十天两重山（swell：整数哈希再与前后两天按 1:2:1 平均，否则像股价图），左右各 8% 淡进纸里；红日（--thread，长夜里是粉色的，像月亮）排在 SVG 之前，下半轮被远山的淡墨盖住。
+  - **场景按自己的大小排**：.home-scene 是 `container: home-scene / size`，宽 min(100%, 560px)，两栏时高 min(640px, 92svh)。不按屏幕宽度，因为手机竖放时场景只有半屏高，竖放平板有 560×500 多，900px 左右的桌面右栏不到 400px 宽，横放手机的右栏只有三百多高。档位：默认是手机的尺寸（格子 15px、书 112、印 0.68）；宽 360 且高 480 起大一号（书 184、格子 19px、信与红日放大、印 0.83）；宽 500 且高 480 起格子 23px、印不缩；高不到 260（一栏的矮屏，舞台只有两百来高）时书缩到 88 宽（`--wn: 88`，第 5 步书升起来时顶边才不出舞台），段评不引原文、章评上移到 48%（否则左边两封叠住、段评后半句被盖住）。不用 CSS round()。
+  - 方格标题：.home-steps 是 inline-size 容器，格子 `--cell: min(48px | 60px | 72px, 100cqw / 7)`（<600、≥600、≥900），七格最多铺满文字栏，900px 左右的桌面上不伸到右栏的书跟前。方格放在 aria-hidden 的 .home-hero__cells 里，h1 另有一份 .sr-only 的整句（TITLE）：一个字一块时，读屏会一个字一个字地断开读，section 的 aria-labelledby 名称也会被拆开。
+  - 格线 --home-rule：与写作页稿纸的格线（manuscript.css 的 --ms-rule）同一个调法，主色 --blush 58% 调进 --ink；再取 50% 透明（长夜 30%）。红线色只给光标、朱批这类信息。读到的那一步透明度 0.42 → 1，它的印钤成白文（solid），其余朱文（outline）。
+  - **减少动效**：全站规则（base.css）只把时长缩到 1ms、不清延迟，而首页舞台的先后次序全靠延迟排（朱批、浮签、"准"的印泥光晕 260ms、三封信），不清掉就是隔一会儿"啪"地冒出一样。home.css 用 `[data-motion='reduced'] .home-scene *`（含 ::before、::after）把 transition-delay 与 animation-delay 清零，加 !important 盖过 .home-scene[data-step] 那几条更具体的规则。"往下读"在减少动效时 scrollIntoView 用 auto。
+  - 约稿函：横线信笺（--line-h 32px，≥900 38px，字落在线上）。题目字距 0.4em，字距也加在最后一个字后面，居中时整体偏左，所以再加 text-indent 0.4em 补齐。落款钤"约稿"。
+  - **首页对共享层的改动**（packages/design 与作者站外壳）：ScreenHandle 加 `bare`，Screen 渲染 `data-bare`（stack.tsx）；layout.css ≥900px 时 `.screen[data-bare] { left: calc(-1 * var(--rail-w)) }`，不挪 .stage 本身（离开落地页时它还要在原处淡出，舞台一挪就会跳一下）；nav.css 里 `.app[data-bare] .rail` 淡出、往左让 12px，visibility 等淡出结束再隐藏；作者站 shell.tsx 按 topHandle.bare 给 .app 标 data-bare。
+  - 已知不足：
+    - 横放刘海屏：三站都开了 viewport-fit=cover，共享层却只有 --safe-top、--safe-bottom，左右安全区全项目都没处理（见 TODO）。首页横放两栏时，左栏的字可能落到刘海下面（按代码推断，没在真机上看过）。
+    - 全站的减少动效不清零延迟。别的页面如果也用延迟排先后，要像首页这样自己清。
+    - Safari、Firefox、真机与读屏软件都没测（第 12 节）。
 
 ## 14. 稿纸（packages/design/src/manuscript/）
 
