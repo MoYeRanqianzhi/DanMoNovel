@@ -1,5 +1,5 @@
 /* ============================================================
- * 站点骨架与跨页面复用的版式：舞台、页面容器、版心、标题、二级页顶栏、按钮、章节列表
+ * 站点骨架与跨页面复用的版式：舞台、页面容器、版心、标题、二级页顶栏、按钮、章节列表、设置列表
  * 三站共用；各站自己的布局写在各站的 CSS 里。
  *
  * 页面以"栈"的形式叠放在舞台里（见 shell/stack.tsx）：新页面盖在旧页面上淡入，
@@ -178,4 +178,61 @@
   margin-left: auto;
   border-radius: 1px;
   background: var(--thread);
+}
+
+/* ---------------- 设置列表 ----------------
+ * 小说站"我的"与作者站"我"共用：一行一项，左边图标、中间名称、右边当前值或控件，细线分隔。
+ * 可以点的行是 li 里的 button.settings-list__item（悬停时有底色）；放控件（分段控件等）的行直接是 li.settings-list__item。 */
+.settings-list {
+  margin-top: var(--sp-10);
+  border-top: 1px solid var(--line);
+}
+.settings-list__item {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+button.settings-list__item {
+  transition: background-color var(--dur-quick) ease;
+}
+button.settings-list__item:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.settings-list__item > svg:first-child {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.7;
+  color: var(--ink-2);
+}
+.settings-list__label {
+  flex: 1;
+  font-size: var(--fs-16);
+}
+.settings-list__value {
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.settings-list__chevron {
+  width: 18px;
+  height: 18px;
+  color: var(--ink-2);
+}
+
+/* "关于"面板里的几段话：第一段是正文，其余是小字（版本、字体授权） */
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  font-size: var(--fs-14);
+  line-height: 1.8;
+  color: var(--ink-2);
+}
+.about p:first-of-type {
+  color: var(--ink);
 }
