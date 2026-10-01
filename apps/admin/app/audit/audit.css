@@ -1,0 +1,560 @@
+/* ============================================================
+ * 日志 /audit：账簿（audit/Audit.tsx）
+ *
+ * 一卷流水账：整卷是一张纸（.ledger），一天一页（.ledger-page），两天之间是骑缝（.ledger-seam）。
+ * 账页的格线与稿纸的格线同一个颜色（主色调 58% 加墨，见 manuscript.css 的 --ms-rule），长夜淡一些。
+ * 红线色只给印（名章、骑缝章）、查账时要一眼看到的事由（驳回、撤销、停用）与书口上正在看的那一天。
+ * 这一页的样式会一直留着（页面栈不卸载），选择器都以本页的类名开头。
+ * ============================================================ */
+.audit {
+  --ledger-ink: color-mix(in oklab, var(--blush) 58%, var(--ink));
+  --ledger-rule: color-mix(in oklab, var(--ledger-ink) 55%, transparent);
+  --ledger-rule-soft: color-mix(in oklab, var(--ledger-ink) 26%, transparent);
+  /* 一行的高度；栏宽：时刻、经手、事由是定宽，对象与附注按 1.25 : 1 分余下的宽度 */
+  --ledger-row: 52px;
+  --c1: 64px;
+  --c2: 60px;
+  --c3: 80px;
+  --ledger-cols: var(--c1) var(--c2) var(--c3) minmax(0, 1.25fr) minmax(0, 1fr);
+  --ledger-pad: var(--sp-8);
+  padding-top: var(--sp-5);
+}
+[data-theme='changye'] .audit {
+  --ledger-rule: color-mix(in oklab, var(--ledger-ink) 34%, transparent);
+  --ledger-rule-soft: color-mix(in oklab, var(--ledger-ink) 16%, transparent);
+}
+@media (min-width: 900px) {
+  .audit {
+    padding-top: var(--sp-10);
+  }
+}
+
+/* ---- 页头与工具：拿起名章、按事由筛、核对、导出 ---- */
+.audit-head__lead {
+  margin-top: 6px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.audit-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3) var(--sp-6);
+  margin-top: var(--sp-6);
+}
+.audit-who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+/* 名章：拿起来的那一方是白文（满底朱红），微微抬起、转一点 */
+.audit-who__seal {
+  padding: 4px;
+  border-radius: 8px;
+  transition: transform var(--dur-base) var(--ease-soft);
+}
+.audit-who__seal:hover {
+  transform: translateY(-2px);
+}
+.audit-who__seal[aria-pressed='true'] {
+  transform: translateY(-3px) rotate(-5deg);
+}
+.audit-who__seal:focus-visible {
+  outline: 2px solid var(--thread);
+  outline-offset: 1px;
+}
+.audit-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* 筛选的标签收紧一点，与名章排在同一行 */
+.audit-acts .tag {
+  height: 28px;
+  padding: 0 12px 0 18px;
+  font-size: 13px;
+}
+.audit-acts .tag::before {
+  left: 7px;
+}
+.audit-actions {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+.audit-actions .btn {
+  height: 40px;
+  padding: 0 18px;
+  font-size: var(--fs-14);
+}
+.audit-count,
+.audit-verdict {
+  flex-basis: 100%;
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.audit-verdict {
+  color: var(--ink);
+}
+/* 还没核对时不占地方，但不能 display: none：读屏要先认得这块播报区，填进结论时才会念出来 */
+.audit-verdict:empty {
+  position: absolute;
+}
+
+/* ---- 一卷：书在左，书口索引在右（宽屏） ----
+ * isolation：账簿纸的 z-index 只在这一卷里比（盖住书口小签）。页面本身不是层叠上下文，
+ * 不隔开的话这张纸会画在压上来的页面（"我"淡入的那一会儿、返回时淡出的那一会儿）上面 */
+.audit-body {
+  isolation: isolate;
+  margin-top: var(--sp-6);
+  padding-bottom: var(--sp-8);
+}
+.ledger {
+  position: relative;
+  /* 盖在书口小签上面：小签从纸的右边沿底下伸出来 */
+  z-index: 1;
+  padding: 0 var(--ledger-pad);
+  border-radius: 4px;
+  box-shadow:
+    0 1px 2px rgb(var(--shadow-rgb) / 0.08),
+    0 26px 50px -32px rgb(var(--shadow-rgb) / 0.6);
+}
+.ledger-end {
+  margin-top: var(--sp-4);
+  font-size: var(--fs-12);
+  text-align: center;
+  color: var(--ink-2);
+}
+
+/* ---- 一页 ---- */
+.ledger-page {
+  padding: var(--sp-10) 0 var(--sp-8);
+  scroll-margin-top: var(--sp-6);
+}
+.ledger-page__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding-bottom: 14px;
+}
+.ledger-page__date {
+  font-family: var(--font-kai);
+  font-weight: 400;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+}
+.ledger-page__season {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.ledger-page__today {
+  margin-right: 8px;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-size: var(--fs-12);
+  color: var(--paper);
+  background: var(--ink);
+}
+.ledger-page__no {
+  margin-left: auto;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 栏目：上面一道双线（账页的抬头线），下面一道细线 */
+.ledger-cols,
+.ledger-line {
+  display: grid;
+  grid-template-columns: var(--ledger-cols);
+}
+.ledger-cols {
+  height: 34px;
+  border-top: 3px double var(--ledger-rule);
+  border-bottom: 1px solid var(--ledger-rule);
+  font-size: var(--fs-12);
+  letter-spacing: 0.3em;
+  color: var(--ink-2);
+}
+.ledger-cols > span,
+.ledger-line > * {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0 12px;
+  border-left: 1px solid var(--ledger-rule-soft);
+}
+.ledger-cols > span:first-child,
+.ledger-line > :first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+/* 一行一笔 */
+.ledger-line {
+  min-height: var(--ledger-row);
+  border-bottom: 1px solid var(--ledger-rule);
+}
+.ledger-line > * {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.ledger-line__time {
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+/* 事由：一枚墨色的小戳，歪一点；查账时要一眼看到的用红线色 */
+.ledger-stamp {
+  display: inline-block;
+  padding: 2px 6px 1px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--font-kai);
+  font-size: 14px;
+  line-height: 1.25;
+  letter-spacing: 0.08em;
+  color: color-mix(in oklab, var(--ink) 80%, transparent);
+  rotate: -4deg;
+}
+.ledger-stamp[data-alert] {
+  color: var(--thread-ink);
+}
+.ledger-line__target {
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.45;
+}
+.ledger-line__note {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* 刚记下不久：墨迹未干，过一会儿才干（干了就不再播：筛掉又筛回来的行不重播，见 Audit.tsx 的 dried） */
+.ledger-line[data-wet] > :not(.ledger-line__who) {
+  animation: ledger-wet 3.2s ease-out both;
+}
+.ledger-line[data-wet] .ledger-line__who .seal {
+  animation: ledger-wet-seal 1.6s ease-out both;
+}
+@keyframes ledger-wet {
+  from {
+    filter: blur(0.6px);
+    text-shadow:
+      0 0 0.6px currentColor,
+      0 0 8px color-mix(in oklab, var(--ink) 30%, transparent);
+  }
+  to {
+    filter: none;
+    text-shadow: none;
+  }
+}
+@keyframes ledger-wet-seal {
+  from {
+    filter: blur(0.8px) saturate(1.4);
+  }
+  to {
+    filter: none;
+  }
+}
+
+/* 筛掉的几笔：页脚写一句 */
+.ledger-page__hidden {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ledger-rule);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+/* 页末的空行：两行，竖线接着上面的栏。过去的页划一道斜线，写"以下空白"；今天这一页开着 */
+.ledger-blank {
+  position: relative;
+  height: calc(var(--ledger-row) * 2);
+  container-type: inline-size;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(var(--ledger-row) - 1px),
+      var(--ledger-rule) calc(var(--ledger-row) - 1px) var(--ledger-row)
+    ),
+    linear-gradient(
+      to right,
+      transparent calc(var(--c1)),
+      var(--ledger-rule-soft) calc(var(--c1)) calc(var(--c1) + 1px),
+      transparent calc(var(--c1) + 1px) calc(var(--c1) + var(--c2)),
+      var(--ledger-rule-soft) calc(var(--c1) + var(--c2)) calc(var(--c1) + var(--c2) + 1px),
+      transparent calc(var(--c1) + var(--c2) + 1px) calc(var(--c1) + var(--c2) + var(--c3)),
+      var(--ledger-rule-soft) calc(var(--c1) + var(--c2) + var(--c3)) calc(var(--c1) + var(--c2) + var(--c3) + 1px),
+      transparent calc(var(--c1) + var(--c2) + var(--c3) + 1px) calc(var(--c1) + var(--c2) + var(--c3) + (100% - var(--c1) - var(--c2) - var(--c3)) * 1.25 / 2.25),
+      var(--ledger-rule-soft) calc(var(--c1) + var(--c2) + var(--c3) + (100% - var(--c1) - var(--c2) - var(--c3)) * 1.25 / 2.25)
+        calc(var(--c1) + var(--c2) + var(--c3) + (100% - var(--c1) - var(--c2) - var(--c3)) * 1.25 / 2.25 + 1px),
+      transparent 0
+    );
+}
+/* 斜线从左上划到右下；"以下空白"四个字顺着斜线写，线在字底下断开 */
+.ledger-blank[data-closed]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 0.7px),
+    color-mix(in oklab, var(--ink-2) 75%, transparent) calc(50% - 0.7px) calc(50% + 0.7px),
+    transparent calc(50% + 0.7px)
+  );
+  -webkit-mask: linear-gradient(to right, #000 calc(50% - 66px), transparent calc(50% - 58px) calc(50% + 58px), #000 calc(50% + 66px));
+  mask: linear-gradient(to right, #000 calc(50% - 66px), transparent calc(50% - 58px) calc(50% + 58px), #000 calc(50% + 66px));
+  pointer-events: none;
+}
+.ledger-blank__text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-family: var(--font-kai);
+  font-size: 15px;
+  letter-spacing: 0.4em;
+  /* 字距会在最后一个字后面多出一截，往右补回半截，四个字才落在正中 */
+  padding-left: 0.4em;
+  color: var(--ink-2);
+  white-space: nowrap;
+  transform: translate(-50%, -50%) rotate(atan2(calc(var(--ledger-row) * 2), 100cqw));
+}
+/* 今天这一页：第一行空行里淡淡写一句，下一笔就记在这里 */
+.ledger-blank__next {
+  position: absolute;
+  left: calc(var(--c1) + var(--c2) + var(--c3) + 12px);
+  top: 0;
+  height: var(--ledger-row);
+  display: flex;
+  align-items: center;
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  color: color-mix(in oklab, var(--ink-2) 55%, transparent);
+}
+
+/* ---- 骑缝：一道齿孔线，骑缝章压在线上，齿孔打穿了印泥 ---- */
+.ledger-seam {
+  position: relative;
+  height: 0;
+  margin: 0 calc(-1 * var(--ledger-pad));
+}
+/* 齿孔：一排小孔透出桌面的颜色，孔边一圈淡淡的影子；盖在印的上面，像打穿了印泥 */
+.ledger-seam::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: -3px;
+  height: 6px;
+  z-index: 2;
+  background: radial-gradient(
+      circle at 5px 3px,
+      var(--paper) 1.5px,
+      rgb(var(--shadow-rgb) / 0.28) 1.9px,
+      transparent 2.4px
+    )
+    0 0 / 11px 6px repeat-x;
+}
+/* 两侧各一个半圆缺口：撕开的地方 */
+.ledger-seam::after {
+  content: '';
+  position: absolute;
+  left: -9px;
+  right: -9px;
+  top: -9px;
+  height: 18px;
+  z-index: 2;
+  background:
+    radial-gradient(circle, var(--paper) 8.5px, transparent 9px) left / 18px 18px no-repeat,
+    radial-gradient(circle, var(--paper) 8.5px, transparent 9px) right / 18px 18px no-repeat;
+}
+.ledger-seam__seal {
+  position: absolute;
+  right: calc(var(--ledger-pad) + 72px);
+  top: 0;
+  z-index: 1;
+  transform: translateY(-50%) rotate(-8deg);
+}
+.ledger-seam__seal .seal {
+  opacity: 0.88;
+}
+/* 核对到这一道：印重新按一下 */
+.ledger-seam[data-checked] .ledger-seam__seal .seal {
+  animation: ledger-press 520ms var(--ease-soft);
+}
+@keyframes ledger-press {
+  40% {
+    scale: 0.9;
+    filter: brightness(1.12);
+  }
+}
+.ledger-seam__chain {
+  position: absolute;
+  right: calc(var(--ledger-pad) + 72px + 58px + 18px);
+  top: 9px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.ledger-seam__value {
+  font-family: var(--font-serif);
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+.ledger-seam__ok {
+  color: var(--ink);
+  animation: ledger-ok var(--dur-base) var(--ease-soft) both;
+}
+@keyframes ledger-ok {
+  from {
+    opacity: 0;
+    translate: -4px 0;
+  }
+}
+
+/* ---- 书口索引（宽屏）：从书的右边沿伸出来的一排小签，正在看的那一天多伸出一点，标一道红线 ---- */
+.ledger-index {
+  display: none;
+}
+@media (min-width: 900px) {
+  .audit-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 88px;
+    align-items: start;
+  }
+  .ledger-index {
+    position: sticky;
+    top: var(--sp-10);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: var(--sp-10);
+    /* 往左缩进纸底下一截，看上去是从书口伸出来的 */
+    margin-left: -10px;
+  }
+  .ledger-index button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    width: 84px;
+    padding: 8px 10px 8px 22px;
+    border-radius: 0 6px 6px 0;
+    text-align: left;
+    color: var(--ink-2);
+    background: var(--sheet-2);
+    box-shadow: 0 6px 14px -10px rgb(var(--shadow-rgb) / 0.5);
+    transition:
+      transform var(--dur-base) var(--ease-soft),
+      color var(--dur-quick) ease;
+  }
+  .ledger-index button:hover {
+    transform: translateX(3px);
+    color: var(--ink);
+  }
+  .ledger-index button[aria-current] {
+    transform: translateX(6px);
+    color: var(--ink);
+    background: var(--sheet);
+    box-shadow:
+      inset -2px 0 0 var(--thread),
+      0 8px 16px -10px rgb(var(--shadow-rgb) / 0.55);
+  }
+  .ledger-index__date {
+    font-family: var(--font-kai);
+    font-size: var(--fs-18);
+    line-height: 1.2;
+  }
+  .ledger-index__count {
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ---- 窄屏：一行一笔改成两行，名章在左，对象与事由在上，附注与时刻在下；没有竖线 ---- */
+@media (max-width: 899px) {
+  .audit {
+    --ledger-pad: var(--sp-4);
+  }
+  /* 工具收紧：笔数与核对、导出排成一行 */
+  .audit-count {
+    order: 1;
+    flex-basis: auto;
+  }
+  .audit-actions {
+    order: 2;
+  }
+  .audit-verdict {
+    order: 3;
+  }
+  .audit-actions .btn {
+    height: 36px;
+    padding: 0 14px;
+  }
+  .ledger-cols {
+    display: none;
+  }
+  .ledger-page__head {
+    border-bottom: 3px double var(--ledger-rule);
+  }
+  .ledger-line {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'who target act'
+      'who note time';
+    column-gap: 12px;
+    row-gap: 2px;
+    padding: 12px 0;
+  }
+  .ledger-line > * {
+    padding: 0;
+    border-left: 0;
+  }
+  .ledger-line__who {
+    grid-area: who;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .ledger-line__target {
+    grid-area: target;
+  }
+  .ledger-line__act {
+    grid-area: act;
+    justify-content: flex-end;
+  }
+  .ledger-line__note {
+    grid-area: note;
+  }
+  .ledger-line__time {
+    grid-area: time;
+    justify-content: flex-end;
+  }
+  .ledger-blank {
+    height: calc(var(--ledger-row) * 1.5);
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(var(--ledger-row) - 1px),
+      var(--ledger-rule) calc(var(--ledger-row) - 1px) var(--ledger-row)
+    );
+  }
+  .ledger-blank__text {
+    transform: translate(-50%, -50%) rotate(atan2(calc(var(--ledger-row) * 1.5), 100cqw));
+  }
+  .ledger-blank__next {
+    left: 50px;
+  }
+  .ledger-seam__seal {
+    right: calc(var(--ledger-pad) + 20px);
+  }
+  .ledger-seam__chain {
+    right: calc(var(--ledger-pad) + 20px + 58px + 14px);
+  }
+}

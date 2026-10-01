@@ -10,6 +10,12 @@ import type { LedgerAct, QueueItem } from '@danmo/data/admin';
 import type { ReviewNote } from '@danmo/data/author';
 import { chapterTitle } from '@danmo/data/chapters';
 
+/**
+ * 这次打开管理站的时刻（毫秒）。示例数据的时间都写"距今几分钟"，要换成具体时刻时（账簿的一行写几点几分）
+ * 从这一刻往回推；这次新记的账时刻取盖章的那一刻，总是晚于它，排在样例账后面
+ */
+export const OPENED_AT = Date.now();
+
 /** 审核的三方印：准（通过）、退（退回修改）、驳（驳回，只给新书上架） */
 export type Verdict = '准' | '退' | '驳';
 

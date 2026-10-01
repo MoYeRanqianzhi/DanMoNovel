@@ -306,22 +306,20 @@ export const LEDGER: readonly LedgerEntry[] = [
   { id: 'l1', minutesAgo: 4690, by: 's5', act: '公告', target: '10 月 3 日凌晨停机维护', note: '02:00 至 04:00' },
 ];
 
+/** 链值的起点：账簿第一笔之前的值（FNV-1a 的偏移基数） */
+export const CHAIN_SEED = 0x811c9dc5;
+
 /**
- * 账簿的链式校验值：每一笔把上一笔的值与自己的内容一起算（FNV-1a，32 位），改动任何一笔，后面的值全都对不上。
- * 原型只是示意；正式版由服务端用加密哈希算，并定期把最新的值另外存证。
- * 返回与 LEDGER 同序（由近到远）的值。
+ * 账簿的链式校验：记下一笔时，把上一笔之后的链值与这一笔的内容一起算（FNV-1a，32 位）。
+ * 从第一笔一路算下来，改动、删去或插入任何一笔，它后面的链值全都对不上（日志页的骑缝章写的就是这个值）。
+ * 原型只是示意：内容里不含时刻（样例账的时刻是"距今几分钟"，每次打开都不同，链值就会变），
+ * 正式版由服务端连同记账的时刻一起用加密哈希算，并定期把最新的值另外存证。
  */
-export function ledgerChain(entries: readonly LedgerEntry[]): string[] {
-  const values: string[] = [];
-  let prev = 0x811c9dc5;
-  for (const e of [...entries].reverse()) {
-    let h = prev;
-    for (const ch of `${e.id}|${e.minutesAgo}|${e.by}|${e.act}|${e.target}|${e.note ?? ''}`) {
-      h ^= ch.codePointAt(0)!;
-      h = Math.imul(h, 0x01000193) >>> 0;
-    }
-    prev = h;
-    values.push(h.toString(16).padStart(8, '0'));
+export function chainNext(prev: number, e: Pick<LedgerEntry, 'id' | 'by' | 'act' | 'target' | 'note'>): number {
+  let h = prev;
+  for (const ch of `${e.id}|${e.by}|${e.act}|${e.target}|${e.note ?? ''}`) {
+    h ^= ch.codePointAt(0)!;
+    h = Math.imul(h, 0x01000193) >>> 0;
   }
-  return values.reverse();
+  return h;
 }

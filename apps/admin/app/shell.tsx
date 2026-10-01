@@ -5,7 +5,7 @@
  * 标签页随身份变：只留手里那方印管得着的（identity.ts，原型专用的"以某个身份预览"）。
  * 侧栏底部是"手里的印"：当前身份的印，点进"我"换印、换主题；窄屏从总览页头的印进入。
  */
-import { LayoutGrid, Stamp } from 'lucide-react';
+import { LayoutGrid, NotebookTabs, Stamp } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router';
 import type { Permission } from '@danmo/data/admin';
@@ -20,6 +20,7 @@ import './admin.css';
 const TABS: (NavItem & { need?: Permission })[] = [
   { to: '/', label: '总览', Icon: LayoutGrid, end: true },
   { to: '/review', label: '审核', Icon: Stamp, need: 'review' },
+  { to: '/audit', label: '日志', Icon: NotebookTabs, need: 'audit' },
 ];
 
 /** 找不到内容时（loader 返回 MISSING）页面栈渲染的页面 */
