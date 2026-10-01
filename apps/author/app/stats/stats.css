@@ -421,11 +421,20 @@
     gap: var(--sp-10);
   }
 }
+/*
+ * 最后是一整块不断行的"子时（23–1 点）"，不会剩一个孤字；
+ * pretty 会把这一整块当成孤字，再从上一行拉一个"是"下来，拆开"其次是"
+ */
 .stats-hours__text .stats-lead {
   margin-top: 0;
   font-family: var(--font-kai);
   font-size: var(--fs-18);
   color: var(--ink);
+  text-wrap: wrap;
+}
+/* "子时（23–1 点）"整个不断行：破折号后面可以断行，会把"23–"与"1 点）"拆到两行 */
+.stats-hours__when {
+  white-space: nowrap;
 }
 .stats-hours__hint {
   margin-top: 8px;

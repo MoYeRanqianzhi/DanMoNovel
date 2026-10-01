@@ -173,7 +173,13 @@ export function StatsScreen({ data }: ScreenProps<StatsData>) {
           <HourDial hours={stats.hours} />
           <div className="stats-hours__text">
             <p className="stats-lead">
-              {BRANCHES[first]}时（{shichenRange(first)}）读的人最多，其次是{BRANCHES[second]}时（{shichenRange(second)}）
+              <span className="stats-hours__when">
+                {BRANCHES[first]}时（{shichenRange(first)}）
+              </span>
+              读的人最多，其次是
+              <span className="stats-hours__when">
+                {BRANCHES[second]}时（{shichenRange(second)}）
+              </span>
             </p>
             <p className="stats-hours__hint">新章定时在 {publishAt} 点前后发布，读者一打开就能看到。</p>
           </div>
