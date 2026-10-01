@@ -34,7 +34,8 @@ const TERMS: [number, number, string][] = [
   [12, 21, '冬至'],
 ];
 
-export function seasonLine(now = new Date()): string {
+/** 这一天在节气里的位置："秋分后第三天"，正当节气那天是"今日秋分"（管理站账簿的页头也用） */
+export function seasonOf(now = new Date()): string {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const year = today.getFullYear();
   // 找到今天或之前最近的一个节气；年初（小寒之前）回落到上一年的冬至
@@ -44,6 +45,10 @@ export function seasonLine(now = new Date()): string {
     if (date <= today) last = { date, name };
   }
   const days = Math.round((today.getTime() - last.date.getTime()) / 86_400_000);
-  const md = `${today.getMonth() + 1}月${today.getDate()}日`;
-  return days === 0 ? `${md}，今日${last.name}` : `${md}，${last.name}后第${toChineseNumber(days)}天`;
+  return days === 0 ? `今日${last.name}` : `${last.name}后第${toChineseNumber(days)}天`;
+}
+
+/** 日期行："9月26日，秋分后第三天"（书架、作者站书房与管理站总览的页头） */
+export function seasonLine(now = new Date()): string {
+  return `${now.getMonth() + 1}月${now.getDate()}日，${seasonOf(now)}`;
 }
