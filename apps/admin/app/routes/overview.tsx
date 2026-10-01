@@ -1,8 +1,8 @@
 /**
- * 路由：/ 总览。SPA 模式，没有服务端 loader。页面组件见 screens/Overview.tsx
+ * 路由：/ 总览。SPA 模式，没有服务端 loader。页面组件见 overview/Overview.tsx
  */
 import type { ScreenHandle } from '@danmo/design/shell/stack';
-import { OverviewScreen } from '../screens/Overview';
+import { OverviewScreen } from '../overview/Overview';
 
 export const handle = { Screen: OverviewScreen, name: 'overview', tab: true } satisfies ScreenHandle<undefined>;
 

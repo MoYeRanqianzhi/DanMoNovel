@@ -1,0 +1,144 @@
+/* ============================================================
+ * 我（me/Me.tsx）：手里的印、换一方印（印谱）、主题、动效与关于
+ * 一栏，宽屏也不铺满：这一页是个人的设置，读起来像一张名片，不像报表。
+ * ============================================================ */
+.me-body {
+  max-width: 820px;
+  padding-bottom: var(--sp-12);
+}
+
+/* ---- 手里的印：大印在左，人在右 ---- */
+.me-hand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  margin-top: var(--sp-4);
+}
+.me-hand__seal {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 116px;
+  height: 116px;
+}
+.me-hand__text {
+  min-width: 0;
+}
+.me-hand__name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-kai);
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+.me-hand__role {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: var(--fs-16);
+}
+.me-hand__role small {
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.me-hand__duty {
+  margin-top: 4px;
+  font-size: var(--fs-14);
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.me-hand__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 8px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 900px) {
+  .me-hand {
+    gap: var(--sp-8);
+    margin-top: var(--sp-8);
+  }
+  .me-hand__seal {
+    width: 140px;
+    height: 140px;
+  }
+  .me-hand__name {
+    font-size: var(--fs-36);
+  }
+}
+
+/* ---- 换一方印：一页印谱，每方印钤在一小方纸上，印下写身份与代表的人 ---- */
+.me-seals {
+  margin-top: var(--sp-10);
+}
+.me-seals__note {
+  max-width: 34em;
+  margin-top: 8px;
+  font-size: var(--fs-14);
+  line-height: 1.8;
+  color: var(--ink-2);
+}
+/* 手机上五方印正好一行（每格至少 60px） */
+.me-seals__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
+}
+.me-seal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+.me-seal__face {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 104px;
+  aspect-ratio: 1;
+  margin-bottom: 6px;
+  border-radius: 3px;
+  background-color: var(--sheet);
+  background-image: var(--grain);
+  background-size: 220px 220px;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 10px 20px -16px rgb(var(--shadow-rgb) / 0.7);
+  transition: transform var(--dur-quick) var(--ease-soft);
+}
+.me-seal:hover .me-seal__face {
+  transform: translateY(-2px);
+}
+/* 在手里的那方：外面一圈红线（信息：现在拿的是这一方） */
+.me-seal[aria-pressed='true'] .me-seal__face {
+  outline: 1.5px solid var(--thread);
+  outline-offset: 4px;
+}
+.me-seal__name {
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  color: var(--ink);
+}
+.me-seal__who {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+
+/* ---- 主题与设置 ---- */
+.me-themes {
+  margin-top: var(--sp-10);
+}
+.me-swatches {
+  margin-top: var(--sp-4);
+}
+.me-settings {
+  margin-top: var(--sp-8);
+}

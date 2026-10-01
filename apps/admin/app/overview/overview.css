@@ -1,0 +1,33 @@
+/* ============================================================
+ * 总览（overview/Overview.tsx）：编辑部的案头
+ * ============================================================ */
+.overview {
+  padding-top: var(--sp-5);
+}
+@media (min-width: 900px) {
+  .overview {
+    padding-top: var(--sp-10);
+  }
+}
+
+/* ---- 页头：标题与节气日期，右上角手里的印 ---- */
+.ov-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+.ov-head__date {
+  margin-top: 4px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+/* 手里的印：点开是"我"；悬停时像被拿起来一点 */
+.ov-head__seal {
+  padding: 4px;
+  border-radius: 10px;
+  transition: transform var(--dur-base) var(--ease-soft);
+}
+.ov-head__seal:hover {
+  transform: translateY(-2px) rotate(2deg);
+}
