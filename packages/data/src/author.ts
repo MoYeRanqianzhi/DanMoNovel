@@ -380,6 +380,95 @@ export const LETTERS: ReaderLetter[] = [
     likes: 58,
     minutesAgo: 60 * 30,
   },
+  {
+    id: 'l6',
+    kind: '段评',
+    reader: '汽水瓶',
+    readerNote: '陪伴 30 天',
+    bookId: '1002100000010004',
+    chapter: 62,
+    quote: '他把耳机分给他一只，线太短，两个人只好坐得很近。',
+    body: '耳机线太短这个设定我能吹一整年！！！',
+    likes: 421,
+    minutesAgo: 60 * 2,
+  },
+  {
+    id: 'l7',
+    kind: '章评',
+    reader: '小满的同桌',
+    readerNote: '陪伴 76 天',
+    bookId: '1002100000010004',
+    chapter: 63,
+    body: '第六十五章明天几点更新呀？已经定好闹钟了。',
+    likes: 73,
+    minutesAgo: 60 * 5,
+  },
+  {
+    id: 'l8',
+    kind: '段评',
+    reader: '三点半的风',
+    readerNote: '陪伴 5 天',
+    bookId: '1002100000010004',
+    chapter: 12,
+    quote: '他撑伞的时候，伞沿总是低一点，低到能挡住另一个人的眼睛。',
+    body: '从这里就开始埋了吗？？回头看全是细节',
+    likes: 88,
+    minutesAgo: 60 * 7,
+  },
+  {
+    id: 'l9',
+    kind: '书评',
+    reader: '纸飞机',
+    readerNote: '陪伴 51 天',
+    bookId: '1002100000010004',
+    body: '文笔很干净，没有狗血，喜欢这种慢慢靠近的感情。唯一的缺点是更新太慢（不是）',
+    likes: 159,
+    minutesAgo: 60 * 26,
+    reply: '在努力写快一点了，也想把它写好。',
+  },
+  {
+    id: 'l10',
+    kind: '段评',
+    reader: '雨停了吗',
+    readerNote: '陪伴 12 天',
+    bookId: '1002100000010004',
+    chapter: 41,
+    quote: '“窗边的位置要抢。”',
+    body: '窗边的位置要抢，哈哈哈哈他根本不是为了位置',
+    likes: 268,
+    minutesAgo: 60 * 40,
+  },
+  {
+    id: 'l11',
+    kind: '章评',
+    reader: '青苔',
+    readerNote: '陪伴 200 天',
+    bookId: '1002100000010008',
+    chapter: 27,
+    body: '一年后回来重读，旧书店还在，猫也还在，真好。',
+    likes: 34,
+    minutesAgo: 60 * 24 * 3,
+    reply: '书店一直开着，欢迎常回来。',
+  },
+];
+
+/**
+ * 读者停下来的地方：段评最多的句子（互动页）。
+ * 正式版由服务端按段落统计段评数；这里是《盐汽水与蝉》的示例，句子与来信里引的一致。
+ */
+export interface HotQuote {
+  bookId: string;
+  chapter: number;
+  quote: string;
+  /** 这一段的段评数 */
+  comments: number;
+}
+
+export const HOT_QUOTES: HotQuote[] = [
+  { bookId: '1002100000010004', chapter: 63, quote: '伞往他那边偏了一点，雨就全落在了自己的肩上。', comments: 1286 },
+  { bookId: '1002100000010004', chapter: 62, quote: '他把耳机分给他一只，线太短，两个人只好坐得很近。', comments: 974 },
+  { bookId: '1002100000010004', chapter: 0, quote: '蝉声一阵高过一阵，像是要把整个夏天最后的力气都用完。', comments: 812 },
+  { bookId: '1002100000010004', chapter: 41, quote: '“窗边的位置要抢。”', comments: 655 },
 ];
 
 /* ---------------- 数据 ---------------- */
@@ -441,7 +530,10 @@ export const FANS: Fan[] = [
   { name: '夏日限定', days: 118, comments: 264 },
   { name: '蝉蜕', days: 64, comments: 198 },
   { name: '橘子汽水', days: 42, comments: 173 },
+  { name: '汽水瓶', days: 30, comments: 142 },
+  { name: '纸飞机', days: 51, comments: 96 },
   { name: '北方的雪', days: 23, comments: 61 },
+  { name: '雨停了吗', days: 12, comments: 57 },
   { name: '晚安小满', days: 9, comments: 22 },
 ];
 
