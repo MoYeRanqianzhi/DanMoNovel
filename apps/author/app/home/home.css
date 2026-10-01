@@ -568,16 +568,6 @@
   }
 }
 
-/* 减少动效：每一步一到就是最后的样子——字一下子写完（Stage.tsx），朱批、"准"的印泥、浮签、三封信也不再一样等一样。
- * 全站的减少动效（base.css）只把时长缩到 1ms、不动延迟；这里的先后次序全靠延迟排，不清掉就是隔一会儿"啪"地冒出一样。
- * 要盖过 .home-scene[data-step] 那几条更具体的规则，与 base.css 一样用 !important */
-[data-motion='reduced'] .home-scene *,
-[data-motion='reduced'] .home-scene *::before,
-[data-motion='reduced'] .home-scene *::after {
-  transition-delay: 0s !important;
-  animation-delay: 0s !important;
-}
-
 /* ============================================================
  * 文字
  * ============================================================ */

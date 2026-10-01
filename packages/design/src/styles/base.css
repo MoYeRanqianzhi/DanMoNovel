@@ -151,12 +151,17 @@ svg {
 
 /* ---- 减少动效 ----
  * data-motion="reduced" 由 ThemeContext 根据"系统设置 + 应用内开关"写到 <html> 上。
- * 这里统一关闭所有循环动画与长过渡；需要保留的"状态变化提示"由组件改用淡入淡出。 */
+ * 这里统一关闭所有循环动画与长过渡；需要保留的"状态变化提示"由组件改用淡入淡出。
+ * 延迟也一起清掉：用延迟排先后的东西（盖章的印泥、一样接一样冒出来的字与浮签）只缩时长不清延迟，
+ * 会停在第一帧，隔一会儿才"啪"地变成最后的样子。三站带延迟的地方 2026-10-02 都过了一遍，
+ * 侧栏淡出后才 visibility: hidden 的那个延迟清掉也没事（淡出本身也是 1ms）。 */
 [data-motion='reduced'] *,
 [data-motion='reduced'] *::before,
 [data-motion='reduced'] *::after {
   animation-iteration-count: 1 !important;
   animation-duration: 1ms !important;
+  animation-delay: 0s !important;
   transition-duration: 1ms !important;
+  transition-delay: 0s !important;
   scroll-behavior: auto !important;
 }

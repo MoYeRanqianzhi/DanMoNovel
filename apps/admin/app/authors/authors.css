@@ -612,12 +612,6 @@
     box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--ink) 30%, transparent);
   }
 }
-/* 减少动效：全局只把时长缩短，延迟要在这里清掉 */
-[data-motion='reduced'] .contract-steps[data-fresh] li[data-now]::before,
-[data-motion='reduced'] .contract-steps[data-fresh] li[data-now] .contract-steps__knot {
-  animation-delay: 0ms;
-}
-
 /* ---- 最近十四天：每天一格（信封左上角那十四格放大了），墨点的面积按那天的字数 ---- */
 .author-days__row {
   display: grid;

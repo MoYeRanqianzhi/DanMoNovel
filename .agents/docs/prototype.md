@@ -179,7 +179,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 - **偏好存储**：localStorage 键 `danmo:prefs`（theme、motion），读取时校验。原先的"夜间"开关（`toggleNight`、`dayTheme`、`NIGHT_THEME`）已删除：它和配色冲突，阅读器改为在"背景"面板里直接选配色（第 10 节）。ThemeProvider 用 `useSyncExternalStore`，服务端快照 = 站点默认。水合期间（prefs 仍是服务端快照）不写 DOM，因为启动脚本已经写好了。`reduced` = 用户选了减少，或选了跟随系统且系统要求减少。
 - **纸纹** `--grain`：只剩细点。原先的横向纤维层像扫描线，已去掉。阅读页的纸面不用 `--grain`，纹理来自阅读纸张（第 10 节"背景"）；阅读器的工具栏与面板是 `.sheet`，仍带细点。
 - **墨晕切换**：`setTheme(id, origin)` 在支持 View Transition 且未减少动效时，把点击坐标与最大半径写成 CSS 变量，用 `::view-transition-new(root)` 上的径向遮罩配合已注册的 `--ink-r` 做出羽化扩散。不支持就直接切换。
-- **减少动效**：base.css 在 `[data-motion='reduced']` 下把 CSS 动画与过渡压到 1ms。WAAPI 不受这条规则影响，所以飞行、翻页必须自己读 `reduced`。
+- **减少动效**：base.css 在 `[data-motion='reduced']` 下把 CSS 动画与过渡压到 1ms，延迟清零（2026-10-02 起；原先不清延迟，用延迟排先后的东西会停在第一帧，隔一会儿才变成最后的样子，各页曾各自清）。WAAPI 不受这条规则影响，所以飞行、翻页必须自己读 `reduced`。
 
 ## 6. Book3D（book3d/）
 
@@ -793,12 +793,11 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - **场景按自己的大小排**：.home-scene 是 `container: home-scene / size`，宽 min(100%, 560px)，两栏时高 min(640px, 92svh)。不按屏幕宽度，因为手机竖放时场景只有半屏高，竖放平板有 560×500 多，900px 左右的桌面右栏不到 400px 宽，横放手机的右栏只有三百多高。档位：默认是手机的尺寸（格子 15px、书 112、印 0.68）；宽 360 且高 480 起大一号（书 184、格子 19px、信与红日放大、印 0.83）；宽 500 且高 480 起格子 23px、印不缩；高不到 260（一栏的矮屏，舞台只有两百来高）时书缩到 88 宽（`--wn: 88`，第 5 步书升起来时顶边才不出舞台），段评不引原文、章评上移到 48%（否则左边两封叠住、段评后半句被盖住）。不用 CSS round()。
   - 方格标题：.home-steps 是 inline-size 容器，格子 `--cell: min(48px | 60px | 72px, 100cqw / 7)`（<600、≥600、≥900），七格最多铺满文字栏，900px 左右的桌面上不伸到右栏的书跟前。方格放在 aria-hidden 的 .home-hero__cells 里，h1 另有一份 .sr-only 的整句（TITLE）：一个字一块时，读屏会一个字一个字地断开读，section 的 aria-labelledby 名称也会被拆开。
   - 格线 --home-rule：与写作页稿纸的格线（manuscript.css 的 --ms-rule）同一个调法，主色 --blush 58% 调进 --ink；再取 50% 透明（长夜 30%）。红线色只给光标、朱批这类信息。读到的那一步透明度 0.42 → 1，它的印钤成白文（solid），其余朱文（outline）。
-  - **减少动效**：全站规则（base.css）只把时长缩到 1ms、不清延迟，而首页舞台的先后次序全靠延迟排（朱批、浮签、"准"的印泥光晕 260ms、三封信），不清掉就是隔一会儿"啪"地冒出一样。home.css 用 `[data-motion='reduced'] .home-scene *`（含 ::before、::after）把 transition-delay 与 animation-delay 清零，加 !important 盖过 .home-scene[data-step] 那几条更具体的规则。"往下读"在减少动效时 scrollIntoView 用 auto。
+  - **减少动效**：首页舞台的先后次序全靠延迟排（朱批、浮签、"准"的印泥光晕 260ms、三封信）；全站规则（base.css）清零延迟之后，每一步一到就是最后的样子（原先 home.css 自己清，2026-10-02 并进全站规则）。"往下读"在减少动效时 scrollIntoView 用 auto。
   - 约稿函：横线信笺（--line-h 32px，≥900 38px，字落在线上）。题目字距 0.4em，字距也加在最后一个字后面，居中时整体偏左，所以再加 text-indent 0.4em 补齐。落款钤"约稿"。
   - **首页对共享层的改动**（packages/design 与作者站外壳）：ScreenHandle 加 `bare`，Screen 渲染 `data-bare`（stack.tsx）；layout.css ≥900px 时 `.screen[data-bare] { left: calc(-1 * var(--rail-w)) }`，不挪 .stage 本身（离开落地页时它还要在原处淡出，舞台一挪就会跳一下）；nav.css 里 `.app[data-bare] .rail` 淡出、往左让 12px，visibility 等淡出结束再隐藏；作者站 shell.tsx 按 topHandle.bare 给 .app 标 data-bare。
   - 已知不足：
     - 横放刘海屏：三站都开了 viewport-fit=cover，共享层却只有 --safe-top、--safe-bottom，左右安全区全项目都没处理（见 TODO）。首页横放两栏时，左栏的字可能落到刘海下面（按代码推断，没在真机上看过）。
-    - 全站的减少动效不清零延迟。别的页面如果也用延迟排先后，要像首页这样自己清。
     - Safari、Firefox、真机与读屏软件都没测（第 12 节）。
 
 ## 14. 稿纸（packages/design/src/manuscript/）
