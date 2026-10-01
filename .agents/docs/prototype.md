@@ -1,7 +1,7 @@
 # 三站前端原型实现说明（面向代理）
 
 > 记录 UI 原型的实现细节与不显而易见的决定，后续代理不必通读源码就能接着开发。
-> 状态以 2026-10-02 的管理站审核页提交为准（React Router v8 的 pnpm workspace，三站结构）。继续工作前，用 `git log` 与当前文件核对，本文可能已经落后。
+> 状态以 2026-10-02 的管理站身份页提交为准（React Router v8 的 pnpm workspace，三站结构）。继续工作前，用 `git log` 与当前文件核对，本文可能已经落后。
 > 设计方向与已定决策见 ../MEMORY.md，待办见 ../TODO.md，当前计划与进度见 ../plan/。
 
 ## 1. 概况
@@ -46,7 +46,7 @@ packages/design/src/
                 BookLoader.tsx + loader.css、gestures.ts（useTilt、useSpin）
   flight/       FlightContext.tsx（飞行引擎与 BookSlot）、timing.ts、flight.css
   shell/        stack.tsx（页面栈，第 4 节）、keepStyles.ts（留住栈里页面的样式表）、nav.tsx + nav.css（TabBar、SideRail、RailLink）、not-found.tsx（notFoundHandle）
-  components/   ui.tsx（IconButton/ThreadProgress/TagMark/Seal/PairLine/Segmented/Logo）、overlays.tsx（Sheet、Toast；Sheet 打开时把焦点移进面板，内容已自己拿了焦点（autoFocus）时不抢）、ErrorPage.tsx、
+  components/   ui.tsx（IconButton/ThreadProgress/TagMark/Seal/PairLine/Segmented/Logo）、overlays.tsx（Sheet、Toast；Sheet 打开时把焦点移进面板，内容已自己拿了焦点（autoFocus）时不抢；Sheet 是 aria-modal，面板开着时要播报的话放在面板里面，面板外的 role="status" 与 Toast 有的读屏不念）、ErrorPage.tsx、
                 Stamp.tsx + stamp.css（盖章：落下与印泥洇开，still 直接显示盖好的样子）
   manuscript/   稿纸（第 14 节）：Manuscript.tsx + manuscript.css、danmo-grid.woff2（方格补字字体）与 danmo-grid-OFL.txt
   lib/          util.ts（cls、seededRandom、clamp、lerp）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts
@@ -77,9 +77,10 @@ apps/author/app/       作者站（SSR，第 13、15 节）：公开首页 /、�
   write/        写作页：Write.tsx（页面与 loadWrite）、Outline.tsx（目录）、panels.tsx（发布、选纸）、drafts.ts（本机副本）、paper.ts（稿纸偏好）
   readers/ stats/ me/   互动、数据、我（第 13 节）
   local.ts      本机改过的封面与作品信息；profile.ts 本机改过的签名、闲章与每日目标
-apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false，第 16 节）：总览 /、审核 /review、日志 /audit、我 /me、404
-  identity.ts   以某个身份预览（原型专用）；session.ts 这次打开期间的决定与新记的账；NoAccess.tsx 管不着的一页；format.ts 时长与数字
+apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false，第 16 节）：总览 /、审核 /review、身份 /staff、日志 /audit、我 /me、404
+  identity.ts   以某个身份预览（原型专用）；session.ts 这次打开期间的决定、名册的改动与新记的账；NoAccess.tsx 管不着的一页；format.ts 时长、数字、入职、人数
   review/       审核：Review.tsx（案卷与两栏）、Detail.tsx（一份案卷）、Annotator.tsx（选字下朱批）、review.css
+  staff/        身份：Staff.tsx（印谱与名帖）、Dossier.tsx（面板：印的释文、名帖、札子）、rules.ts（谁能对谁做什么、理由）、staff.css
   audit/        日志：Audit.tsx（一卷流水账）、audit.css
   me/ overview/ 我、总览（总览暂时只有页头）
 ```
@@ -655,7 +656,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - 九种视口回归：场景大小、书宽、标题右沿与修正前完全一致；类型检查通过。
 - **作者站公开首页未验收**：真机（iOS Safari 的 svh 与地址栏伸缩、横放手机的刘海，见第 13 节已知不足）；Safari 与 Firefox（容器查询的 size 容器、@property 的墨晕、mask）；读屏软件实际朗读；系统层面的减少动效只按 `data-motion` 的结果测过（偏好设为"减少"），没有直接开系统设置。
 - **测试注意**：
-  - 页面切换、淡出、被盖住的页面要在生产构建上看一遍：开发模式下样式从不撤，生产构建里路由的样式表随地址撤换（第 4 节"留住样式表"）。临时起一个生产服务：在 `apps/<站>` 下 `PORT=<空闲端口> npx react-router-serve ./build/server/index.js`，用完按端口找到进程停掉。
+  - 页面切换、淡出、被盖住的页面要在生产构建上看一遍：开发模式下样式从不撤，生产构建里路由的样式表随地址撤换（第 4 节"留住样式表"）。临时起一个生产服务：在 `apps/<站>` 下 `PORT=<空闲端口> npx react-router-serve ./build/server/index.js`，用完按端口找到进程停掉。管理站是 SPA，构建只有 build/client：在那里 `python -m http.server <端口> --bind 127.0.0.1` 托管，从首页进、点标签走（静态服务没有回退到 index.html，直接打开深链接是 404）。
   - Vite 会缓存"解析失败"：先写了 `import './x.css'`、后建文件时，这个站的开发服务器一直报 500 "Failed to load url"，文件建好也不恢复。先建文件再写 import；已经卡住了就 `touch apps/<站>/vite.config.ts`，那个站的开发服务器会重启。
   - Playwright 截图的文件名写成 `.playwright-mcp/<名字>.png`（已忽略）。只写文件名会存到仓库根目录，混进未跟踪文件。
   - Windows 上 Playwright 的浏览器窗口被遮挡时，Chrome 会暂停 requestAnimationFrame，动画卡在半途，看起来像代码有问题。测动效前先 `page.bringToFront()`。
@@ -900,7 +901,8 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - REVIEW_LIMIT_MINUTES = 1440，超过即超时：q4《镜头之外》等了 1560 分钟。
     - 与另两站对得上：q1 是作者站《晚风信号》5 小时前送审的第一章；q6 是新作者鹿鸣的新书《落日邮差》（书号 1002100000010009，章名在 chapters.ts 的 NAMED_CHAPTERS）。
   - 举报 REPORTS（r1~r4）。
-  - 账簿 LEDGER（l1~l15，数组由近到远，编号越大越晚）。LedgerAct 含"撤回"。
+  - 账簿 LEDGER（l1~l15，数组由近到远，编号越大越晚）。LedgerAct 含"撤回"与"下线"（强制退出所有设备上的登录，身份页记的）。
+  - appointPermission(role)：任命这种身份要的权限（超管 appoint.super，其余 appoint，站长 null）。身份页的红线、能不能给某方印都由它与 can 推出。
     - 与作者站对得上的几笔：l12 青砚通过《盐汽水与蝉》第六十五章（定时明天 20:00）、l8 拾遗退回《晚风信号》第三章（两条朱批）、l5 阿梨的"新书上架"推荐、l13 知秋发起的签约、l6 长庚任命霁月。
     - 链值：CHAIN_SEED 起，chainNext(上一笔之后的值, 这一笔) 用 FNV-1a 串下去，给日志页的骑缝章用。内容不含时刻（样例账的时刻每次打开都不同，含了链值就会变）；正式版由服务端连同时刻用加密哈希算。
   - 时间都写"距今几分钟"；管理站是 SPA，在浏览器里换成具体时刻。
@@ -908,6 +910,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 打开管理站的人是站长；在"我"里换一方印，就以那个身份的代表来看整站。
   - 存在 localStorage `danmo-admin:as`，读时校验是不是 RoleId；previewAs(role) 写入并通知订阅者，storage 事件让别的标签页也跟着变。
   - useIdentity() 返回 `{role, me, previewing, can}`。正式版没有这个开关，权限一律由服务端校验。
+  - me 是 representative(role, 名册)：PREVIEW_AS 定的那位这次被撤了这方印、停用了或重置了两步验证（身份页），就换名册里第一位还拿着它、两步验证开着的人（没开好的人特权暂停，代表不了这方印）；一个都没有了，用 STAFF 里的原样（预览的是这方印管得着什么，总得有人拿着）。"我"页印下写的代表也是它。
 - **外壳**（shell.tsx）：
   - TABS 每项带 need（看这一页要的权限），按 can 过滤：手里的印管不着的页面不出现在侧栏与底部导航里。
   - 侧栏底部 HandSeal：当前身份的印加一个"我"字，NavLink 到 /me，已在 /me 时不重复进栈。窄屏从总览页头的印进 /me。
@@ -927,7 +930,10 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - ledger：新记的账，由远到近，id s1、s2……
   - decide 记下决定并记一笔账：附注取总批；没有总批时写"N 条朱批"。
   - undo 删掉决定，另记一笔"撤回"（附注如 `撤回"通过"`），原来那一笔不动。
-  - describe(item) 是账簿上写的对象。日志页（C4）要把 LEDGER 与 session 的 ledger 合起来显示。
+  - describe(item) 是账簿上写的对象。日志页把 LEDGER 与 session 的 ledger 合起来显示。
+  - staff：对工作人员的改动（StaffChange：roles、group、appointed[身份] 的时刻、disabledAt、resetAt、loggedOutAt）。rosterOf(session) 把它叠到 STAFF 上，改动没变时返回同一个数组；useRoster() 订阅。
+  - appoint、revoke、disable、resetTwoFactor、forceLogout 各改一项并记一笔账：任命"某某为某身份"（附注先写组）；撤销"某某的某身份"（本人撤自己的，附注先写"主动卸任"）；停用"某某的账号"；重置"某某的两步验证"；下线"某某的所有设备"。
+  - update 一律 `{...state, ...}`：新加的字段不会被别的动作丢掉。
 - **审核**（review/）：/review 与 /review/:id 两个路由共用 ReviewScreen，data 是 `{id}`。/review/:id 的 handle 是 back 'hop'、book 取案卷的书、parent 回 /review。
   - **版面**（review.css）：
     - < 900px：/review 只显示案卷；/review/:id 只显示详情，案卷 display: none 但仍渲染，所以每一页里都有一份书位。
@@ -976,6 +982,23 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - **核对**：从最早的那道骑缝起，每 480ms 核一道（印重新按一下、写"对得上"），最后 role="status" 给结论"核对完毕：N 笔账，几道骑缝的链值都对得上"；减少动效时一次核完。离开页面时清掉计时器。播报区空着时用 `position: absolute` 让出位置，不能 display:none：不在无障碍树里的播报区，填进文字时读屏不念。**导出**：Toast 提示原型未接入。
   - **墨迹未干**：打开这一页之前不到一分钟记下的（WET_MS）、打开之后新记的，文字有模糊与晕开的影子、名章更艳，3.2 秒内干透。审核页盖章、撤回后切到日志就能看到。干透时（ledger-wet 的 animationend）记进 AuditScreen 的 dried：筛掉的行会卸载，筛回来时不能在挂载时重新判断，否则一分钟之内会再湿一遍。
   - **书口索引的当前页**：滚动时取开头已过屏幕上方 140px 的最后一页；滚到底取最后一页（短页的开头到不了那条线）。点书口翻页时直接标在点的那一天，1 秒内不按滚动改（平滑滚动还没停）；jumpedAt 的初值是负无穷，新开的页面 performance.now() 从 0 起算，初值 0 会挡掉第一次计算。
+- **身份**（staff/，/staff，标签页，need 'staff'：站长、超管、管理员；管理员只能看）：印谱与名册合在一张纸上。
+  - **规矩**（rules.ts）：整体管不着的理由 blockedReason 的先后——手里的印没有 appoint（管理员）→ 对象是站长 → 对象已停用 → 对象是超管而手里没有 appoint.super（同级）。对象是自己另算：只能卸任（站长不能卸任，只能转让；转让提示未接入）。选印 grantReason：站长印"只有一位"、超管印要 appoint.super、已有的"已是某某"；选人 pickReason：自己、整体管不着的（站长、已停用、同级）、能给的印都有了。理由写明是第几条规矩；RULES 是页末列的七条（staff-roles 记忆的结构规则）。
+  - **红线**：THREADS 由 appointPermission 与 can 推出，七根。SealRow 不用 getBoundingClientRect 量印的位置（页面淡入、飞行时祖先带着变换），用列表的 clientWidth 与 columnGap 算五等分格子的中心；拱起的高度读 CSS 的 --arc-h（手机 84、宽屏 128）。每根是三次贝塞尔，两个控制点同高，峰高是控制点高度的四分之三；控制点横向偏跨度的 0.06 与 0.22，峰偏向起点。pathLength 为 1，完整动效下 dasharray 1 1、偏移 1→0 一根根系上（延迟 180 + 110×i ms）。突出的那方印（指着的，否则手里的）的线与结 data-on 描深，其余淡到 0.26。印上打的结：小圆加两根垂到印上的线头。
+  - **版面**（staff.css）：.seal-book 是一张 .sheet 纸，::before 画文武边栏（border 1.5px，outline 1px 内缩 5px）。题签"印谱"竖写、绝对定位在右上角（红线从左边拱过来，右上角空着），纸上那一句左右各让 48/64px。
+    - 宽屏：.seal-row__seals 与 .seal-book__groups 同样 `repeat(5, minmax(0, 1fr))`、同样 --book-gap，印正好压在各自那一列上。列用 subgrid 对齐（职责一行、名帖一行），名字与"由谁任命"在宽屏上只留给读屏。列要 min-width: 0：网格项默认不肯窄过内容，960 宽时名帖挤出了列。名帖列表是 inline-size 容器，列宽 160px 以下（约 1100 宽以下）名帖竖排，名章在上，像腰牌。一根绳（列表的 ::before）从职责底下垂到最后一张名帖，名帖不透明，绳只在帖与帖之间露出来；列表 align-self: start，否则短列的绳会垂到最长那一列的底。
+    - 手机：五方印 44px（Seal 的尺寸写在行内样式里，CSS 用 !important 盖过去），各组竖排，组头是小印、名字、人数、由谁任命与职责。
+    - 这一页没有正的 z-index（第 4 节）。
+  - **名帖**：名章（朱文 36）、名字、"我"、组与"兼某某"、最近在线（5 分钟内写"在线"，强制下线之后"已下线"）；两步验证没开用红线色写"两步验证未开""特权暂停"，两半各自不断行。印谱之外：没有身份的写"暂无身份"；停用的名章褪灰，右边斜贴一道封条（字让出 96px），还留着身份的写"身份不生效：某某"。
+  - **面板**（Dossier.tsx，一张 Sheet 换着放三样）：印的释文（"某某之印"：由谁任命、能任命谁、职责、grantsOf 列的"这方印管得着"、拿着它的人；给得了时"任命一位某某"）；名帖（身份、入职、两步验证、最近在线、账号、处置一栏）；札子。Sheet 收起的 260ms 里内容照旧（Dossier 在渲染时记下上一次打开的，是 React 允许的派生状态写法）。每样东西打开时焦点放在它开头（useFocusOnOpen；Sheet 见焦点已在面板里就不抢）。
+    - 经手的人也在换一样东西放时记下（Dossier 的 me 快照，Sealed.by 带着它）：卸任自己之后预览的代表当场换人，面板里的名章、正文、标题不能跟着换，账簿的经手人用 Sealed.by。
+    - 做完之后的读屏播报在面板里面（札子里一直挂着的 role="status"，钤印后填上"已……，账簿记了一笔"）；"转让站长"的提示也写在名帖面板里，不用 Toast。面板外的播报区与 Toast 在 aria-modal 面板开着时有的读屏不念。
+    - 名帖面板的事实栏是 dl：dd 要清掉浏览器默认的 40px 左缩进（全站基础样式只清了 h1~h4、p、ul、ol、figure）。
+  - **札子**：页头"任命"先选人，再选印；从印的释文来的已定了印；编辑另选组（默认这人原来的组，没有就现代组）。附注可点常用语。下面一张笺：楷书正文（还没选的留一段空白横线）、附注、日期、"经手"一格。撤销别人、重置、下线、停用要写缘由才能钤印：按钮 aria-disabled，旁边写差什么。
+    - 按下"钤印"就算数：先交给 StaffScreen.seal 改名册、记账，再播 Stamp（经手人的名章，朱文 46px），落定后札子再留 520ms，面板收起；减少动效时 Stamp 立刻 onDone，面板立刻收起。面板中途被关掉，这一笔也已经记下。
+    - 按下之后正文与选印区照那一刻的样子（sealed 快照）：名册已经改了，刚给的印不能变成"已是某某"。
+  - **结果留在名帖上**：键都带改动的时刻，dried 集合记干了的（与日志页同一个做法）。新任命的名帖 staff-wet（从绳上落下，字迹洇着）；下线、重置的那一行 staff-wet-line；新停用的封条 staff-strip。撤销与停用的名帖留在原处（leaving，inert），先划一道红线再收起（grid-template-rows 1fr→0fr，末了负外边距吃掉列表间距），animationend 之后才拿掉；减少动效时不留。这些动画都延迟 1.1s：钤印 520ms、札子留 520ms、面板收起 260ms 之后才看得见；减少动效时把延迟清掉（全站的规则不清延迟，延迟里停在第一帧，新名帖是透明的）。收起中的名帖末了的负外边距用列表的 --tag-gap（手机 8、宽屏 12）。
+    - 撤销、停用之后，打开面板的那张名帖已经不在了（换成收起中的纸，或挪到印谱之外），Sheet 还焦点时找不到它，焦点落在 body：StaffScreen 的 navigate 在面板收起 320ms 后把焦点交给这个人现在的名帖（data-member，不滚动页面）。
 - **验收（2026-10-02，开发服务器）**：
   - 宽屏 1440 的完整流程：打开最久的一份、选字下朱批、常用语写总批、盖退、撤回、换一份盖准、下一份、新书（退、驳禁用及理由）、封面、简介比对、编辑身份打开 /review/q2 是"管不着"。控制台无报错。
   - 稿纸位置：1440 与 1280 靠左，浮签贴纸边；960 与 390 居中，浮签点开才展开。作者站写作页仍居中。
@@ -983,10 +1006,16 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 长夜：案卷与封面对照看过。类型检查与三站构建通过。
   - 代码审查（2026-10-02）的修正都在浏览器里核过：面板打开后焦点在批语框里（只用键盘写完、Ctrl+Enter 贴上）；封面的退回理由不提正文；浮条指着、离开、Tab 聚焦都对；已审的印有读屏文字；"无题"是淡墨；作者站的面板仍把焦点移进面板。
   - 日志：1440、1280、960、390 与长夜看过；审核页盖准、撤回、再盖准后今天那页多出三笔且墨迹未干；名章与事由筛选、两者叠加、页脚的笔数；核对逐道进行、减少动效时一次完成；书口点最后一天、倒数第二天、第一天、滚轮到底都标对；管理员、编辑、审核打开 /audit 是"管不着"；导出有提示。控制台无报错。
+  - 身份：1440、1280、1100、960、390 与长夜看过；名帖在 960、1100 竖排，1280 以上横排，都没有挤出列；手机上题签与那一句不重叠。
+    晚棠强制下线（没写缘由时钤印不动，点常用语后盖上，名帖上"已下线"墨迹未干）；页头任命知秋为审核（审核那一列多出知秋，墨迹未干）；撤销拾遗的审核（先划一道再收起，挪到印谱之外"暂无身份"）；停用霁月（编辑那一列收起，印谱之外贴上封条）；超管之印的释文。日志今天那一页多出下线、任命、撤销、停用四笔。
+    超管预览：南星"同级"什么都做不了，自己只能卸任，选印时站长与超管给不了。管理员预览：页头写"只能看"，对别人什么都做不了，自己能卸任。编辑打开 /staff 是"管不着"。撤销长庚的超管之后，"我"页超管那方印下写南星，换成超管预览时名册上的"我"是南星。
+    减少动效：红线直接画好，撤销之后名帖直接不见。键盘：印上回车打开释文，Esc 关上之后焦点回到印上。
+    代码审查（2026-10-02）的修正都核过：超管预览卸任自己，札子留着的那一会儿印、正文、标题仍是长庚，账簿经手是长庚，之后名册上的"我"是南星；事实栏的值不再缩进；减少动效下任命后面板一收起新名帖就在（不透明、延迟 0）；从键盘撤销不言的审核后焦点在不言（编辑那一列）的名帖上；札子里的播报与名帖面板里的转让提示有字；手机上收起的名帖末了 -8px；重置长庚的两步验证后"我"页超管的代表是南星。控制台无报错，类型检查与三站构建通过；审核页盖章与日志页的回归脚本照旧通过。生产构建（静态托管）里总览 → 身份 → 日志 → 身份，身份页淡出的每一帧格子都还是 grid，面板正常。
   - 日志的代码审查（2026-10-02）三处修正都核过：推入"我"与返回的半途截图，账簿纸在"我"底下；播报区空着时 position absolute、高 0，核对完是结论且页面只多出那一行；盖章后墨迹干透，再拿起、放下名章，这一笔不再湿。
 - **已知不足**：
   - 决定与朱批只在内存里，刷新就没了。
   - 日志只有样例账与这次新记的几笔，没有按日期范围筛（样例只有几天）；更早的账写"已经归档"。
   - 跨段选中只批第一段那一截。
   - 举报还没有页面（等总览的待办与日志）。
+  - 身份：还不在名册里的人（新同事）不能在这里开账号，原型没有邀请；转让站长只有提示；停用之后没有"启用"；重置两步验证之后，本人重新开好的过程没有模拟。
   - 新书只给第一章的稿纸。
