@@ -1,9 +1,10 @@
 /**
- * 这次打开管理站期间做过的事（原型没有后端）：审核的决定与朱批、对工作人员的任命与处置、
+ * 这次打开管理站期间做过的事（原型没有后端）：审核的决定与朱批、处理过的举报、对工作人员的任命与处置、
  * 编辑对作者做的事（寄出合同、备忘、写信）、设置页批在校样上的与付印的、贴的告示、新记的账
  *
  * 只存在内存里，刷新就没了。正式版每一个决定都写进服务端，账簿由服务端追加。
  * 几页靠它对得上：审核页盖了章，案卷挪进"已审"，日志页的账簿当场多一笔，总览的待办少一份；
+ * 总览里处理了一条举报，举报那一摞少一条，账簿同样多一笔；
  * 身份页任命、撤销、停用了谁，名册跟着改，"以某个身份预览"的代表也跟着换（identity.ts）；
  * 作者页给新作者寄出合同，这位作者挪进"洽谈中"、归到经手的编辑名下；
  * 设置页把站规第四条（审核时限）付印之后，审核页按新的时限算超时。
@@ -28,6 +29,7 @@ import {
   type PolicyArticle,
   type PolicyValue,
   type QueueItem,
+  type Report,
   type RoleId,
   type Showcase,
   type StaffMember,
@@ -59,6 +61,18 @@ export interface Decision extends Marks {
   /** 盖章的时刻（毫秒） */
   at: number;
   /** 经手的人（STAFF 的 id） */
+  by: string;
+}
+
+/** 处理举报的两方印：删（删去被举报的内容）、留（举报不成立，内容留着） */
+export type ReportVerdict = '删' | '留';
+
+export const REPORT_ACT: Record<ReportVerdict, LedgerAct> = { 删: '删除', 留: '保留' };
+
+/** 一条举报的处理：哪方印、什么时候、谁经手 */
+export interface ReportDecision {
+  verdict: ReportVerdict;
+  at: number;
   by: string;
 }
 
@@ -145,6 +159,8 @@ export interface PostedNotice extends Omit<Notice, 'minutesAgo'> {
 interface Session {
   marks: Record<string, Marks>;
   decisions: Record<string, Decision>;
+  /** 处理过的举报，以举报的 id 为键 */
+  reports: Record<string, ReportDecision>;
   /** 以工作人员的 id 为键 */
   staff: Record<string, StaffChange>;
   /** 以作者的 id 为键 */
@@ -163,6 +179,7 @@ const EMPTY_MARKS: Marks = { summary: '', notes: [] };
 let state: Session = {
   marks: {},
   decisions: {},
+  reports: {},
   staff: {},
   authors: {},
   showcase: { prints: 0 },
@@ -247,6 +264,36 @@ export function undo(item: QueueItem, by: string) {
     ...state,
     decisions,
     ledger: [...state.ledger, entry(by, '撤回', describe(item), `撤回"${VERDICT_ACT[decision.verdict]}"`)],
+  });
+}
+
+/* ---------------- 举报 ---------------- */
+
+/** 账簿上写的对象：哪一种内容、开头一句（举报里记着的开头本来就以省略号收尾） */
+function reportTarget(r: Report): string {
+  return `${r.kind}“${r.excerpt}”`;
+}
+
+/** 处理一条举报：删去或留下，账簿记一笔（附注写举报的理由与几个人举报，留下的写"举报不成立"） */
+export function settleReport(r: Report, verdict: ReportVerdict, by: string) {
+  const note = verdict === '删' ? `${r.reason}，${countKai(r.count)}人举报` : `举报不成立（${r.reason}）`;
+  update({
+    ...state,
+    reports: { ...state.reports, [r.id]: { verdict, at: Date.now(), by } },
+    ledger: [...state.ledger, entry(by, REPORT_ACT[verdict], reportTarget(r), note)],
+  });
+}
+
+/** 撤回刚才的处理：举报回到待处理（删去的内容恢复）；账簿另记一笔"撤回"，原来那一笔不动 */
+export function reopenReport(r: Report, by: string) {
+  const decision = state.reports[r.id];
+  if (!decision) return;
+  const reports = { ...state.reports };
+  delete reports[r.id];
+  update({
+    ...state,
+    reports,
+    ledger: [...state.ledger, entry(by, '撤回', reportTarget(r), `撤回“${REPORT_ACT[decision.verdict]}”`)],
   });
 }
 
@@ -358,6 +405,11 @@ export function authorsOf(session: Session): AuthorEntry[] {
 /** 读作者名册（订阅这次打开期间的改动） */
 export function useAuthors(): AuthorEntry[] {
   return authorsOf(useSession());
+}
+
+/** 名册上的这几位作者，这个身份看得到：站长、超管看全部；编辑看自己名下的与还没有编辑的（作者页的名册、总览"签约"那一摞） */
+export function visibleAuthors(authors: readonly AuthorEntry[], all: boolean, me: string): AuthorEntry[] {
+  return all ? [...authors] : authors.filter((a) => !a.editor || a.editor === me);
 }
 
 /** 名册上这一位作者现在的样子 */

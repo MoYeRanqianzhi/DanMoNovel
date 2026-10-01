@@ -40,11 +40,11 @@ import {
   sendLetter,
   useAuthors,
   useSession,
+  visibleAuthors,
   writeMemo,
   type AuthorEntry,
   type Member,
 } from '../session';
-import { visibleAuthors } from './Authors';
 import './authors.css';
 
 export interface AuthorData {

@@ -7,10 +7,13 @@
  * - 窄屏：/review 只有案卷；点开进栈到 /review/:id（不是标签页，底部导航收起），书从案卷飞进稿子的页头，返回飞回去。
  *   两种做法由 useIsWide 决定（只决定点开时怎么走，版面仍由 CSS 决定）。
  * - 盖完章看"下一份"：宽屏同样 retarget；窄屏替换栈顶这一页，不一份一份越压越深，返回直接回到案卷。
+ *   下一份先在筛着的这一种里找（从总览点"封面"那一摞进来的，接着审封面），这一种审完了再找全部里等得最久的；
+ *   宽屏换到别的种类时放下筛选，左边才看得到它。
  *
  * 案卷：等得最久的在最上面（超过审核时限的，左边一道红线、写出超时多久）；按种类筛选；
  * 这次盖过章的挪进下面的"已审"，右边钤着那方印（session.ts，刷新就没了）。
- * 没选中时右边是一只印盒与一句提示，按钮直接打开等得最久的那一份。
+ * 筛选：/review?kind=… 打开时先筛好（总览点一摞进来）。窄屏点开的每一份是新的一页，筛选靠地址带过去（/review/:id?kind=…）。
+ * 没选中时右边是一只印盒与一句提示，按钮直接打开左边（按筛着的种类）等得最久的那一份。
  */
 import { useLayoutEffect, useRef, useState } from 'react';
 import { QUEUE, QUEUE_KINDS, type QueueItem, type QueueKind } from '@danmo/data/admin';
@@ -30,6 +33,8 @@ import './review.css';
 export interface ReviewData {
   /** 选中的案卷；/review 时为空 */
   id: string | null;
+  /** 打开时先按哪一种筛（/review?kind=…，总览里点一摞稿子进来；窄屏点开的一份也带着）；之后由页面上的筛选自己管 */
+  kind?: QueueKind;
 }
 
 /** 案卷的第二行：哪一章，或者是新书、封面、简介 */
@@ -46,6 +51,12 @@ const byWaiting = (a: QueueItem, b: QueueItem) => b.minutesAgo - a.minutesAgo;
 /** 案卷在队列里的书位名（不含页面 id） */
 const caseName = (id: string) => `case:${id}`;
 
+/** 地址里的 ?kind=（外部输入：不认得的当作没筛）；/review 与 /review/:id 两个路由的 clientLoader 共用 */
+export function kindParam(url: string): QueueKind | undefined {
+  const kind = new URL(url).searchParams.get('kind');
+  return QUEUE_KINDS.find((k) => k.id === kind)?.id;
+}
+
 export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
   const { can } = useIdentity();
   const session = useSession();
@@ -53,7 +64,7 @@ export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
   const limit = useReviewLimit();
   const wide = useIsWide();
   const { push, retarget } = useStack();
-  const [kind, setKind] = useState<QueueKind | null>(null);
+  const [kind, setKind] = useState<QueueKind | null>(data.kind ?? null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   // 宽屏上换一份案卷是 retarget（还是这一页）：整页滚回顶上，从新案卷的案由读起。
@@ -71,16 +82,21 @@ export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
   );
   /** 按选中的种类筛 */
   const shown = (list: QueueItem[]) => (kind ? list.filter((q) => q.kind === kind) : list);
+  /** 左边列着的待审案卷（按筛着的种类） */
+  const queue = shown(pending);
   const overdue = pending.filter((q) => q.minutesAgo > limit).length;
   /** 案卷在这一页里的书位 id（窄屏点开时书从这里飞出去，返回时飞回来） */
   const caseSlot = (q: QueueItem) => screen.slot(caseName(q.id));
+  /** 窄屏进栈的地址：这一份属于筛着的种类时带上 ?kind=，新的一页才知道筛着什么（它的"下一份"按它找） */
+  const pathOf = (q: QueueItem) => `/review/${q.id}${kind && q.kind === kind ? `?kind=${kind}` : ''}`;
 
   /** 打开一份案卷：宽屏换地址（同一页），窄屏进栈 */
   const open = (q: QueueItem) => {
     if (wide) retarget(`/review/${q.id}`);
-    else push(`/review/${q.id}`, { flightFrom: caseSlot(q), book: q.book });
+    else push(pathOf(q), { flightFrom: caseSlot(q), book: q.book });
   };
-  const next = item ? pending.find((q) => q.id !== item.id) : undefined;
+  /** 下一份：先在筛着的这一种里找，这一种审完了再找全部里等得最久的 */
+  const next = item ? (queue.find((q) => q.id !== item.id) ?? pending.find((q) => q.id !== item.id)) : undefined;
 
   /**
    * 盖完章看下一份。宽屏与点案卷一样。窄屏替换栈顶这一页（进场不飞书，两页交叉淡入淡出）；
@@ -88,11 +104,15 @@ export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
    * （当前这一份的那一格）换算出来。直接打开地址进来的，下面没有案卷，没有来处，返回时不飞
    */
   const openNext = (current: QueueItem, q: QueueItem) => {
-    if (wide) return retarget(`/review/${q.id}`);
+    if (wide) {
+      // 筛着的这一种审完了、下一份是别的种类：放下筛选，左边才看得到它
+      if (kind && q.kind !== kind) setKind(null);
+      return retarget(`/review/${q.id}`);
+    }
     const from = screen.fromSlot;
     const own = caseName(current.id);
     const home = from?.endsWith(own) ? from.slice(0, -own.length) + caseName(q.id) : undefined;
-    push(`/review/${q.id}`, { replace: true, flightFrom: home });
+    push(pathOf(q), { replace: true, flightFrom: home });
   };
   const doneShown = shown(done);
 
@@ -138,7 +158,7 @@ export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
             );
           })}
         </div>
-        {shown(pending).length > 0 ? cards(shown(pending)) : <p className="review-queue__empty">这一类都审完了。</p>}
+        {queue.length > 0 ? cards(queue) : <p className="review-queue__empty">{kind ? '这一类都审完了。' : '案卷都审完了。'}</p>}
         {doneShown.length > 0 && (
           <>
             <h2 className="review-queue__sub">已审 {doneShown.length} 份</h2>
@@ -157,10 +177,10 @@ export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
             <Seal text="驳" size={54} variant="outline" />
           </div>
           <p className="review-idle__text">
-            {pending.length ? '左边是待审的案卷，先从等得最久的那一份看起。' : '案卷都审完了。'}
+            {queue.length ? '左边是待审的案卷，先从等得最久的那一份看起。' : kind && pending.length ? '这一类都审完了。' : '案卷都审完了。'}
           </p>
-          {pending.length > 0 && (
-            <button type="button" className="btn btn--primary" onClick={() => open(pending[0])}>
+          {queue.length > 0 && (
+            <button type="button" className="btn btn--primary" onClick={() => open(queue[0])}>
               打开等得最久的一份
             </button>
           )}

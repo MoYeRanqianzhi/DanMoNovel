@@ -8,13 +8,13 @@
  * - 两天之间是一道齿孔线，骑缝章压在线上，旁边写较早那天结账时的链值（每一笔连同上一笔的值一起算，见 admin.ts 的 chainNext）：
  *   改动、删去或插入任何一笔，它后面的链值全都对不上。"核对"从最早的那道骑缝起逐个核一遍。
  * - 筛选：拿起一方名章只看这个人经手的，或者按事由的类别看。筛掉的行不显示，页脚写另有几笔；链值照旧，它管的是整页。
- * - 这次打开管理站之后新记的（审核页盖的章、撤回）接在今天那一页的末尾；刚记下不久的墨迹未干，过一会儿才干。
+ * - 这次打开管理站之后新记的（审核页盖的章、总览里处理的举报、撤回……）接在今天那一页的末尾；刚记下不久的墨迹未干，过一会儿才干。
  * 宽屏右边一列是书口的日期索引，点一下翻到那一天，正在看的那天标一道红线；手机上没有。
  * 正式版账簿由服务端追加，链值用加密哈希、连同时刻一起算，并定期另外存证；导出带链值与服务端的签名（原型提示未接入）。
  */
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Download, ShieldCheck } from 'lucide-react';
-import { CHAIN_SEED, LEDGER, STAFF, chainNext, getStaff, type LedgerAct } from '@danmo/data/admin';
+import { ALERT_ACTS, CHAIN_SEED, LEDGER, STAFF, chainNext, getStaff, type LedgerAct } from '@danmo/data/admin';
 import { toChineseNumber } from '@danmo/data/chapters';
 import { useToast } from '@danmo/design/components/overlays';
 import { Seal, TagMark } from '@danmo/design/components/ui';
@@ -25,17 +25,16 @@ import { NoAccess } from '../NoAccess';
 import { OPENED_AT, useSession, type FreshEntry } from '../session';
 import './audit.css';
 
-/** 事由的类别（筛选用） */
+/**
+ * 事由的类别（筛选用）。审核与举报合成一类：两样都是对内容下的决定，撤回也是两样共用的（按事由筛，分不开是撤回哪一样）
+ */
 const ACT_GROUPS: readonly { name: string; acts: readonly LedgerAct[] }[] = [
-  { name: '审核', acts: ['通过', '退回', '驳回', '撤回'] },
+  { name: '审核与举报', acts: ['通过', '退回', '驳回', '删除', '保留', '撤回'] },
   { name: '人事', acts: ['任命', '撤销', '停用', '重置', '下线'] },
   { name: '推荐与公告', acts: ['推荐', '公告'] },
   { name: '站规', acts: ['修订'] },
   { name: '签约', acts: ['签约'] },
 ];
-
-/** 查账时要一眼看到的事由：不予上架、撤销身份、停用账号（用红线色，其余的戳是墨色） */
-const ALERT: ReadonlySet<LedgerAct> = new Set<LedgerAct>(['驳回', '撤销', '停用']);
 
 /** 记下之后多久之内打开日志，这一笔的墨迹还没干 */
 const WET_MS = 60_000;
@@ -400,7 +399,7 @@ function LedgerLine({ line, wet, onDry }: { line: Line; wet: boolean; onDry: (id
         <span className="sr-only">{person?.name}</span>
       </span>
       <span className="ledger-line__act">
-        <span className="ledger-stamp" data-alert={ALERT.has(line.act) || undefined}>
+        <span className="ledger-stamp" data-alert={ALERT_ACTS.has(line.act) || undefined}>
           {line.act}
         </span>
       </span>

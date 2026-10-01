@@ -18,7 +18,7 @@ import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { ago, headcount } from '../format';
 import { useIdentity } from '../identity';
 import { NoAccess } from '../NoAccess';
-import { OPENED_AT, useAuthors, type AuthorEntry } from '../session';
+import { OPENED_AT, useAuthors, visibleAuthors, type AuthorEntry } from '../session';
 import './authors.css';
 
 /** 三组，按这个次序排 */
@@ -30,11 +30,6 @@ const GROUPS: readonly { state: ContractState; note: string }[] = [
 
 /** 信封在这一页里的书位名（点开时书从邮票上飞出去，返回时飞回来） */
 export const envelopeSlot = (id: string) => `envelope:${id}`;
-
-/** 名册上的这几位作者，这个身份看得到：站长、超管看全部；编辑看自己名下的与还没有编辑的 */
-export function visibleAuthors(authors: readonly AuthorEntry[], all: boolean, me: string): AuthorEntry[] {
-  return all ? [...authors] : authors.filter((a) => !a.editor || a.editor === me);
-}
 
 export function AuthorsScreen({ screen }: ScreenProps<undefined>) {
   const { can, me } = useIdentity();

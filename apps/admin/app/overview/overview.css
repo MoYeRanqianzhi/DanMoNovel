@@ -1,8 +1,18 @@
 /* ============================================================
  * 总览（overview/Overview.tsx）：编辑部的案头
+ * 从上往下：页头、待办（一摞一摞的稿子，Pile.tsx）、今日（几个数与远山）、账簿摘录；1240px 起账簿挪到右边一栏。
+ * 账簿摘录的格线与日志页同一个颜色（主色调 58% 加墨）；红线色只给超时的浮签、印与查账时要一眼看到的事由。
+ * 举报的面板（Reports.tsx）由 Sheet 挂到 <body> 下，不在 .overview 里面，那几条规则不能靠 .overview 上的变量。
+ * 这一页的样式会一直留着（页面栈不卸载），选择器都以本页的类名开头。
  * ============================================================ */
 .overview {
+  --ov-ledger-ink: color-mix(in oklab, var(--blush) 58%, var(--ink));
+  --ov-rule: color-mix(in oklab, var(--ov-ledger-ink) 55%, transparent);
   padding-top: var(--sp-5);
+  padding-bottom: var(--sp-12);
+}
+[data-theme='changye'] .overview {
+  --ov-rule: color-mix(in oklab, var(--ov-ledger-ink) 34%, transparent);
 }
 @media (min-width: 900px) {
   .overview {
@@ -10,7 +20,7 @@
   }
 }
 
-/* ---- 页头：标题与节气日期，右上角手里的印 ---- */
+/* ---- 页头：标题，问候与节气日期，右上角手里的印 ---- */
 .ov-head {
   display: flex;
   align-items: flex-end;
@@ -22,6 +32,12 @@
   font-size: var(--fs-14);
   color: var(--ink-2);
 }
+.ov-head__hello {
+  margin-right: 12px;
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  color: var(--ink);
+}
 /* 手里的印：点开是"我"；悬停时像被拿起来一点 */
 .ov-head__seal {
   padding: 4px;
@@ -30,4 +46,432 @@
 }
 .ov-head__seal:hover {
   transform: translateY(-2px) rotate(2deg);
+}
+
+/* ---- 版面：一栏；宽屏右边一栏是账簿 ---- */
+.ov-grid {
+  display: grid;
+  gap: var(--sp-10);
+  margin-top: var(--sp-8);
+}
+@media (min-width: 1240px) {
+  .ov-grid {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    column-gap: var(--sp-12);
+    align-items: start;
+  }
+  .ov-ledger {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}
+/* 标题与右边的小东西（图例、"翻开账簿"）在一行 */
+.ov-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px var(--sp-4);
+}
+
+/* ---- 待办：一摞一摞的稿子立在案头上 ---- */
+.ov-piles {
+  display: grid;
+  /* 一格至少 96px：1240px 刚分两栏时左栏只有六百五十几，六摞要排得下一行；
+   * 窄的手机（360 宽，再让出滚动条）上 96px 只排得下两格，取一行的 30% 保证三格 */
+  grid-template-columns: repeat(auto-fill, minmax(min(96px, 30%), 1fr));
+  gap: var(--sp-4) var(--sp-3);
+  margin-top: var(--sp-3);
+}
+.pile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding-bottom: 6px;
+  border-radius: var(--radius-m);
+  text-align: center;
+}
+.pile__name {
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  line-height: 1.3;
+}
+.pile__amount {
+  margin-top: 1px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.pile__sub {
+  margin-top: 1px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.pile__sub[data-alert] {
+  color: var(--thread-ink);
+}
+.pile[data-empty] .pile__name {
+  color: var(--ink-2);
+}
+
+/* 一摞的画（Pile.tsx）：纸面是纸色，两个切口叠一点阴影色（随主题），切口上的细线是一页一页的纸 */
+.pile-art {
+  --pile-edge: color-mix(in oklab, var(--ink) 16%, transparent);
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.pile-art__shade {
+  stop-color: rgb(var(--shadow-rgb));
+}
+.pile-art__top,
+.pile-art__front,
+.pile-art__side {
+  stroke: var(--pile-edge);
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+}
+.pile-art__top {
+  fill: var(--sheet);
+}
+.pile-art__front {
+  fill: color-mix(in oklab, var(--sheet), rgb(var(--shadow-rgb)) 9%);
+}
+.pile-art__side {
+  fill: color-mix(in oklab, var(--sheet), rgb(var(--shadow-rgb)) 20%);
+}
+.pile-art__leaf {
+  fill: none;
+  stroke: color-mix(in oklab, var(--ink) 11%, transparent);
+  stroke-width: 0.5;
+}
+/* 超时的那几份伸出来的浮签：超时是信息，用红线色 */
+.pile-art__flag {
+  fill: var(--thread);
+}
+/* 稿纸的格线与日志页账页的格线同一个颜色 */
+.pile-art__rule {
+  fill: none;
+  stroke: color-mix(in oklab, var(--blush) 58%, var(--ink));
+  stroke-width: 0.45;
+  opacity: 0.55;
+}
+.pile-art__strokes {
+  fill: none;
+  stroke: color-mix(in oklab, var(--ink) 62%, transparent);
+  stroke-width: 0.8;
+  stroke-linecap: round;
+}
+.pile-art__text {
+  fill: color-mix(in oklab, var(--ink) 24%, transparent);
+}
+.pile-art__text--head {
+  fill: color-mix(in oklab, var(--ink) 50%, transparent);
+}
+.pile-art__seal {
+  fill: var(--thread);
+}
+.pile-art__seal-text {
+  fill: var(--sheet);
+  font-family: var(--font-kai);
+  font-size: 10px;
+}
+/* 一份都没有：这一摞原来的位置只剩一圈虚线 */
+.pile-art__empty {
+  fill: none;
+  stroke: color-mix(in oklab, var(--ink) 26%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+/* 指着这一摞：最上面那一叠提起来一点，像要拿起来看 */
+.pile-art__lift {
+  transition: transform var(--dur-base) var(--ease-soft);
+}
+.pile:hover .pile-art__lift,
+.pile:focus-visible .pile-art__lift {
+  transform: translateY(-6px);
+}
+
+/* ---- 今日：几个数用墨写，下面是远山（共用的 hills.css） ---- */
+.ov-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-4);
+  margin-top: var(--sp-5);
+}
+/* 名目在上、数在下（与作者站数据页的三个总数同一个排法）；dd 默认左边缩进 40px */
+.ov-figure dt {
+  font-size: var(--fs-12);
+  letter-spacing: 0.2em;
+  color: var(--ink-2);
+}
+.ov-figure dd {
+  margin: 2px 0 0;
+  white-space: nowrap;
+}
+/* 墨写的数：楷书的数字，墨色边上洇开一点 */
+.ov-figure strong {
+  font-family: var(--font-kai);
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 1px color-mix(in oklab, var(--ink) 35%, transparent);
+}
+.ov-figure dd span {
+  margin-left: 4px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+@media (min-width: 900px) {
+  .ov-figure strong {
+    font-size: 2.75rem;
+  }
+}
+
+/* ---- 账簿摘录：账页的抬头双线，一行一笔（与日志页手机上的排法一样） ---- */
+.ov-ledger__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+  transition: color var(--dur-quick) ease;
+}
+.ov-ledger__more:hover {
+  color: var(--ink);
+}
+.ov-ledger__more svg {
+  width: 16px;
+  height: 16px;
+}
+.ov-ledger__empty {
+  margin-top: var(--sp-4);
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.ov-lines {
+  margin-top: var(--sp-3);
+  border-top: 3px double var(--ov-rule);
+}
+.ov-line {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'who target act'
+    'who note time';
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ov-rule);
+}
+/* 只有自己经手的：不用名章那一栏 */
+.ov-lines[data-mine] .ov-line {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'target act'
+    'note time';
+}
+.ov-line__who {
+  grid-area: who;
+  align-self: start;
+  padding-top: 2px;
+}
+.ov-line__target {
+  grid-area: target;
+  min-width: 0;
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.45;
+}
+.ov-line__act {
+  grid-area: act;
+  justify-self: end;
+}
+.ov-line__note {
+  grid-area: note;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.ov-line__time {
+  grid-area: time;
+  justify-self: end;
+  align-self: end;
+  font-size: var(--fs-12);
+  line-height: 1.6;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* 账簿铺满一栏宽（640px 起、右边一栏之前）：一笔排成一行，栏目与日志页电脑上的一样。
+ * 每一行是各自的网格，栏宽都要定死（时刻那一栏写"昨天 22:20"时比"06:54"宽，用 auto 会让附注那一栏左右错开） */
+@media (min-width: 640px) and (max-width: 1239.98px) {
+  .ov-line {
+    grid-template-columns: 30px 64px minmax(0, 1.25fr) minmax(0, 1fr) 76px;
+    grid-template-areas: 'who act target note time';
+    align-items: center;
+  }
+  .ov-lines[data-mine] .ov-line {
+    grid-template-columns: 64px minmax(0, 1.25fr) minmax(0, 1fr) 76px;
+    grid-template-areas: 'act target note time';
+  }
+  .ov-line__who {
+    align-self: center;
+    padding-top: 0;
+  }
+  .ov-line__act {
+    justify-self: start;
+  }
+  .ov-line__time {
+    align-self: center;
+  }
+}
+/* 事由：一枚墨色的小戳，歪一点；查账时要一眼看到的用红线色（与日志页的 .ledger-stamp 一样） */
+.ov-stamp {
+  display: inline-block;
+  padding: 2px 6px 1px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--font-kai);
+  font-size: 14px;
+  line-height: 1.25;
+  letter-spacing: 0.08em;
+  color: color-mix(in oklab, var(--ink) 80%, transparent);
+  rotate: -4deg;
+}
+.ov-stamp[data-alert] {
+  color: var(--thread-ink);
+}
+/* 这次新记、一分钟之内的：墨迹未干 */
+.ov-line[data-wet] > :not(.ov-line__who) {
+  animation: ov-wet 3.2s ease-out both;
+}
+@keyframes ov-wet {
+  from {
+    filter: blur(0.6px);
+    text-shadow:
+      0 0 0.6px currentColor,
+      0 0 8px color-mix(in oklab, var(--ink) 30%, transparent);
+  }
+  to {
+    filter: none;
+    text-shadow: none;
+  }
+}
+
+/* ---- 举报的面板（Reports.tsx）：一条一张纸条，删去或留下 ---- */
+.reports__count {
+  margin-bottom: var(--sp-4);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.reports {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.report {
+  position: relative;
+  padding: 14px 16px 12px;
+  border-radius: 3px;
+  background: var(--paper);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 8px 18px -14px rgb(var(--shadow-rgb) / 0.55);
+}
+.report:nth-child(odd) {
+  rotate: -0.4deg;
+}
+.report:nth-child(even) {
+  rotate: 0.3deg;
+}
+.report__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.report__kind {
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--paper);
+  background: color-mix(in oklab, var(--ink) 78%, transparent);
+}
+.report__reason {
+  font-size: 13px;
+  color: var(--ink);
+}
+.report__meta {
+  font-variant-numeric: tabular-nums;
+}
+/* blockquote 默认左右缩进 40px */
+.report__excerpt {
+  margin: 8px 0 0;
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.65;
+  transition: opacity var(--dur-base) ease;
+}
+.report[data-verdict='删'] .report__excerpt {
+  opacity: 0.5;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklab, var(--ink) 70%, transparent);
+}
+.report[data-verdict='留'] .report__excerpt {
+  opacity: 0.6;
+}
+/* 两方印：与审核页的印盒同一个样子，印下写着是什么 */
+.report__seals {
+  display: flex;
+  justify-content: flex-end;
+  gap: 18px;
+  margin-top: 6px;
+}
+.report__seal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.report__seal .seal {
+  transition: transform var(--dur-quick) var(--ease-soft);
+}
+.report__seal:hover .seal {
+  transform: rotate(-8deg) translateY(-3px);
+}
+/* 盖过之后：结果与撤回；印落在纸条右边 */
+.report__done {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  margin-top: 6px;
+  padding-right: 76px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.report__undo {
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 3px;
+}
+.report__undo:hover {
+  text-decoration-color: currentColor;
+}
+/* 印外面的一层：定位写在这里，不写在 .stamp 上（生产构建里共用的 stamp.css 排在本页样式后面，同样分量的选择器会盖掉这里） */
+.report__stamp {
+  position: absolute;
+  right: 18px;
+  bottom: 10px;
+  pointer-events: none;
 }
