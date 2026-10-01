@@ -1,0 +1,32 @@
+/*
+ * 一笔墨迹（InkStroke.tsx）：起笔、笔身、收笔三段排成一行。
+ * 长度 = 起笔与收笔的固定宽度（--ink-min）+ 剩下的宽度 × --ink-w（0~1，相对外面那一格）；
+ * 浓淡 --ink-a 加在整笔上（opacity 让三段先合成再变淡，压住的接缝不会更深）。
+ */
+.ink-stroke {
+  --ink-min: 46px;
+  display: flex;
+  width: calc(var(--ink-min) + (100% - var(--ink-min)) * var(--ink-w));
+  height: 16px;
+  color: var(--ink);
+  opacity: var(--ink-a);
+}
+.ink-stroke svg {
+  height: 100%;
+  overflow: visible;
+  fill: currentColor;
+}
+.ink-stroke__head {
+  flex: none;
+  width: 16px;
+}
+/* 笔身左右各多出 1px，压住起笔与收笔，接缝处不透出细缝 */
+.ink-stroke__body {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0 -1px;
+}
+.ink-stroke__tail {
+  flex: none;
+  width: 30px;
+}

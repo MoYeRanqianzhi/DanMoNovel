@@ -3,12 +3,13 @@
  *
  * 段评先引一句原文，再是读者写的话；左上角一枚书签形标签写明是哪种评论，旁边是出自哪本书、哪一章。
  * 信笺的横线与行高对齐，字正好落在线上（样式见 letter.css）。
- * 作者回过的信，末尾多一段"回信"，用作者自己的闲章落款。
+ * 作者回过的信，末尾多一段"回信"，用作者自己的闲章落款；刚寄出的回信，闲章当场盖下去（Stamp）。
  */
 import { Heart } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { AUTHOR, WORKS, type ReaderLetter } from '@danmo/data/author';
 import { chapterTitle } from '@danmo/data/chapters';
+import { Stamp } from '@danmo/design/components/Stamp';
 import { Seal, TagMark } from '@danmo/design/components/ui';
 import { formatAgo, formatNumber } from '../format';
 import './letter.css';
@@ -21,9 +22,11 @@ interface LetterCardProps {
   children?: ReactNode;
   /** 高亮：从书房点进来时，互动页把对应的那封信标出来 */
   focused?: boolean;
+  /** 回信刚寄出：大于 0 时闲章当场盖下去，而不是静静印在那里 */
+  stamped?: number;
 }
 
-export function LetterCard({ letter: l, onOpen, children, focused }: LetterCardProps) {
+export function LetterCard({ letter: l, onOpen, children, focused, stamped = 0 }: LetterCardProps) {
   const work = WORKS.find((w) => w.book.id === l.bookId);
   const where = work
     ? `《${work.book.title}》${l.chapter !== undefined ? ` · ${chapterTitle(work.book, l.chapter)}` : ''}`
@@ -50,7 +53,11 @@ export function LetterCard({ letter: l, onOpen, children, focused }: LetterCardP
       {l.reply && (
         <span className="letter__reply">
           <span className="letter__reply-text">{l.reply}</span>
-          <Seal text={AUTHOR.seal} size={22} />
+          {stamped > 0 ? (
+            <Stamp text={AUTHOR.seal} play={stamped} size={22} tilt={-4} className="letter__stamp" />
+          ) : (
+            <Seal text={AUTHOR.seal} size={22} />
+          )}
         </span>
       )}
     </>
