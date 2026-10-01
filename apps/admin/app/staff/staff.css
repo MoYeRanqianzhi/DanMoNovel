@@ -1,0 +1,1015 @@
+/* ============================================================
+ * 身份 /staff：印谱（staff/Staff.tsx）与面板（staff/Dossier.tsx）
+ *
+ * 一张纸（.seal-book）上：五方身份印排成一排，红线拱在上面（.seal-row）；每方印底下一组名帖（.seal-group）。
+ * 宽屏五列，印正好压在各自那一列上面：两个格子同样五等分、同样的间距（--book-gap），Staff.tsx 按这个算红线的落点。
+ * 手机上五方印缩成一排放在上面，各组竖着排。
+ * 纸的边框是一道文武边栏（外粗内细两道线），线色与稿纸、账簿的格线相同（主色调 58% 加墨，长夜更淡）。
+ * 红线色只给信息：谁能任命谁的红线、印、两步验证没开、封条、撤销时划的那一道。
+ * 面板（Sheet）挂在 <body> 下，不在 .staff 里面：面板用到的变量在 .dossier、.slip-view 上另写一份。
+ * 这一页的样式会一直留着（页面栈不卸载），选择器都以本页的类名开头；这一页不用正的 z-index（见 route-styles 记忆）。
+ * ============================================================ */
+.staff,
+.dossier,
+.slip-view {
+  --book-ink: color-mix(in oklab, var(--blush) 58%, var(--ink));
+  --book-rule: color-mix(in oklab, var(--book-ink) 55%, transparent);
+  --book-rule-soft: color-mix(in oklab, var(--book-ink) 26%, transparent);
+}
+[data-theme='changye'] :is(.staff, .dossier, .slip-view) {
+  --book-rule: color-mix(in oklab, var(--book-ink) 34%, transparent);
+  --book-rule-soft: color-mix(in oklab, var(--book-ink) 16%, transparent);
+}
+.staff {
+  /* 五列之间的间距：上面那排印与底下的五列共用 */
+  --book-gap: 12px;
+  padding-top: var(--sp-5);
+}
+@media (min-width: 900px) {
+  .staff {
+    --book-gap: 18px;
+    padding-top: var(--sp-10);
+  }
+}
+
+/* ---------------- 页头 ---------------- */
+.staff-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4) var(--sp-8);
+}
+.staff-head__lead {
+  max-width: 40em;
+  margin-top: 6px;
+  font-size: var(--fs-14);
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.staff-head__count {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.staff-head .btn {
+  height: 44px;
+  padding: 0 22px;
+  font-size: var(--fs-14);
+}
+.staff-head__view {
+  max-width: 20em;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+/* ---------------- 一张纸：印谱与名册 ---------------- */
+.seal-book {
+  position: relative;
+  margin-top: var(--sp-6);
+  padding: 22px 18px 26px;
+  border-radius: 4px;
+  box-shadow:
+    0 1px 2px rgb(var(--shadow-rgb) / 0.08),
+    0 26px 50px -32px rgb(var(--shadow-rgb) / 0.6);
+}
+/* 文武边栏：外面一道粗、里面隔一点一道细 */
+.seal-book::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1.5px solid var(--book-rule);
+  outline: 1px solid var(--book-rule-soft);
+  outline-offset: -5px;
+  pointer-events: none;
+}
+@media (min-width: 900px) {
+  .seal-book {
+    padding: 34px 34px 38px;
+  }
+  .seal-book::before {
+    inset: 12px;
+  }
+}
+
+/* 题签：右上角一张竖条，写"印谱"（红线从左边拱过来，右上角空着） */
+.seal-book__head {
+  display: flex;
+  justify-content: flex-end;
+}
+.seal-book__title {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  writing-mode: vertical-rl;
+  padding: 10px 5px;
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  font-weight: 400;
+  letter-spacing: 0.32em;
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--book-rule);
+}
+@media (min-width: 900px) {
+  .seal-book__title {
+    top: 30px;
+    right: 30px;
+    padding: 12px 6px;
+    font-size: var(--fs-18);
+  }
+}
+/* 纸上那一句：突出的那方印由谁任命、能任命谁（写在红线上方，两边让开右上角的题签） */
+.seal-book__caption {
+  width: 100%;
+  padding: 0 48px;
+  font-family: var(--font-kai);
+  font-size: 15px;
+  line-height: 1.7;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--ink-2);
+}
+@media (min-width: 900px) {
+  .seal-book__caption {
+    padding: 0 64px;
+  }
+}
+
+/* ---------------- 五方印与红线 ---------------- */
+.seal-row {
+  /* 红线拱起的高度：Staff.tsx 读这个值算线的形状 */
+  --arc-h: 84px;
+  position: relative;
+  padding-top: var(--arc-h);
+}
+@media (min-width: 900px) {
+  .seal-row {
+    --arc-h: 128px;
+  }
+}
+.seal-row__threads {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.seal-row__thread {
+  fill: none;
+  stroke: var(--thread);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  opacity: 0.26;
+  transition:
+    opacity var(--dur-base) ease,
+    stroke-width var(--dur-base) ease;
+}
+.seal-row__thread[data-on] {
+  opacity: 0.95;
+  stroke-width: 1.6;
+}
+/* 第一次画出来时一根一根系上（pathLength 为 1：虚线一段实、一段空，偏移从 1 到 0 就是从起点画到终点） */
+[data-motion='full'] .seal-row__thread {
+  stroke-dasharray: 1 1;
+  animation: staff-tie 1100ms var(--ease-soft) both;
+}
+@keyframes staff-tie {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.seal-row__knot {
+  opacity: 0.5;
+  transition: opacity var(--dur-base) ease;
+}
+.seal-row__knot[data-on] {
+  opacity: 1;
+}
+.seal-row__knot circle {
+  fill: var(--thread);
+}
+.seal-row__knot path {
+  fill: none;
+  stroke: var(--thread);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+.seal-row__seals {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  column-gap: var(--book-gap);
+}
+.seal-row__seal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding-bottom: 4px;
+  border-radius: 8px;
+}
+.seal-row__seal:focus-visible {
+  outline-offset: 4px;
+}
+/* 手机上印小一号（Seal 的尺寸写在行内样式里，这里要 !important 才盖得过） */
+.seal-row .seal-row__face {
+  --seal: 44px !important;
+  transition: transform var(--dur-quick) var(--ease-soft);
+}
+@media (min-width: 900px) {
+  .seal-row .seal-row__face {
+    --seal: 64px !important;
+  }
+}
+/* 指着的那方印微微一转、抬起，像被拿起来 */
+.seal-row__seal:hover .seal-row__face {
+  transform: rotate(-8deg) translateY(-3px);
+}
+.seal-row__name {
+  margin-top: 6px;
+  font-family: var(--font-kai);
+  font-size: 15px;
+  line-height: 1.2;
+}
+.seal-row__count {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+@media (min-width: 900px) {
+  .seal-row__name {
+    margin-top: 8px;
+    font-size: var(--fs-18);
+  }
+  .seal-row__count {
+    font-size: 13px;
+  }
+}
+
+/* ---------------- 每方印底下的一组 ---------------- */
+.seal-book__groups {
+  margin-top: var(--sp-6);
+}
+.seal-group + .seal-group {
+  margin-top: var(--sp-8);
+}
+.seal-group__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
+}
+.seal-group__seal {
+  grid-row: span 2;
+}
+.seal-group__name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  font-weight: 400;
+}
+.seal-group__name small {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.seal-group__from {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.seal-group__duty {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+/* 名帖之间的间距写成变量：收起中的名帖末了用负外边距吃掉它（staff-leave） */
+.seal-group__tags {
+  --tag-gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tag-gap);
+  margin-top: 12px;
+}
+.seal-group__empty {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+/* 宽屏：五列，每列的印就在头顶上（上面那一排），这里只写职责；名字与由谁任命留给读屏 */
+@media (min-width: 900px) {
+  .seal-book__groups {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: auto auto;
+    column-gap: var(--book-gap);
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--book-rule-soft);
+  }
+  /* min-width 0：网格项默认不肯窄过自己的内容，名帖会挤出这一列 */
+  .seal-group,
+  .seal-group + .seal-group {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    row-gap: 18px;
+    min-width: 0;
+    margin-top: 0;
+  }
+  .seal-group__head {
+    display: block;
+    text-align: center;
+  }
+  .seal-group__seal {
+    display: none;
+  }
+  .seal-group__name,
+  .seal-group__from {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .seal-group__duty {
+    margin-top: 0;
+    padding: 0 4px;
+  }
+  /* 一根绳从职责底下垂下来，穿过这一列的每张名帖（名帖不透明，绳只在帖与帖之间露出来） */
+  /* 名帖只占自己的高度（不跟着最长的那一列拉长），绳才停在最后一张名帖上。
+   * 这一列是容器：列窄的时候（一千一百宽以下）名帖改成竖排，见下面的 @container */
+  .seal-group__tags {
+    --tag-gap: 12px;
+    position: relative;
+    align-self: start;
+    margin-top: 0;
+    container-type: inline-size;
+  }
+  .seal-group__tags::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -18px;
+    bottom: 30px;
+    width: 1px;
+    background: var(--book-rule);
+  }
+  .seal-group__empty {
+    margin-top: 0;
+    text-align: center;
+  }
+}
+
+/* ---------------- 名帖 ---------------- */
+.staff-tag {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  text-align: left;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image: var(--grain);
+  background-size: 220px 220px;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 8px 16px -14px rgb(var(--shadow-rgb) / 0.7);
+  transition:
+    transform var(--dur-quick) var(--ease-soft),
+    box-shadow var(--dur-quick) ease;
+}
+button.staff-tag:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 14px 24px -16px rgb(var(--shadow-rgb) / 0.8);
+}
+button.staff-tag:focus-visible {
+  outline-offset: 2px;
+}
+.staff-tag__chop {
+  flex: none;
+}
+.staff-tag__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.staff-tag__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-kai);
+  font-size: 17px;
+  line-height: 1.35;
+}
+.staff-tag__me {
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--ink-2);
+  background: color-mix(in oklab, var(--ink) 8%, transparent);
+}
+.staff-tag__meta,
+.staff-tag__alert {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+/* 两半之间空一点；窄的名帖里各自成行，不在词中间断开 */
+.staff-tag__alert {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.6em;
+  color: var(--thread-ink);
+}
+
+/* 列窄的时候名帖竖着挂：名章在上，字居中排在下面，像一块腰牌 */
+@container (max-width: 160px) {
+  .staff-tag {
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 8px 10px;
+    text-align: center;
+  }
+  .staff-tag__text {
+    align-items: center;
+    max-width: 100%;
+  }
+  .staff-tag__name,
+  .staff-tag__alert {
+    justify-content: center;
+  }
+}
+
+/* 停用的：名章褪成灰，一道封条斜贴过名帖右边（字让开封条，太长的省略） */
+.staff-tag[data-disabled] .staff-tag__text {
+  padding-right: 96px;
+}
+.staff-tag[data-disabled] .staff-tag__chop {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+.staff-tag[data-disabled] .staff-tag__name {
+  color: var(--ink-2);
+}
+.staff-tag__strip {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  width: 92px;
+  height: 20px;
+  margin-top: -10px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-kai);
+  font-size: 12px;
+  letter-spacing: 0.8em;
+  text-indent: 0.8em;
+  color: var(--thread-ink);
+  background-color: color-mix(in oklab, var(--paper) 88%, var(--blush));
+  background-image: var(--grain);
+  background-size: 220px 220px;
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--thread) 28%, transparent),
+    0 3px 6px -4px rgb(var(--shadow-rgb) / 0.5);
+  rotate: -14deg;
+  pointer-events: none;
+}
+
+/* 墨迹未干：刚任命的名帖从绳上落下来，字迹先洇着，过一会儿才干。
+ * 等面板收起来再播（钤印 520ms，札子再留 520ms，面板收起 260ms） */
+.staff-tag[data-wet] {
+  animation: staff-wet 3.2s ease-out 1.1s both;
+}
+@keyframes staff-wet {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+    filter: blur(1px);
+  }
+  14% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0.7px);
+  }
+  100% {
+    filter: none;
+  }
+}
+.staff-tag__meta[data-wet],
+.staff-tag__alert[data-wet] {
+  animation: staff-wet-line 3.2s ease-out 1.1s both;
+}
+@keyframes staff-wet-line {
+  from {
+    filter: blur(0.6px);
+    text-shadow:
+      0 0 0.6px currentColor,
+      0 0 8px color-mix(in oklab, var(--ink) 30%, transparent);
+  }
+  to {
+    filter: none;
+    text-shadow: none;
+  }
+}
+.staff-tag__strip[data-wet] {
+  animation: staff-strip 700ms cubic-bezier(0.3, 0.9, 0.4, 1) 1.1s both;
+}
+@keyframes staff-strip {
+  0% {
+    opacity: 0;
+    scale: 1.25;
+  }
+  60% {
+    opacity: 1;
+    scale: 0.97;
+  }
+  100% {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/* 撤销、停用：名帖上先划一道红线，再收起（grid 的一行从 1fr 收到 0fr；末了负外边距吃掉列表的间距） */
+.seal-group__leaving {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: staff-leave 1s var(--ease-inout) 1.1s both;
+}
+.seal-group__leaving > div {
+  min-height: 0;
+  overflow: hidden;
+}
+.seal-group__leaving .staff-tag::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 50%;
+  height: 1.5px;
+  background: var(--thread);
+  transform-origin: left center;
+  animation: staff-strike 420ms var(--ease-soft) 1.1s both;
+}
+@keyframes staff-strike {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes staff-leave {
+  0%,
+  45% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    margin-bottom: 0;
+  }
+  100% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    margin-bottom: calc(var(--tag-gap) * -1);
+  }
+}
+
+/* 减少动效：全站的规则只把时长压到 1ms，不动延迟（见 TODO 的"减少动效不清延迟"）。
+ * 这几条带 1.1s 延迟、填充 both，延迟里停在第一帧（新名帖、封条是透明的），这里把延迟清掉；动画照旧 1ms 播完，animationend 照样记"干了" */
+[data-motion='reduced'] :is(.staff-tag, .staff-tag__meta, .staff-tag__alert, .staff-tag__strip)[data-wet] {
+  animation-delay: 0s;
+}
+
+/* ---------------- 印谱之外、规矩 ---------------- */
+.staff-outside,
+.staff-rules {
+  margin-top: var(--sp-10);
+}
+.staff-outside__tags {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  margin-top: var(--sp-4);
+}
+.staff-rules__list {
+  display: grid;
+  gap: 8px;
+  max-width: 46em;
+  margin-top: var(--sp-4);
+}
+.staff-rules__list li {
+  display: grid;
+  grid-template-columns: 4.4em minmax(0, 1fr);
+  gap: 10px;
+  font-family: var(--font-kai);
+  font-size: 15px;
+  line-height: 1.8;
+}
+.staff-rules__no {
+  color: var(--ink-2);
+}
+
+/* ---------------- 面板：一方印的释文、一个人的名帖 ---------------- */
+.dossier,
+.slip-view {
+  outline: none;
+}
+.dossier__head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dossier__head > .seal {
+  flex: none;
+}
+.dossier__head-text {
+  min-width: 0;
+}
+.dossier__lead {
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+.dossier__sub {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.dossier__roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+}
+.dossier__role {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dossier__chop[data-variant='outline'] {
+  opacity: 0.55;
+  filter: grayscale(1);
+}
+.dossier__subtitle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: var(--sp-5);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  font-weight: 400;
+}
+.dossier__subtitle small {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.dossier__grants {
+  display: grid;
+  gap: 2px;
+  margin-top: 6px;
+  font-size: var(--fs-14);
+  line-height: 1.7;
+}
+.dossier__grants li::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--ink-2);
+}
+.dossier__holders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 10px;
+}
+.dossier__holders li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.dossier__note {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-s);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-2);
+  background: var(--sheet-2);
+}
+.dossier__foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--sp-5);
+}
+.dossier__foot .btn {
+  height: 42px;
+  padding: 0 22px;
+  font-size: var(--fs-14);
+}
+.dossier__facts {
+  margin-top: var(--sp-4);
+  border-top: 1px solid var(--line);
+}
+.dossier__facts > div {
+  display: grid;
+  grid-template-columns: 5.5em minmax(0, 1fr);
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-14);
+}
+.dossier__facts dt {
+  color: var(--ink-2);
+}
+/* 浏览器给 dd 默认左缩进 40px，全站的基础样式没有清 */
+.dossier__facts dd {
+  margin: 0;
+}
+.dossier__facts dd[data-alert] {
+  color: var(--thread-ink);
+}
+.dossier__acts li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.dossier__act-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.dossier__act-label {
+  font-size: 15px;
+}
+.dossier__act-hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.dossier__acts .btn {
+  flex: none;
+  height: 34px;
+  padding: 0 16px;
+  font-size: var(--fs-14);
+}
+.dossier__acts li[data-off] .dossier__act-label {
+  color: var(--ink-2);
+}
+.dossier__acts li[data-off] .btn {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* 名帖面板里的播报（转让的提示）：空着时让出位置，但不能 display: none，否则读屏不念后来填进去的字 */
+.dossier__status {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-s);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-2);
+  background: var(--sheet-2);
+}
+.dossier__status:empty {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---------------- 面板：札子 ---------------- */
+.slip-form {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.slip-pick__label {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.slip-pick__people,
+.slip-pick__seals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+}
+.slip-pick__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 62px;
+  padding: 4px 0 2px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.slip-pick__item .seal {
+  transition: transform var(--dur-quick) var(--ease-soft);
+}
+.slip-pick__item:not([aria-disabled]):hover .seal,
+.slip-pick__item[aria-pressed='true'] .seal {
+  transform: rotate(-8deg) translateY(-2px);
+}
+.slip-pick__item[aria-disabled] {
+  cursor: not-allowed;
+}
+.slip-pick__item[aria-disabled] .seal {
+  opacity: 0.4;
+  filter: grayscale(0.7);
+}
+.slip-pick__item[aria-disabled] .slip-pick__name {
+  color: var(--ink-2);
+}
+.slip-pick__why {
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--ink-2);
+}
+.slip-pick--row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.slip-pick--row .slip-pick__label {
+  margin-bottom: 0;
+}
+.slip-field {
+  display: grid;
+}
+.slip-field__input {
+  height: 42px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-s);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.slip-field__input:focus-visible {
+  outline: 2px solid var(--thread);
+  outline-offset: 1px;
+}
+.slip-phrases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: -8px;
+}
+.slip-phrases__item {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  background: var(--sheet-2);
+  transition:
+    color var(--dur-quick) ease,
+    background-color var(--dur-quick) ease;
+}
+.slip-phrases__item:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--blush) 45%, var(--sheet-2));
+}
+
+/* 札子本身：一张带文武边栏的笺，正文是楷书，横线打底；右下角"经手"一格，名章落在这里 */
+.slip {
+  position: relative;
+  margin-top: 18px;
+  padding: 16px 22px 14px;
+  border-radius: 3px;
+  background-color: var(--paper);
+  background-image: var(--grain);
+  background-size: 220px 220px;
+  box-shadow:
+    0 0 0 1.5px var(--book-rule),
+    0 0 0 4px var(--paper),
+    0 0 0 5px var(--book-rule-soft),
+    0 14px 26px -18px rgb(var(--shadow-rgb) / 0.6);
+}
+.slip__text,
+.slip__note {
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  line-height: 1.95;
+  background-image: linear-gradient(to bottom, transparent calc(100% - 1px), var(--book-rule-soft) calc(100% - 1px));
+  background-size: 100% 1.95em;
+}
+.slip__text {
+  text-wrap: pretty;
+}
+.slip__text b {
+  font-weight: 400;
+  color: var(--ink);
+  box-shadow: inset 0 -0.42em 0 color-mix(in oklab, var(--blush) 45%, transparent);
+}
+.slip__note {
+  font-size: var(--fs-16);
+  color: var(--ink-2);
+}
+.slip__blank {
+  display: inline-block;
+  width: 3.2em;
+  height: 1em;
+  margin: 0 0.2em;
+  vertical-align: -0.12em;
+  border-bottom: 1px solid var(--ink-2);
+}
+.slip__foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.slip__date {
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.slip__sign {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.slip__slot {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--book-rule-soft);
+}
+.slip[data-sealed] .slip__slot {
+  box-shadow: none;
+}
+.slip-view__law {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.slip-view__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+.slip-view__actions .btn {
+  height: 42px;
+  padding: 0 20px;
+  font-size: var(--fs-14);
+}
+.slip-view__press {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.slip-view__missing {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.slip-view__press .btn[aria-disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.slip-view__press .btn .seal {
+  background: var(--paper);
+}
