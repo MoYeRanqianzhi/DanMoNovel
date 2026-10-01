@@ -7,7 +7,8 @@
  * - 互动：读者来信（段评、章评、书评）与书友
  * - 数据：阅读、收藏、跟读率
  * "我"（笔名、闲章、签约与等级、主题）放在侧栏底部；窄屏从书房右上角的闲章进入。
- * 公开的作者站首页（/）不是标签页，没有底部导航，只有它自己的"开始写作"入口。
+ * 公开的作者站首页（/）是落地页（handle.bare）：访客还没有登录，它在栈顶时侧栏与底部导航都收起，
+ * 只有它自己的"开始写作"与"登录"入口。
  * 写作页不是标签页：进入时底部导航收起，整屏留给稿纸。
  */
 import { ChartSpline, LampDesk, LibraryBig, Mails, UserRound } from 'lucide-react';
@@ -34,7 +35,7 @@ export default function AuthorShell() {
 function Chrome({ stage }: { stage: ReactNode }) {
   const { topHandle } = useStack();
   return (
-    <div className="app">
+    <div className="app" data-bare={topHandle.bare || undefined}>
       <SideRail
         items={TABS}
         logo={<Logo size={38} vertical seal="作者" name="耽墨作者站" />}
