@@ -27,4 +27,4 @@
 - [客户端：Tauri 2](memory/client-shell.md) — 做桌面或移动客户端、打包、原生能力、鸿蒙适配时读；用户已确认 Tauri 2 承载同一套 Web 前端，鸿蒙后续走 ArkWeb
 - [后端语言：Go](memory/backend-language.md) — 写服务端代码、对接国内云服务、设计服务端进程与端口时读；用户已确认用 Go，Rust 只用于 Tauri 客户端
 - [中文输入法与输入框](memory/cjk-input.md) — 写任何输入框的事件处理、字数上限或回车提交时读；组字期间不改输入框的值，组字中的回车是选字，上限很短时不设 maxLength、保存时校验
-- [页面样式会一直留着](memory/route-styles.md) — 写或改任何页面的 CSS、做页面切换与淡出动效、升级 React Router 时读；访问过的页面样式不卸载，不能写漏到别的页的全局规则，页面切换要在生产构建上看
+- [页面样式会一直留着](memory/route-styles.md) — 写或改任何页面的 CSS、做页面切换与淡出动效、升级 React Router 时读；访问过的页面样式不卸载，不能写漏到别的页的全局规则，页里正的 z-index 要用 isolation 关住，页面切换要在生产构建上看
