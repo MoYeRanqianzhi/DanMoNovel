@@ -12,18 +12,19 @@
   inset: 0;
 }
 
-/* 舞台：所有页面叠放在这里；桌面端给侧栏让出位置 */
+/* 舞台：所有页面叠放在这里；桌面端给侧栏让出位置（侧栏连着左边的安全区一起让，见 nav.css） */
 .stage {
   position: absolute;
   inset: 0;
 }
 @media (min-width: 900px) {
   .stage {
-    left: var(--rail-w);
+    left: calc(var(--rail-w) + var(--safe-left));
   }
 }
 
-/* 页面：每个页面是一个独立的滚动容器（下层页面隐藏但保留滚动位置） */
+/* 页面：每个页面是一个独立的滚动容器（下层页面隐藏但保留滚动位置）。
+ * 四边都让出安全区：横放的刘海屏上，左右的刘海与圆角下面不放内容 */
 .screen {
   position: absolute;
   inset: 0;
@@ -31,6 +32,8 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-top: var(--safe-top);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
 }
 /* 根页面（标签页）底部给浮起的导航条留出空间 */
 .screen[data-root] {
@@ -40,10 +43,15 @@
   .screen[data-root] {
     padding-bottom: var(--sp-12);
   }
-  /* 落地页（handle.bare）：外壳收起了侧栏（见 nav.css），这一页往左铺到侧栏的位置。
+  /* 左边的安全区已经由侧栏让过了（舞台从侧栏右边起） */
+  .screen {
+    padding-left: 0;
+  }
+  /* 落地页（handle.bare）：外壳收起了侧栏（见 nav.css），这一页往左铺到侧栏的位置，左边的安全区由这一页自己让。
    * 不挪舞台本身：离开落地页时它还要在原处淡出，舞台一挪就会跳一下 */
   .screen[data-bare] {
-    left: calc(-1 * var(--rail-w));
+    left: calc(-1 * (var(--rail-w) + var(--safe-left)));
+    padding-left: var(--safe-left);
   }
 }
 

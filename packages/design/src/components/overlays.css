@@ -20,7 +20,8 @@
   bottom: 0;
   max-height: 86vh;
   overflow-y: auto;
-  padding: 10px var(--sp-5) calc(var(--sp-6) + var(--safe-bottom));
+  /* 手机上铺满整个宽：横放的刘海屏左右再让出安全区 */
+  padding: 10px calc(var(--sp-5) + var(--safe-right)) calc(var(--sp-6) + var(--safe-bottom)) calc(var(--sp-5) + var(--safe-left));
   border-radius: var(--radius-l) var(--radius-l) 0 0;
   box-shadow: 0 -16px 40px -24px rgb(var(--shadow-rgb) / 0.55);
   outline: none;
@@ -53,7 +54,7 @@
     top: 50%;
     bottom: auto;
     width: min(480px, 92vw);
-    padding-bottom: var(--sp-6);
+    padding: 10px var(--sp-5) var(--sp-6);
     border-radius: var(--radius-l);
     translate: -50% -50%;
     animation-name: sheet-pop;
@@ -131,6 +132,6 @@
 @media (min-width: 900px) {
   .toast-region {
     bottom: 36px;
-    padding-left: var(--rail-w);
+    padding-left: calc(var(--rail-w) + var(--safe-left));
   }
 }

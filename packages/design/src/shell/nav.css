@@ -5,8 +5,8 @@
 /* ---------------- 移动端底部导航 ---------------- */
 .tabbar {
   position: fixed;
-  left: 14px;
-  right: 14px;
+  left: calc(14px + var(--safe-left));
+  right: calc(14px + var(--safe-right));
   bottom: calc(12px + var(--safe-bottom));
   z-index: 30;
   height: var(--tabbar-h);
@@ -87,12 +87,13 @@
     top: 0;
     bottom: 0;
     z-index: 30;
-    width: var(--rail-w);
+    /* 横放的刘海屏：侧栏连着左边的安全区一起铺，图标仍在刘海右边（舞台从侧栏右边起，见 layout.css） */
+    width: calc(var(--rail-w) + var(--safe-left));
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 36px;
-    padding: 30px 0 22px;
+    padding: 30px 0 22px var(--safe-left);
     box-shadow: 1px 0 0 var(--line);
     transition:
       opacity var(--dur-base) ease,

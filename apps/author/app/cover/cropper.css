@@ -25,7 +25,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: calc(10px + var(--safe-top)) 14px 10px;
+  padding: calc(10px + var(--safe-top)) calc(14px + var(--safe-right)) 10px calc(14px + var(--safe-left));
 }
 .cropper__title {
   flex: 1;
@@ -180,7 +180,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px 22px;
-  padding: 12px 18px calc(16px + var(--safe-bottom));
+  padding: 12px calc(18px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(18px + var(--safe-left));
 }
 .cropper__slider {
   display: flex;

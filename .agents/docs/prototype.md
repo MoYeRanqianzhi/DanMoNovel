@@ -247,6 +247,11 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 移动端是底部纸条导航，列数与丝带位置由 `--tab-count`、`--tab` 计算；丝带需要 `z-index: 1`。
   - 桌面端（≥900px）是左侧栏，竖排毛笔 Logo，底部有主题入口。
   - `RailLink` 是 NavLink，带 `state={{ tab: true }}` 与 `prefetch="intent"`；点击时先调 `selectTab`，已处理就 preventDefault。
+- **安全区**（tokens.css 的 --safe-top、--safe-bottom、--safe-left、--safe-right，都是 env(safe-area-inset-*)；三站都开了 viewport-fit=cover）：
+  - .screen 四边都让（上、左、右用 padding；根页面的下边连着底部导航一起让）；底部导航左右各让 14px 加安全区。
+  - 宽屏：侧栏连着左边的安全区一起铺（宽 rail-w + safe-left，图标在刘海右边），舞台从侧栏右边起，所以 .screen 的左边不再让；落地页（data-bare）往左铺到屏幕边，自己让左边。
+  - 底部面板在手机上铺满整个宽，左右再让；轻提示在宽屏上避开侧栏与安全区。阅读器的页眉页脚与上下两栏另算（见第 10 节、待办）。
+  - Playwright 模拟不了刘海：验收时在 :root 上改这几个变量（例如 44px、34px），量 .screen、.page、底部导航、侧栏的位置。
 - **层级表**（z-index）：
 
 | 层 | 值 | 位置 |
@@ -797,7 +802,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 约稿函：横线信笺（--line-h 32px，≥900 38px，字落在线上）。题目字距 0.4em，字距也加在最后一个字后面，居中时整体偏左，所以再加 text-indent 0.4em 补齐。落款钤"约稿"。
   - **首页对共享层的改动**（packages/design 与作者站外壳）：ScreenHandle 加 `bare`，Screen 渲染 `data-bare`（stack.tsx）；layout.css ≥900px 时 `.screen[data-bare] { left: calc(-1 * var(--rail-w)) }`，不挪 .stage 本身（离开落地页时它还要在原处淡出，舞台一挪就会跳一下）；nav.css 里 `.app[data-bare] .rail` 淡出、往左让 12px，visibility 等淡出结束再隐藏；作者站 shell.tsx 按 topHandle.bare 给 .app 标 data-bare。
   - 已知不足：
-    - 横放刘海屏：三站都开了 viewport-fit=cover，共享层却只有 --safe-top、--safe-bottom，左右安全区全项目都没处理（见 TODO）。首页横放两栏时，左栏的字可能落到刘海下面（按代码推断，没在真机上看过）。
+    - 横放刘海屏：共享层 2026-10-02 补上了 --safe-left、--safe-right（页面四边、底部导航、侧栏连同舞台、底部面板、轻提示都让开了，见第 8 节），首页的两栏因此不会落到刘海下面；只用改变量的办法核过，没在真机上看过。
     - Safari、Firefox、真机与读屏软件都没测（第 12 节）。
 
 ## 14. 稿纸（packages/design/src/manuscript/）
