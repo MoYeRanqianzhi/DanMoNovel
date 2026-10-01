@@ -329,77 +329,9 @@ button.me-tie:hover {
   color: var(--ink-2);
 }
 
-/*
- * 纸样：每张是那套主题的一小片稿纸（data-theme 让里面的变量都换成那套主题的），
- * 格线用那套主题自己的线色，格子里竖写主题的名字，左下角一方小印是那套主题的红。
- * 选中的那张外面一圈红线：红线用当前主题的（圈在按钮上，按钮不在 data-theme 里面）。
- */
+/* 主题纸样（packages/design 的 ThemeSwatches）与上面的标题隔开 */
 .me-swatches {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--sp-4) var(--sp-3);
   margin-top: var(--sp-4);
-}
-@media (min-width: 700px) {
-  .me-swatches {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-  }
-}
-.me-swatch {
-  display: block;
-  border-radius: 4px;
-}
-.me-swatch[aria-pressed='true'] {
-  outline: 1.5px solid var(--thread);
-  outline-offset: 4px;
-}
-.me-swatch__paper {
-  position: relative;
-  display: block;
-  aspect-ratio: 3 / 4;
-  border-radius: 3px;
-  /* 稿纸格：从右上角起算，竖写的字正好落在格子里 */
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(to left, var(--line) 1px, transparent 1px),
-    var(--grain);
-  background-size:
-    16px 16px,
-    16px 16px,
-    220px 220px;
-  background-position:
-    right 0 top 0,
-    right 0 top 0,
-    0 0;
-  box-shadow:
-    0 0 0 1px var(--line),
-    0 12px 22px -18px rgb(var(--shadow-rgb) / 0.8);
-  transition: transform var(--dur-quick) var(--ease-soft);
-}
-.me-swatch:hover .me-swatch__paper {
-  transform: translateY(-2px);
-}
-/* 一个字占一格：字号 12px 加 4px 字距，正好 16px；上下各让 2px，字在格子正中 */
-.me-swatch__name {
-  position: absolute;
-  top: 18px;
-  right: 16px;
-  writing-mode: vertical-rl;
-  font-family: var(--font-kai);
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 4px;
-  color: var(--ink);
-}
-.me-swatch__seal {
-  position: absolute;
-  left: 10px;
-  bottom: 10px;
-  width: 9px;
-  height: 9px;
-  border-radius: 1.5px;
-  background: var(--thread);
-  transform: rotate(-6deg);
 }
 
 .me-settings {

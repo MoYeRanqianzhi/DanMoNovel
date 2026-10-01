@@ -32,8 +32,8 @@ import { Stamp } from '@danmo/design/components/Stamp';
 import { IconButton, Logo, Seal, Segmented } from '@danmo/design/components/ui';
 import { useClientValue } from '@danmo/design/lib/useClientValue';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
-import { originOf, useTheme, type MotionPref } from '@danmo/design/theme/ThemeContext';
-import { THEMES } from '@danmo/design/theme/themes';
+import { useTheme, type MotionPref } from '@danmo/design/theme/ThemeContext';
+import { ThemeSwatches } from '@danmo/design/theme/ThemeSwatches';
 import { phasePath } from '../components/moon';
 import { formatAgo, formatCount, formatNumber } from '../format';
 import { DAILY_GOALS, MOTTO_MAX, isSealText, saveProfile, sealVariant, useProfileEdit } from '../profile';
@@ -83,7 +83,7 @@ const DEFAULT_THEME = 'xiangye';
 export function MeScreen({ data }: ScreenProps<MeData>) {
   const { back, push } = useStack();
   const navigate = useNavigate();
-  const { theme, setTheme, motionPref, setMotionPref } = useTheme();
+  const { motionPref, setMotionPref } = useTheme();
   const author = { ...data.author, ...useProfileEdit() };
   const days = useClientValue(() => dayCount(author.joined), 0);
   const [editing, setEditing] = useState(false);
@@ -225,23 +225,7 @@ export function MeScreen({ data }: ScreenProps<MeData>) {
             <h2 className="section-title" id="me-themes">
               主题<small>作者站默认缃叶</small>
             </h2>
-            <div className="me-swatches">
-              {THEMES.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  className="me-swatch"
-                  aria-pressed={t.id === theme}
-                  title={t.id === DEFAULT_THEME ? `${t.note}（作者站默认）` : t.note}
-                  onClick={(e) => setTheme(t.id, originOf(e))}
-                >
-                  <span className="me-swatch__paper paper" data-theme={t.id}>
-                    <span className="me-swatch__name">{t.name}</span>
-                    <span className="me-swatch__seal" aria-hidden="true" />
-                  </span>
-                </button>
-              ))}
-            </div>
+            <ThemeSwatches defaultTheme={DEFAULT_THEME} site="作者站" className="me-swatches" />
           </section>
 
           <ul className="settings-list me-settings">
