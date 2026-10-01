@@ -23,6 +23,7 @@ interface SheetProps {
 /**
  * 移动端从底部升起的一张纸，桌面端居中显示。
  * 关闭时先播放收起动画再卸载；打开时把焦点移入面板，关闭后把焦点还给触发它的按钮。
+ * 面板里的内容已经自己拿了焦点时（例如 autoFocus 的输入框）不抢：React 在提交阶段就给它聚焦了，早于这里的副作用。
  */
 export function Sheet({ open, title, onClose, children }: SheetProps) {
   const [mounted, setMounted] = useState(open);
@@ -49,7 +50,7 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
   }, [open]);
 
   useEffect(() => {
-    if (mounted && !closing) panelRef.current?.focus();
+    if (mounted && !closing && !panelRef.current?.contains(document.activeElement)) panelRef.current?.focus();
   }, [mounted, closing]);
 
   // Esc 关闭面板。用捕获阶段并阻止传播，避免同时触发全局的"Esc 返回上一页"
