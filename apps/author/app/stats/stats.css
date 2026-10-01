@@ -1,0 +1,476 @@
+/* ============================================================
+ * 数据（Stats.tsx 与三张图：Hills 远山、FollowStroke 跟读、HourDial 时辰）
+ * 一栏从上往下：选书与三个总数、最近 30 天、跟读、读者什么时候读。
+ * 图都用 --ink 着色：浅色主题是墨，长夜里是浅色的笔墨；红色只给"今天"（当前位置）。
+ * ============================================================ */
+
+.stats {
+  padding-top: var(--sp-5);
+  padding-bottom: var(--sp-12);
+}
+@media (min-width: 900px) {
+  .stats {
+    padding-top: var(--sp-10);
+  }
+}
+.stats-empty {
+  margin-top: var(--sp-10);
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  color: var(--ink-2);
+}
+
+/* ---- 头：标题与选书 ---- */
+.stats-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-4);
+}
+@media (min-width: 900px) {
+  .stats-head {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+}
+.stats-head__sub {
+  margin-top: 4px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+
+/* ---- 三个总数：左边立着这本书 ---- */
+.stats-overview {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  margin-top: var(--sp-6);
+}
+@media (min-width: 900px) {
+  .stats-overview {
+    gap: var(--sp-10);
+    margin-top: var(--sp-8);
+  }
+}
+.stats-overview__book {
+  flex: none;
+}
+.stats-totals {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+/* dd 默认左边缩进 40px */
+.stats-total dd {
+  margin-inline-start: 0;
+}
+.stats-total dt {
+  font-size: var(--fs-12);
+  letter-spacing: 0.2em;
+  color: var(--ink-2);
+}
+.stats-total__value {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-top: 2px;
+  font-family: var(--font-kai);
+  white-space: nowrap;
+}
+.stats-total__value strong {
+  font-size: 1.75rem;
+  font-weight: 400;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.stats-total__value span {
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.stats-total__note {
+  margin-top: 4px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 900px) {
+  .stats-totals {
+    gap: var(--sp-6);
+  }
+  .stats-total__value strong {
+    font-size: var(--fs-48);
+  }
+  .stats-total__value span {
+    font-size: var(--fs-18);
+  }
+}
+
+/* ---- 每一段：标题、一句话、图 ---- */
+.stats-section {
+  margin-top: var(--sp-12);
+}
+.stats-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px var(--sp-4);
+}
+.stats-lead {
+  margin-top: 6px;
+  font-size: var(--fs-14);
+  line-height: 1.7;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.stats-lead__more {
+  display: block;
+}
+
+/* 图例：两座小山，浓淡与图里的两重山一样 */
+.stats-legend {
+  display: flex;
+  gap: var(--sp-4);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.stats-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.stats-legend span::before {
+  content: '';
+  width: 16px;
+  height: 9px;
+  background: var(--ink);
+  clip-path: polygon(0 100%, 30% 30%, 48% 58%, 70% 0, 100% 100%);
+}
+.stats-legend__far::before {
+  opacity: 0.3;
+}
+.stats-legend__near::before {
+  opacity: 0.66;
+}
+
+/* ---- 远山（Hills.tsx） ---- */
+.hills {
+  margin-top: var(--sp-4);
+}
+.hills__stage {
+  position: relative;
+  height: 172px;
+  color: var(--ink);
+  /* 竖着滑照常滚动页面，横着拖才是在山上挑某一天 */
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+@media (min-width: 900px) {
+  .hills__stage {
+    height: 236px;
+  }
+}
+.hills__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  /* 左右两端淡进纸里，像山隐进雾里（数据都在不淡的那一段） */
+  mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+}
+/* 山脊描一道更浓的墨：近山清楚，远山若有若无 */
+.hills__ridge {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  opacity: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+.hills__ridge--far {
+  opacity: 0.22;
+}
+/* 今天：一轮红日，日心在今天那一点；排在远山后面，下半轮隔着一层淡墨 */
+.hills__sun {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: var(--thread);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--thread) 12%, transparent);
+}
+/* 叠在后面的坐标轴之上（纸条伸到坐标轴那一行） */
+.hills__probe {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  pointer-events: none;
+}
+.hills__line {
+  position: absolute;
+  bottom: 0;
+  left: -0.5px;
+  width: 1px;
+  background: color-mix(in srgb, var(--ink) 38%, transparent);
+}
+.hills__dot {
+  position: absolute;
+  left: -4.5px;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.hills__dot--near {
+  background: var(--ink);
+}
+/* 指着的那一天：竖线下端挂一张小纸条，落在坐标轴那一行 */
+.hills__tip {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  translate: -50% 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--sheet);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 10px 24px -14px rgb(var(--shadow-rgb) / 0.6);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.hills__tip b {
+  margin-right: 8px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.hills__probe[data-edge='start'] .hills__tip {
+  translate: -14px 0;
+}
+.hills__probe[data-edge='end'] .hills__tip {
+  translate: calc(-100% + 14px) 0;
+}
+.hills__axis {
+  position: relative;
+  height: 20px;
+  margin-top: 8px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  transition: opacity var(--dur-quick) ease;
+}
+.hills[data-probing] .hills__axis {
+  opacity: 0;
+}
+.hills__axis span {
+  position: absolute;
+  top: 0;
+  translate: -50% 0;
+  white-space: nowrap;
+}
+.hills__axis span:last-child {
+  translate: -75% 0;
+}
+
+/* ---- 跟读（FollowStroke.tsx） ---- */
+/* 上方留出指着某一章时那张小纸条的位置，免得盖住上面那句话 */
+.follow {
+  margin-top: var(--sp-10);
+}
+.follow__stroke {
+  position: relative;
+  display: flex;
+  height: 48px;
+  color: var(--ink);
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+/*
+ * 三段外面那一层：浓淡与"越往后墨越淡"都加在这里（一个合成组），
+ * 三段各自变淡的话，互相压住的 1px 会叠深成一道竖线
+ */
+.follow__ink {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  opacity: 0.74;
+  mask-image: linear-gradient(to right, #000 6%, rgb(0 0 0 / 0.5));
+}
+.follow__ink svg {
+  height: 100%;
+  overflow: visible;
+  fill: currentColor;
+}
+.follow__head {
+  flex: none;
+  width: 26px;
+}
+/* 笔身左右各多出 1px，压住起笔与收笔，接缝处不透出细缝 */
+.follow__body {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0 -1px;
+}
+.follow__tail {
+  flex: none;
+  width: 44px;
+}
+.follow__probe {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 1px;
+  margin-left: -0.5px;
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--ink) 30%, transparent);
+  pointer-events: none;
+}
+.follow__tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  translate: -50% 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--sheet);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 10px 24px -14px rgb(var(--shadow-rgb) / 0.6);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.follow__tip b {
+  margin-right: 4px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.follow__probe[data-edge='start'] .follow__tip {
+  translate: -14px 0;
+}
+.follow__probe[data-edge='end'] .follow__tip {
+  translate: calc(-100% + 14px) 0;
+}
+/* 圈点：读的人比前一章多的那几章，笔的上方一个小圈 */
+.follow__mark {
+  position: absolute;
+  top: 4px;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.3px color-mix(in srgb, var(--ink) 62%, transparent);
+  pointer-events: none;
+}
+/* 分卷的标尺：一卷一段细线，两头各一个小刻度，卷名写在下面 */
+.follow__ruler {
+  position: relative;
+  height: 30px;
+  margin-top: 10px;
+}
+.follow__volume {
+  position: absolute;
+  top: 0;
+  padding-top: 8px;
+  overflow: hidden;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+}
+.follow__volume::before,
+.follow__volume::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  width: 1px;
+  height: 7px;
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+.follow__volume::before {
+  left: 0;
+}
+.follow__volume::after {
+  right: 0;
+}
+
+/* ---- 读者什么时候读（HourDial.tsx） ---- */
+.stats-hours__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-5);
+  margin-top: var(--sp-4);
+}
+@media (min-width: 700px) {
+  .stats-hours__body {
+    flex-direction: row;
+    gap: var(--sp-10);
+  }
+}
+.stats-hours__text .stats-lead {
+  margin-top: 0;
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  color: var(--ink);
+}
+.stats-hours__hint {
+  margin-top: 8px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.dial {
+  flex: none;
+  width: 248px;
+  height: 248px;
+  overflow: visible;
+  color: var(--ink);
+  touch-action: manipulation;
+}
+.dial__rim {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 16%, transparent);
+  stroke-width: 1;
+}
+.dial__dot {
+  fill: currentColor;
+}
+.dial__hit {
+  fill: transparent;
+}
+.dial__branch {
+  font-family: var(--font-kai);
+  font-size: 13px;
+  fill: var(--ink-2);
+  text-anchor: middle;
+  dominant-baseline: central;
+  transition: fill var(--dur-quick) ease;
+}
+.dial__hour[data-active] .dial__branch {
+  fill: var(--ink);
+}
+.dial__name {
+  font-family: var(--font-kai);
+  font-size: 17px;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+.dial__range {
+  font-size: 8.5px;
+  fill: var(--ink-2);
+  text-anchor: middle;
+  font-variant-numeric: tabular-nums;
+}

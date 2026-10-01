@@ -9,8 +9,9 @@
  *   /works/:bookId/cover      封面工作室：封面、书脊、封底各自合成或上传图片，不进 CDN
  *   /write/:bookId/:chapter?  写作：一章的稿纸（章节序号从 1 开始，省略时打开最后一章草稿），不进 CDN
  *   /readers                  互动：读者来信与回信、读者停下来的地方、书友（?focus= 某一封信），不进 CDN
+ *   /stats                    数据：一本书最近 30 天的远山、跟读、读者什么时候读，不进 CDN
  *   *                         其余地址：404，在页面栈里显示"找不到这一页"
- * 其余页面（数据、我）在作者站原型的后续步骤中加入，见 .agents/plan/。
+ * 其余页面（我）在作者站原型的后续步骤中加入，见 .agents/plan/。
  */
 import { type RouteConfig, index, layout, route } from '@react-router/dev/routes';
 
@@ -23,6 +24,7 @@ export default [
     route('works/:bookId/cover', 'routes/cover.tsx'),
     route('write/:bookId/:chapter?', 'routes/write.tsx'),
     route('readers', 'routes/readers.tsx'),
+    route('stats', 'routes/stats.tsx'),
     route('*', 'routes/not-found.tsx'),
   ]),
 ] satisfies RouteConfig;
