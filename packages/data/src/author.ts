@@ -298,7 +298,7 @@ export const MESSAGES: DeskMessage[] = [
     id: 'm4',
     from: '站务',
     title: '《盐汽水与蝉》入选本周推荐',
-    body: '本周在书城"新书上架"推荐位展示，从周一到周日。',
+    body: '本周在书城“新书上架”推荐位展示，从周一到周日。',
     minutesAgo: 60 * 50,
     unread: false,
     bookId: '1002100000010004',

@@ -969,7 +969,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - decisions：准、退、驳，附盖章的时刻与经手的人。
   - ledger：新记的账，由远到近，id s1、s2……
   - decide 记下决定并记一笔账：附注取总批；没有总批时写"N 条朱批"。
-  - undo 删掉决定，另记一笔"撤回"（附注如 `撤回"通过"`），原来那一笔不动。
+  - undo 删掉决定，另记一笔"撤回"（附注如 `撤回“通过”`），原来那一笔不动。
   - describe(item) 是账簿上写的对象。日志页把 LEDGER 与 session 的 ledger 合起来显示。
   - reports：处理过的举报（`ReportDecision {verdict: '删' | '留', at, by}`），settleReport、reopenReport 见上面"总览"；REPORT_ACT 把印文换成事由（删除、保留）。
   - staff：对工作人员的改动（StaffChange：roles、group、appointed[身份] 的时刻、disabledAt、resetAt、loggedOutAt）。rosterOf(session) 把它叠到 STAFF 上，改动没变时返回同一个数组；useRoster() 订阅。

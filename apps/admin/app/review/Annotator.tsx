@@ -133,7 +133,7 @@ export function Annotator({ root, paragraphs, notes, onAdd }: AnnotatorProps) {
           style={{ left: pick.x, top: pick.y }}
           disabled={pick.taken}
           title={pick.taken ? '这几个字已经批过了' : undefined}
-          aria-label={pick.taken ? '这几个字已经批过了' : `在"${pick.quote}"旁边下朱批`}
+          aria-label={pick.taken ? '这几个字已经批过了' : `在“${pick.quote}”旁边下朱批`}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setWriting(pick)}
         >

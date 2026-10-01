@@ -79,7 +79,7 @@ export function MeScreen() {
           </h2>
           <p className="me-seals__note">
             {previewing
-              ? `站长砚田正拿着${role.name}的印。拿回"站长"那一方，就是自己。`
+              ? `站长砚田正拿着${role.name}的印。拿回“站长”那一方，就是自己。`
               : '你是站长砚田。拿起别的印，看看那个身份眼里的管理站：标签页只留它管得着的，管不着的按钮会写明为什么。'}
           </p>
           <ul className="me-seals__grid">

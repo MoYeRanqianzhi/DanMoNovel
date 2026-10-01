@@ -22,7 +22,8 @@ export function NoAccess({ title, need }: { title: string; need: Permission }) {
       </div>
       <h1 className="page-title">{title}</h1>
       <p className="no-access__text">
-        这一页要拿{roles.map((r) => `"${r.name}"`).join('、')}的印。你手里是"{role.name}"的印。
+        {/* 并列的几个引号之间不加顿号（GB/T 15834）：“站长”“超管”“管理员” */}
+        这一页要拿{roles.map((r) => `“${r.name}”`).join('')}的印。你手里是“{role.name}”的印。
       </p>
       <button type="button" className="btn btn--primary" onClick={() => push('/me')}>
         换一方印

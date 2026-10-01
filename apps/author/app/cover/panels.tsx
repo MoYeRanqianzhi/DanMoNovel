@@ -74,7 +74,7 @@ export function FrontPanel({ api }: { api: StudioApi }) {
         note={
           mode === 'auto'
             ? '平台按配色与纹样画出封面，书脊与封底自动成套'
-            : `上传一张图，裁成 ${FACE_PX.front.width} × ${FACE_PX.front.height} 的 PNG，印上"耽墨文库"`
+            : `上传一张图，裁成 ${FACE_PX.front.width} × ${FACE_PX.front.height} 的 PNG，印上“耽墨文库”`
         }
       />
       {mode === 'auto' ? <FrontMaker api={api} /> : <ImagePanel face="front" api={api} />}
@@ -418,8 +418,8 @@ export function SpinePanel({ api }: { api: StudioApi }) {
         api={api}
         note={
           mode === 'auto'
-            ? '书脊跟着封面的颜色，印书名、作者与"耽"字'
-            : `上传一张图，裁成 ${SPINE_PX.width} × ${SPINE_PX.height} 的 PNG，印上"耽"字朱印`
+            ? '书脊跟着封面的颜色，印书名、作者与“耽”字'
+            : `上传一张图，裁成 ${SPINE_PX.width} × ${SPINE_PX.height} 的 PNG，印上“耽”字朱印`
         }
       />
       {mode === 'auto' ? (
@@ -561,7 +561,7 @@ function FaceChip({ face, book, k }: { face: 'spine' | 'back'; book: Book; k: nu
 }
 
 const IMAGE_NOTES: Record<FaceKind, (book: Book) => string> = {
-  front: () => '裁剪时可以拖动"耽墨文库"，放到画面上空一些的地方。书脊与封底用合成样式时，会从这张图上取色。',
+  front: () => '裁剪时可以拖动“耽墨文库”，放到画面上空一些的地方。书脊与封底用合成样式时，会从这张图上取色。',
   spine: (book) => {
     const shown = Math.round((SPINE_PX.width * thicknessRatio(book.words)) / 0.26);
     return `书脊按最厚的书定宽 ${SPINE_PX.width} 像素。这本书 ${formatWords(book.words)}，只露出中间 ${shown} 像素；字放在正中 ${SPINE_SAFE_PX} 像素里，书再薄也看得见。`;

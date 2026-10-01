@@ -263,7 +263,7 @@ export function undo(item: QueueItem, by: string) {
   update({
     ...state,
     decisions,
-    ledger: [...state.ledger, entry(by, '撤回', describe(item), `撤回"${VERDICT_ACT[decision.verdict]}"`)],
+    ledger: [...state.ledger, entry(by, '撤回', describe(item), `撤回“${VERDICT_ACT[decision.verdict]}”`)],
   });
 }
 

@@ -165,7 +165,7 @@ export function LabScreen({ screen }: ScreenProps<undefined>) {
             <Slider label="进度" value={progress} min={0} max={1} step={0.01} onChange={setProgress} />
             <label className="lab-check">
               <input type="checkbox" checked={ribbon} onChange={(e) => setRibbon(e.target.checked)} />
-              <span>显示丝带书签（夹在"读到的那一页"的深度）</span>
+              <span>显示丝带书签（夹在“读到的那一页”的深度）</span>
             </label>
           </Block>
         </div>

@@ -37,7 +37,7 @@ export const ROLES: readonly Role[] = [
   { id: 'super', name: '超管', seal: '超管', duty: '协助站长全面管理：任命管理员、编辑与审核，看账簿，修订站规' },
   { id: 'admin', name: '管理员', seal: '管理', duty: '日常运营：推荐位、公告与举报' },
   { id: 'editor', name: '编辑', seal: '编辑', duty: '签约作者，照看名下的作者与作品' },
-  { id: 'reviewer', name: '审核', seal: '审核', duty: '审读章节、新书、封面与简介，盖"准"或"退"' },
+  { id: 'reviewer', name: '审核', seal: '审核', duty: '审读章节、新书、封面与简介，盖“准”或“退”' },
 ];
 
 export function getRole(id: RoleId): Role {

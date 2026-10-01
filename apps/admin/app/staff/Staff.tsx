@@ -156,7 +156,7 @@ export function StaffScreen() {
             任命
           </button>
         ) : (
-          <p className="staff-head__view">你手里是"{myRole.name}"的印：名册只能看，任命与处置只有站长、超管能做。</p>
+          <p className="staff-head__view">你手里是“{myRole.name}”的印：名册只能看，任命与处置只有站长、超管能做。</p>
         )}
       </header>
 

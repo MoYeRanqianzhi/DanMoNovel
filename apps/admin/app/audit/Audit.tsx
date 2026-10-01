@@ -20,6 +20,7 @@ import { useToast } from '@danmo/design/components/overlays';
 import { Seal, TagMark } from '@danmo/design/components/ui';
 import { seasonOf } from '@danmo/design/lib/season';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
+import { countKai } from '../format';
 import { useIdentity } from '../identity';
 import { NoAccess } from '../NoAccess';
 import { OPENED_AT, useSession, type FreshEntry } from '../session';
@@ -199,7 +200,7 @@ export function AuditScreen() {
   };
   const verdict =
     checked !== null && checked >= seams
-      ? `核对完毕：${lines.length} 笔账，${seams ? `${toChineseNumber(seams)}道骑缝的` : ''}链值都对得上。`
+      ? `核对完毕：${lines.length} 笔账，${seams ? `${countKai(seams)}道骑缝的` : ''}链值都对得上。`
       : '';
 
   /** 翻到某一天 */
