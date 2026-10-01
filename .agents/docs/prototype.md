@@ -1,7 +1,7 @@
 # 三站前端原型实现说明（面向代理）
 
 > 记录 UI 原型的实现细节与不显而易见的决定，后续代理不必通读源码就能接着开发。
-> 状态以 2026-10-02 的作者站公开首页提交为准（React Router v8 的 pnpm workspace，三站结构）。继续工作前，用 `git log` 与当前文件核对，本文可能已经落后。
+> 状态以 2026-10-02 的管理站审核页提交为准（React Router v8 的 pnpm workspace，三站结构）。继续工作前，用 `git log` 与当前文件核对，本文可能已经落后。
 > 设计方向与已定决策见 ../MEMORY.md，待办见 ../TODO.md，当前计划与进度见 ../plan/。
 
 ## 1. 概况
@@ -36,15 +36,17 @@ packages/data/src/
   posts.ts      发现页的示例帖子 POSTS、帖子类别 POST_KINDS、formatPostTime
   author.ts     作者站的示例数据（第 13 节）：AUTHOR、WORKS、volumesOf、MESSAGES、LETTERS、statsOf、FANS、REVIEWS（朱批）、今日字数
   manuscripts.ts 写作页与审核页的示例稿件：manuscriptOf、wordCount、draftWords、hasDraft
+  admin.ts      管理站的示例数据（第 16 节）：身份与权限、工作人员、责任编辑、审核队列、举报、账簿
 packages/design/src/
   styles/       index.ts（按顺序引入字体与 tokens → themes → base → transitions → layout）、tokens.css（@property 注册）、
                 themes.css（8 套主题）、base.css、transitions.css（墨晕与页面进出场）、layout.css（.app/.stage/.screen、版心、按钮、设置列表与"关于"）
-  theme/        themes.ts（主题元数据）、ThemeContext.tsx（偏好存储、themeBootScript、墨晕切换）
+  theme/        themes.ts（主题元数据）、ThemeContext.tsx（偏好存储、themeBootScript、墨晕切换）、
+                ThemeSwatches.tsx + swatches.css（八张主题纸样，作者站与管理站的"我"共用）
   book3d/       Book3D.tsx + book3d.css、faces.tsx + faces.css（各面平面内容）、motifs.tsx（封面纹样）、barcode.ts（Code 128C）、
                 BookLoader.tsx + loader.css、gestures.ts（useTilt、useSpin）
   flight/       FlightContext.tsx（飞行引擎与 BookSlot）、timing.ts、flight.css
   shell/        stack.tsx（页面栈，第 4 节）、keepStyles.ts（留住栈里页面的样式表）、nav.tsx + nav.css（TabBar、SideRail、RailLink）、not-found.tsx（notFoundHandle）
-  components/   ui.tsx（IconButton/ThreadProgress/TagMark/Seal/PairLine/Segmented/Logo）、overlays.tsx（Sheet、Toast）、ErrorPage.tsx、
+  components/   ui.tsx（IconButton/ThreadProgress/TagMark/Seal/PairLine/Segmented/Logo）、overlays.tsx（Sheet、Toast；Sheet 打开时把焦点移进面板，内容已自己拿了焦点（autoFocus）时不抢）、ErrorPage.tsx、
                 Stamp.tsx + stamp.css（盖章：落下与印泥洇开，still 直接显示盖好的样子）
   manuscript/   稿纸（第 14 节）：Manuscript.tsx + manuscript.css、danmo-grid.woff2（方格补字字体）与 danmo-grid-OFL.txt
   lib/          util.ts（cls、seededRandom、clamp、lerp）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts
@@ -75,7 +77,10 @@ apps/author/app/       作者站（SSR，第 13、15 节）：公开首页 /、�
   write/        写作页：Write.tsx（页面与 loadWrite）、Outline.tsx（目录）、panels.tsx（发布、选纸）、drafts.ts（本机副本）、paper.ts（稿纸偏好）
   readers/ stats/ me/   互动、数据、我（第 13 节）
   local.ts      本机改过的封面与作品信息；profile.ts 本机改过的签名、闲章与每日目标
-apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false）：总览 /、404；页面还是占位
+apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false，第 16 节）：总览 /、审核 /review、我 /me、404
+  identity.ts   以某个身份预览（原型专用）；session.ts 这次打开期间的决定与新记的账；NoAccess.tsx 管不着的一页；format.ts 时长与数字
+  review/       审核：Review.tsx（案卷与两栏）、Detail.tsx（一份案卷）、Annotator.tsx（选字下朱批）、review.css
+  me/ overview/ 我、总览（总览暂时只有页头）
 ```
 
 ## 3. 框架约定、路由与服务端渲染
@@ -792,8 +797,11 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - ManuscriptEditor：文本框，加一份看不见的镜像文字。
   - ManuscriptText：只读正文，可以带朱批。
   - ReviewSummary：总批与批注清单；不给 onPick 时清单不可点。
+  - 只读的纸头没有章名时写"无题"，`.ms__title[data-empty]` 用淡墨（manuscript.css，写作页与审核页共用）。
   - 工具：numberNotes（按出现先后编号，重叠的只留前一条）、paragraphsToText、textToParagraphs、INDENT、PAPER_MODES、isPaperMode。
-  - 管理站审核页要复用它们；在正文上选字、写批语新增批注还没做。
+  - 管理站审核页复用它们；在正文上选字、写批语新增批注由管理站的 Annotator 做（第 16 节）。
+  - `align`：'center'（缺省，写作页）或 'start'（审核页）。'start' 把纸靠左放、余下的宽度全给右边的浮签（side = 全部余量）；
+    只有余量 ≥ SLIP_ROOM 时才真的靠左（Metrics.start，写成 .ms-frame 的 data-align），放不下浮签时（手机、窄窗）照旧居中——那时浮签反正点开才展开，靠左只会让右边空出一截。
 - **尺寸**：measure() 读 CSS 变量 --ms-size（窄屏 18px、宽屏 21px）与 --ms-pad（16/52px），算出字距、格宽、格数、行间空白与行高：
   - 字距 T = round(F × 0.28)；格宽 P = F + T；
   - 格数 N = floor((宽度 − 2pad) / P)，限在 8~20；
@@ -871,3 +879,96 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 - **作品详情** /works/:bookId（works/Work.tsx；handle back 'hop'、book applyLocal、parent /works）：骨架与小说站书籍详情一样（useSpin、useTilt、宽屏两栏、书吸顶）；"封面"进工作室，"接着写"开最新的草稿、没有草稿开新的一章；分卷折叠，最后一卷默认展开；InfoSheet 改简介、标签（书名要编辑同意，腰封文案在工作室改），每次打开从保存过的内容开始。
 - **StateMark**（components/StateMark.tsx）：章节状态的小标记，写作页目录与作品详情共用。
 - **已知不足**：改动只在这台浏览器里；本机改过封面的书在服务端渲染与水合时先是原封面，挂载后换上（刷新时闪一下，正式版由服务器给封面就没有这个问题）；新建作品不真的创建；管理站的封面审核没做；裁剪器不能旋转。
+
+## 16. 管理站（apps/admin/app/，2026-10-02 起）
+
+设计、验收标准与进度见 [管理站计划](../plan/2026-10-02-admin-site.md)，身份与权限的规则见 staff-roles 记忆。
+
+- **SPA**：react-router.config.ts 里 ssr: false，路由模块用 clientLoader（找不到时返回 MISSING），meta 一律 noindex。
+  - 构建时只预渲染外壳，所以读本机存储的状态（预览的身份）仍用 useSyncExternalStore，并给出"没预览"的快照，第一次渲染与预渲染一致。
+- **示例数据**（packages/data/src/admin.ts）：
+  - 身份 ROLES：owner 站长、super 超管、admin 管理员（印文"管理"）、editor 编辑、reviewer 审核；getRole。
+  - 权限 Permission：review、authors、authors.all、staff、appoint、appoint.super、audit、operate、policy。GRANTS 是每种身份的权限表；can(roles, p) 取一个人所有身份的并集；rolesWith(p) 列出有这项权限的身份（NoAccess 用）。
+  - STAFF 12 人，getStaff。特例：晚棠没开两步验证；霁月 2026-09-30 才任命；不言同时是审核与编辑（古代组）；秋池已离职，账号停用、身份撤销（roles 为空）。
+  - PREVIEW_AS：每种身份的代表——站长砚田 s1、超管长庚 s2、管理员阿梨 s4、编辑知秋 s6、审核青砚 s9。
+  - EDITOR_OF / editorOf(author)：作者 → 责任编辑。栖迟、林间有鹿、北途、渡川、季夏、知夏 → 知秋 s6；墨迟迟、山月 → s7；温酒 → s11；白昼 → s8。
+  - 审核队列 QUEUE（q1~q8）：`QueueItem {id, kind, book, chapter?, title?, minutesAgo, note?, next?}`。
+    - kind：chapter、book、cover、blurb（QUEUE_KINDS）。title 给番外这类不按"第几章"编号的；next 是封面、简介改成的样子。
+    - REVIEW_LIMIT_MINUTES = 1440，超过即超时：q4《镜头之外》等了 1560 分钟。
+    - 与另两站对得上：q1 是作者站《晚风信号》5 小时前送审的第一章；q6 是新作者鹿鸣的新书《落日邮差》（书号 1002100000010009，章名在 chapters.ts 的 NAMED_CHAPTERS）。
+  - 举报 REPORTS（r1~r4）。
+  - 账簿 LEDGER（l1~l15，数组由近到远，编号越大越晚）。LedgerAct 含"撤回"。
+    - 与作者站对得上的几笔：l12 青砚通过《盐汽水与蝉》第六十五章（定时明天 20:00）、l8 拾遗退回《晚风信号》第三章（两条朱批）、l5 阿梨的"新书上架"推荐、l13 知秋发起的签约、l6 长庚任命霁月。
+    - ledgerChain 用 FNV-1a 把每一笔与上一笔的值串起来，给日志页的骑缝章用。
+  - 时间都写"距今几分钟"；管理站是 SPA，在浏览器里换成具体时刻。
+- **以某个身份预览**（identity.ts，原型专用）：
+  - 打开管理站的人是站长；在"我"里换一方印，就以那个身份的代表来看整站。
+  - 存在 localStorage `danmo-admin:as`，读时校验是不是 RoleId；previewAs(role) 写入并通知订阅者，storage 事件让别的标签页也跟着变。
+  - useIdentity() 返回 `{role, me, previewing, can}`。正式版没有这个开关，权限一律由服务端校验。
+- **外壳**（shell.tsx）：
+  - TABS 每项带 need（看这一页要的权限），按 can 过滤：手里的印管不着的页面不出现在侧栏与底部导航里。
+  - 侧栏底部 HandSeal：当前身份的印加一个"我"字，NavLink 到 /me，已在 /me 时不重复进栈。窄屏从总览页头的印进 /me。
+  - 404 用 notFoundHandle('回到总览')。
+- **我**（me/Me.tsx，/me，handle.parent 回总览）：
+  - 手里的印：Stamp 92px。换印时 play 计数加一，重新盖一次；第一次进来 still，直接显示盖好的样子。
+  - 代表的人：名章、身份、职责、入职、两步验证。
+  - 印谱：五方印，按钮带 aria-pressed；手里那方白文（满底朱红），盒里的朱文，外圈一道红线。
+  - ThemeSwatches（默认墨白）、动效 Segmented、关于 Sheet；换印后 role="status" 播报。
+- **总览**（overview/）：暂时只有页头（节气日期、右上角手里的印进 /me），其余放在 C1 最后做。
+- **管不着的一页**（NoAccess.tsx）：
+  - 标签页里本来就没有这一页，只有直接打开地址、或换了印再返回时才走到这里。
+  - 列出 rolesWith(need) 的空心印，写"这一页要拿……的印。你手里是……的印。"，按钮"换一方印"进 /me。
+- **这次打开期间的状态**（session.ts，内存，刷新就没了）：
+  - marks：每份案卷的总批与朱批草稿，换到别的案卷再回来还在。
+  - decisions：准、退、驳，附盖章的时刻与经手的人。
+  - ledger：新记的账，由远到近，id s1、s2……
+  - decide 记下决定并记一笔账：附注取总批；没有总批时写"N 条朱批"。
+  - undo 删掉决定，另记一笔"撤回"（附注如 `撤回"通过"`），原来那一笔不动。
+  - describe(item) 是账簿上写的对象。日志页（C4）要把 LEDGER 与 session 的 ledger 合起来显示。
+- **审核**（review/）：/review 与 /review/:id 两个路由共用 ReviewScreen，data 是 `{id}`。/review/:id 的 handle 是 back 'hop'、book 取案卷的书、parent 回 /review。
+  - **版面**（review.css）：
+    - < 900px：/review 只显示案卷；/review/:id 只显示详情，案卷 display: none 但仍渲染，所以每一页里都有一份书位。
+    - ≥ 900px：两栏 `minmax(270px, 300px) minmax(0, 1fr)`。案卷 sticky、max-height 100svh、自己滚动；详情 padding `var(--sp-10) var(--sp-8) var(--sp-12)`。
+    - 种类筛选的 TagMark 收紧了（高 28px）：300px 宽的一栏里两行排得下。
+  - **打开一份**：
+    - 宽屏用 retarget，还是同一页；useLayoutEffect 随 data.id 把 .screen 滚回顶上，左边的案卷不动。
+    - 窄屏 push：书从案卷的 BookSlot（`${sid}:case:<id>`，宽 40、POSES.thumb）飞进详情页头的 hero。
+  - **下一份**：待审里等得最久的另一份。
+    - 宽屏 retarget。
+    - 窄屏 `push(..., {replace: true, flightFrom})`：替换栈顶，栈不加深；不带 book，进场不飞书。
+    - flightFrom 由 screen.fromSlot 换算：把结尾的 `case:<当前>` 换成 `case:<下一份>`，返回时书飞回下面那页案卷里下一份的那一格。直接打开地址进来的没有 fromSlot，返回时不飞。
+  - **案卷 Case**：
+    - li.case 带 data-current、data-late、data-done；整张可点，.case__title 按钮的 ::after 铺满整张。
+    - 超时的左边一道红线，写"超时 N 小时"。
+    - 盖过章的挪进"已审"，按盖章时刻由近到远，右边钤着那方印（印是 aria-hidden，旁边有 sr-only 的"已通过"等）。筛选后"已审"一节只在有内容时出现。
+  - **没选中时**（只在宽屏看得到）：印盒（准、退实心，驳空心）、一句提示、"打开等得最久的一份"。
+  - **Detail**：
+    - 案由：BookSlot hero、种类、《书名》与案由、作者、责任编辑（editorOf）、字数、送审时刻或红线色的"超时"。案由是 inline-block，放不下时整段换到书名下面。
+    - 作者的话 .review-note：宽度随内容（fit-content）的一张小签，署名另起一行靠右。
+    - 章节：`Manuscript paper="grid" align="start"`。没有决定时是 ManuscriptText 加 Annotator；有了决定，纸头盖上 Stamp（刚盖的播放，已有的 still），有总批或朱批时纸头里接着放 ReviewSummary，署名是盖章的人（decision.by，不是当前身份）。封面与简介没有稿纸，印盖在案由的右上角。
+    - 新书：Book3D 128、资料 dl、Jacket 150，再加第一章（chapterParagraphs）的稿纸。
+    - 封面：现在与换成的两张 Jacket。
+    - 简介：diffChars 用 LCS 逐字比对，删去的放进 `<del>`，添上的放进 `<ins>`。
+  - **印盒 Tray**：
+    - 总批 textarea（最多 300 字）；PHRASES 按种类给常用语，点一下接在总批后面。
+    - 印按 SEALS 排，驳只给新书。盖不了的印是 aria-disabled，配一个 .tray__why（role tooltip，由 aria-describedby 指向）：退要有总批或至少一处朱批（封面、简介没有稿纸，只能写总批），驳要有总批。
+    - 印的按钮与理由浮条并排放在 .tray__slot 里：浮条放进按钮会并进按钮的名称，读屏把理由念两遍。指着 .tray__slot 或聚焦按钮时浮条出现。
+    - 盖章之后：印、outcome 的一句结果、撤回、下一份；另有 sr-only 的 role="status" 播报。
+  - **Annotator**（选字下朱批）：
+    - 何时重算：selectionchange，捕获阶段的滚动，resize。
+    - locate()：用 Range.toString 从正文开头量到选区两端的字数，按 ManuscriptText 的排法（每段前 INDENT，段间一个 
+）换算成"第几段、从第几个字起、共几个字"。跨段时只取第一段那一截。
+    - 与已有朱批重叠时"批"字按钮禁用（numberNotes 会丢掉重叠的）。
+    - 按钮位置：精确指针浮在选区上方，触屏浮在选区下方，让开系统的复制菜单。mousedown 时 preventDefault，不丢选区。
+    - 写批语用 Sheet"下朱批"：引着被批的字；textarea autoFocus，最多 200 字，Ctrl/⌘+Enter 提交（组字时不拦）；"算了"与"贴上浮签"。
+- **验收（2026-10-02，开发服务器）**：
+  - 宽屏 1440 的完整流程：打开最久的一份、选字下朱批、常用语写总批、盖退、撤回、换一份盖准、下一份、新书（退、驳禁用及理由）、封面、简介比对、编辑身份打开 /review/q2 是"管不着"。控制台无报错。
+  - 稿纸位置：1440 与 1280 靠左，浮签贴纸边；960 与 390 居中，浮签点开才展开。作者站写作页仍居中。
+  - 手机 390：进栈、书飞进页头、选字后"批"在选区下方、写朱批、浮签点开、盖准；"下一份"后栈里仍是两页，返回时书飞回下一份的那一格。
+  - 长夜：案卷与封面对照看过。类型检查与三站构建通过。
+  - 代码审查（2026-10-02）的修正都在浏览器里核过：面板打开后焦点在批语框里（只用键盘写完、Ctrl+Enter 贴上）；封面的退回理由不提正文；浮条指着、离开、Tab 聚焦都对；已审的印有读屏文字；"无题"是淡墨；作者站的面板仍把焦点移进面板。
+- **已知不足**：
+  - 决定与朱批只在内存里，刷新就没了。
+  - 跨段选中只批第一段那一截。
+  - 举报还没有页面（等总览的待办与日志）。
+  - 新书只给第一章的稿纸。
