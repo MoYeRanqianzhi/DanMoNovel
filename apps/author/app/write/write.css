@@ -167,16 +167,13 @@
   }
 }
 
-/* 纸头：章的标签后面跟着卷名；只读时没有章名写"无题" */
+/* 纸头：章的标签后面跟着卷名（没有章名时的"无题"见 manuscript.css） */
 .write-volume {
   margin-left: 1.1em;
   font-family: var(--font-sans);
   font-size: var(--fs-12);
   letter-spacing: 0.06em;
   color: color-mix(in srgb, var(--ink-2) 80%, transparent);
-}
-.ms__title[data-empty] {
-  color: var(--ink-2);
 }
 
 /* ---- 预览：读者在小说站读到的样子（阅读纸色、缺省纸张、文楷正文） ---- */

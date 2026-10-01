@@ -96,11 +96,13 @@ interface Metrics {
   gap: number;
   /** 行高 L = P + G */
   line: number;
-  /** 稿纸两边各余下多宽（宽屏上浮签贴在这里） */
+  /** 稿纸右边余下多宽（宽屏上浮签贴在这里）：纸居中时是两边余下的一半，靠左放时是全部 */
   side: number;
+  /** 纸是否真的靠左放（要求靠左、而且余下的宽度放得下浮签） */
+  start: boolean;
 }
 
-function measure(frame: HTMLElement): Metrics {
+function measure(frame: HTMLElement, align: PaperAlign): Metrics {
   const style = getComputedStyle(frame);
   const font = Math.round(parseFloat(style.getPropertyValue('--ms-size')) || 18);
   const pad = parseFloat(style.getPropertyValue('--ms-pad')) || 16;
@@ -110,12 +112,15 @@ function measure(frame: HTMLElement): Metrics {
   const cols = Math.max(MIN_COLS, Math.min(MAX_COLS, Math.floor((width - 2 * pad) / pitch)));
   // 行间空白取偶数：格线落在整像素上，设备像素比为 1 的屏幕上也不发虚
   const gap = 2 * Math.round(pitch * 0.2);
-  const side = Math.max(0, (width - cols * pitch - 2 * pad) / 2);
-  return { cols, pitch, font, track, gap, line: pitch + gap, side };
+  const rest = Math.max(0, width - cols * pitch - 2 * pad);
+  // 靠左放是为了把余下的宽度都让给浮签；余下的放不下浮签时（手机、窄窗）浮签反正点开才展开，纸照旧居中更匀称
+  const start = align === 'start' && rest >= SLIP_ROOM;
+  const side = start ? rest : rest / 2;
+  return { cols, pitch, font, track, gap, line: pitch + gap, side, start };
 }
 
 const sameMetrics = (a: Metrics, b: Metrics) =>
-  a.cols === b.cols && a.pitch === b.pitch && a.gap === b.gap && Math.abs(a.side - b.side) < 1;
+  a.cols === b.cols && a.pitch === b.pitch && a.gap === b.gap && a.start === b.start && Math.abs(a.side - b.side) < 1;
 
 interface SheetState {
   metrics: Metrics | null;
@@ -127,8 +132,12 @@ const SheetContext = createContext<SheetState>({ metrics: null, paper: 'grid' })
 /* 稿纸                                                                */
 /* ------------------------------------------------------------------ */
 
+/** 纸放在哪里：居中（写作页），或者靠左、把余下的宽度都留给右边的浮签（管理站审核页；余下的放不下浮签时照旧居中） */
+export type PaperAlign = 'center' | 'start';
+
 interface ManuscriptProps {
   paper: PaperMode;
+  align?: PaperAlign;
   /** 纸头：章的标签与章名、审核的总批（样式可用 .ms__label / .ms__title） */
   head: ReactNode;
   /** 盖在纸头右上角的印（<Stamp>） */
@@ -138,7 +147,7 @@ interface ManuscriptProps {
   className?: string;
 }
 
-export function Manuscript({ paper, head, stamp, children, className }: ManuscriptProps) {
+export function Manuscript({ paper, align = 'center', head, stamp, children, className }: ManuscriptProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
 
@@ -146,14 +155,14 @@ export function Manuscript({ paper, head, stamp, children, className }: Manuscri
     const frame = frameRef.current;
     if (!frame) return;
     const update = () => {
-      const next = measure(frame);
+      const next = measure(frame, align);
       setMetrics((prev) => (prev && sameMetrics(prev, next) ? prev : next));
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(frame);
     return () => ro.disconnect();
-  }, []);
+  }, [align]);
 
   const style = metrics
     ? ({
@@ -168,7 +177,13 @@ export function Manuscript({ paper, head, stamp, children, className }: Manuscri
   const state = useMemo(() => ({ metrics, paper }), [metrics, paper]);
 
   return (
-    <div ref={frameRef} className={cls('ms-frame', className)} style={style} data-ready={metrics ? '' : undefined}>
+    <div
+      ref={frameRef}
+      className={cls('ms-frame', className)}
+      style={style}
+      data-ready={metrics ? '' : undefined}
+      data-align={metrics?.start ? 'start' : undefined}
+    >
       <article className="ms sheet" data-paper={paper}>
         {stamp && <div className="ms__stamp">{stamp}</div>}
         <header className="ms__head">{head}</header>
