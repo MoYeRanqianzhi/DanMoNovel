@@ -388,7 +388,8 @@ export const AUTHORS: readonly AuthorRecord[] = [
     works: [{ book: getBook('1002100000010002'), contract: '签约' }],
     days: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     lastMinutesAgo: 60 * 24 * 40,
-    memo: '想给《潮汐来信》换一张夜里的海做完结纪念，封面已经送审。',
+    // 两天前的备忘说"这两天送审"，送审记录（q7）在三小时前，前后对得上
+    memo: '想给《潮汐来信》换一张夜里的海做完结纪念，封面这两天就送审。',
     memoDaysAgo: 2,
   },
   {
@@ -458,7 +459,7 @@ export const AUTHORS: readonly AuthorRecord[] = [
     works: [{ book: getBook('1001100000010003'), contract: '签约' }],
     days: [0, 0, 0, 0, 0, 0, 0, 0, 0, 4300, 0, 0, 0, 0],
     lastMinutesAgo: 60 * 24 * 9,
-    memo: '简介改了一版，等审核。下一本想写江湖。',
+    memo: '简介想再改一版，改好就送审。下一本想写江湖。',
     memoDaysAgo: 2,
   },
   {
@@ -497,7 +498,8 @@ export const AUTHORS: readonly AuthorRecord[] = [
     level: '研墨',
     joined: '2026-09-28',
     works: [{ book: SUNSET_POSTMAN, contract: '未签约' }],
-    days: [3100, 0, 2400, 0, 0, 2800, 0, 0, 0, 0, 0, 0, 0, 0],
+    // days[i] 是 i 天前写的字数；入驻那天（四天前）才开始写，更早的都是 0
+    days: [3100, 0, 2400, 0, 2800, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     lastMinutesAgo: 540,
   },
   {
@@ -513,10 +515,6 @@ export const AUTHORS: readonly AuthorRecord[] = [
   },
 ];
 
-export function getAuthor(id: string): AuthorRecord | undefined {
-  return AUTHORS.find((a) => a.id === id);
-}
-
 /** 作者在名册上归哪一组：有一部签了就是签约；一部都没签、有一部在谈，是洽谈中；其余是未签约 */
 export function contractOf(works: readonly AuthorWork[]): ContractState {
   if (works.some((w) => w.contract === '签约')) return '签约';
@@ -526,34 +524,7 @@ export function contractOf(works: readonly AuthorWork[]): ContractState {
 
 /* ---------------- 设置：橱窗（推荐位）、告示（公告）、站规 ---------------- */
 
-/**
- * 书城的橱窗：两处由编辑挑的推荐位（书号）。
- * - ring：书环"编辑推荐"七本，顺序就是环上的顺序，从正对读者的那本起、往右数（与小说站 Store.tsx 的 RING_IDS 一致）；
- * - fresh："新书上架"四格（与小说站现在按上架日期取的四本一致；正式版由编辑挑，样例账 l5 阿梨把《盐汽水与蝉》放进了这里）。
- * 三张榜单按规则自动排，不是推荐位
- */
-export interface Showcase {
-  ring: readonly string[];
-  fresh: readonly string[];
-}
-
-export const SHOWCASE: Showcase = {
-  ring: [
-    '1002100000010003', // 雨停之前
-    '1003100000010001', // 星轨同行
-    '1002100000010006', // 镜头之外
-    '1002100000010002', // 潮汐来信
-    '1001100000010003', // 折梅寄远
-    '1002100000010001', // 他的第七封信
-    '1001100000010001', // 云岫不归
-  ],
-  fresh: [
-    '1002100000010006', // 镜头之外
-    '1003100000010001', // 星轨同行
-    '1002100000010005', // 雾港无灯
-    '1002100000010004', // 盐汽水与蝉
-  ],
-};
+/* 橱窗（SHOWCASE）本身在 books.ts：小说站的书城也要读它，放在这里会把整份管理站的示例数据带进小说站的客户端包 */
 
 /** 一份校样现在是第几版、最后一次付印是谁、距今几分钟（付印一次加一版） */
 export interface Edition {

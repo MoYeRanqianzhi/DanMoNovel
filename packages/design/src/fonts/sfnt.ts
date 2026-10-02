@@ -126,9 +126,40 @@ function namesAt(view: DataView, dirAt: number): FontNames {
   return name ? readNames(view, name.offset, name.length) : { family: null, fullName: null };
 }
 
+/** name 表解压后的上限：正常的 name 表只有几 KB 到几十 KB */
+const NAME_MAX = 1 << 20;
+
+/**
+ * 解压 zlib 数据，边读边数，超过 cap 就停下返回 null。
+ * 文件头里写的原长度不可信：一小段压缩数据可以膨胀成几 GB，整个读完再看会先把内存撑爆
+ */
+async function inflateCapped(bytes: Uint8Array<ArrayBuffer>, cap: number): Promise<Uint8Array<ArrayBuffer> | null> {
+  const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate')).getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > cap) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const c of chunks) {
+    out.set(c, at);
+    at += c.byteLength;
+  }
+  return out;
+}
+
 /**
  * WOFF 1.0：表目录在 44 字节的文件头之后，每条 20 字节；
  * 压缩过的表是 zlib 格式，正好对应 DecompressionStream 的 'deflate'。
+ * 解压最多到文件头写的原长度、且不超过 NAME_MAX；超了就当读不出名字（调用方用文件名代替）。
  */
 async function namesOfWoff(view: DataView<ArrayBuffer>): Promise<FontNames> {
   const count = view.getUint16(12);
@@ -142,8 +173,10 @@ async function namesOfWoff(view: DataView<ArrayBuffer>): Promise<FontNames> {
     if (offset + compLength > view.byteLength) break;
     let bytes: Uint8Array<ArrayBuffer> = new Uint8Array(view.buffer, view.byteOffset + offset, compLength);
     if (compLength < origLength) {
-      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'));
-      bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+      if (origLength > NAME_MAX) break;
+      const inflated = await inflateCapped(bytes, origLength);
+      if (!inflated) break;
+      bytes = inflated;
     }
     return readNames(new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength), 0, bytes.byteLength);
   }

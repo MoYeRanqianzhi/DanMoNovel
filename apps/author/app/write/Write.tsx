@@ -54,12 +54,13 @@ import {
   textToParagraphs,
   type PaperMode,
 } from '@danmo/design/manuscript/Manuscript';
+import { formatNumber } from '@danmo/design/lib/format';
 import { PaperTexture } from '@danmo/design/paper/PaperTexture';
 import { DEFAULT_PAPER } from '@danmo/design/paper/papers';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
 import { phasePath } from '../components/moon';
-import { formatAgo, formatNumber } from '../format';
+import { formatAgo } from '../format';
 import { useProfileEdit } from '../profile';
 import { loadDraft, saveDraft } from './drafts';
 import { Outline } from './Outline';

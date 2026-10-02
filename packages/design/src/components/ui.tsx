@@ -82,11 +82,14 @@ interface TagMarkProps {
   onClick?: () => void;
 }
 
-/** 有 onClick 时是可切换的按钮，否则只是展示用的标签 */
+/**
+ * 有 onClick 时是按钮，否则只是展示用的标签。
+ * 传了 active 的是筛选一类的开关（aria-pressed）；没传的是普通的动作按钮（Lab 的姿势预设），不报"未按下"
+ */
 export function TagMark({ children, active, onClick }: TagMarkProps) {
   if (!onClick) return <span className="tag">{children}</span>;
   return (
-    <button type="button" className="tag" data-active={active || undefined} aria-pressed={!!active} onClick={onClick}>
+    <button type="button" className="tag" data-active={active || undefined} aria-pressed={active} onClick={onClick}>
       {children}
     </button>
   );

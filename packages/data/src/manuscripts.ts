@@ -122,11 +122,6 @@ const DRAFTS: Record<string, string[]> = {
   ],
 };
 
-/** 这一章有没有单独写的稿件 */
-export function hasDraft(bookId: string, index: number): boolean {
-  return `${bookId}:${index}` in DRAFTS;
-}
-
 /** 第 index 章（从 0 开始）的稿件，按段给出：有单独的稿件就用它，没有就借用试读正文 */
 export function manuscriptOf(book: Book, index: number): string[] {
   return DRAFTS[`${book.id}:${index}`] ?? chapterParagraphs(book, index);

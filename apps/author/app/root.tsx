@@ -7,7 +7,7 @@ import { Links, Meta, Outlet, Scripts, isRouteErrorResponse } from 'react-router
 import type { ReactNode } from 'react';
 import type { Route } from './+types/root';
 import '@danmo/design/styles/index';
-import { ErrorPage } from '@danmo/design/components/ErrorPage';
+import { RouteErrorPage } from '@danmo/design/components/ErrorPage';
 import { ToastProvider } from '@danmo/design/components/overlays';
 import { FlightProvider } from '@danmo/design/flight/FlightContext';
 import { ThemeProvider, themeBootScript } from '@danmo/design/theme/ThemeContext';
@@ -59,16 +59,5 @@ export default function App() {
 
 /** 出错页：在 Provider 之外渲染，按钮用普通链接整页跳转回首页 */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  const notFound = isRouteErrorResponse(error) && error.status === 404;
-  return (
-    <ErrorPage
-      kind={notFound ? 'not-found' : 'error'}
-      action={
-        <a className="btn btn--primary" href="/">
-          回到作者站首页
-        </a>
-      }
-      detail={import.meta.env.DEV && !notFound && error instanceof Error ? error.stack : undefined}
-    />
-  );
+  return <RouteErrorPage error={error} homeLabel="回到作者站首页" />;
 }

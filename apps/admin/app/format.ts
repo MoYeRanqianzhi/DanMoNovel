@@ -1,8 +1,8 @@
 /**
- * 管理站的几种写法：多久以前、多长时间、千分位与几万、入职年月、几个人、量词前的汉字数字，
+ * 管理站的几种写法：多久以前、多长时间、入职年月、几个人、量词前的汉字数字，
  * 以及日子：楷书里的汉字年月日（dayKai、isoKai、yearKai）、YYYY-MM-DD（isoDay）、一段日子（rangeLabel 写账簿、rangeKai 写告示）
  *
- * 千分位自己拼，不用 toLocaleString：各浏览器的区域数据可能不同（作者站 format.ts 同一个理由）。
+ * 千分位与几万是作者站、管理站共用的，在 @danmo/design/lib/format。
  */
 import { toChineseNumber } from '@danmo/data/chapters';
 
@@ -19,17 +19,6 @@ export function span(minutes: number): string {
   if (minutes < 60) return `${Math.max(1, Math.round(minutes))} 分钟`;
   if (minutes < 60 * 24) return `${Math.round(minutes / 60)} 小时`;
   return `${Math.round(minutes / (60 * 24))} 天`;
-}
-
-/** 12,840 */
-export function formatNumber(n: number): string {
-  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
-/** 大数字的简写：132740 → "13.3 万"，不到一万写千分位（与作者站 format.ts 的 formatCount 同一种写法） */
-export function formatCount(n: number): string {
-  if (n < 10000) return formatNumber(n);
-  return `${(n / 10000).toFixed(1).replace(/\.0$/, '')} 万`;
 }
 
 /** 入职（YYYY-MM-DD）写成"2024 年 5 月" */

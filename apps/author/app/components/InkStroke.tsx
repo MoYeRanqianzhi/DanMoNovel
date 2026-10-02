@@ -12,6 +12,7 @@
  * seed 让每一笔的笔头、腰身与几缕的长短略有不同（同一个 seed 每次画得一样，服务端与浏览器一致）。
  */
 import type { CSSProperties } from 'react';
+import { lerp } from '@danmo/design/lib/util';
 import './ink-stroke.css';
 
 interface InkStrokeProps {
@@ -23,7 +24,6 @@ interface InkStrokeProps {
 
 /** 保留一位小数：路径随 HTML 一起下发，不必写十几位 */
 const q = (v: number) => Math.round(v * 10) / 10;
-const lerp = (from: number, to: number, t: number) => from + (to - from) * t;
 
 /**
  * 起笔，坐标系 16 × 16：左上角是切进来的笔尖，左边斜着往右下收，左下角是按下去的笔肚；

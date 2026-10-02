@@ -49,8 +49,8 @@ const AXIS: [number, string][] = [
   [0, '今天'],
 ];
 
-/** 第 i 天（共 n 天）在画布上的横坐标 */
-const xAt = (i: number, n: number) => PAD + (i / (n - 1)) * (W - 2 * PAD);
+/** 第 i 天（共 n 天）在画布上的横坐标（只有一天时放在最左边，不除以零） */
+const xAt = (i: number, n: number) => PAD + (i / Math.max(1, n - 1)) * (W - 2 * PAD);
 
 interface Ridge {
   /** 每一天在山脊上的纵坐标 */
@@ -67,7 +67,8 @@ interface Ridge {
  */
 function ridge(values: readonly number[], top: number, base: number, rough: number, seed: number): Ridge {
   const n = values.length;
-  const max = Math.max(...values);
+  // 至少按 1 算：一组全是 0 时（新书一个月没人收藏）山是平的，不是 0/0 画不出来
+  const max = Math.max(1, ...values);
   const ys = values.map((v) => base - (v / max) * (base - top));
   // 山脚伸到画布外面，两端不会像被刀切过
   const pts: Point[] = [[-12, ys[0] + 30]];

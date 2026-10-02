@@ -97,6 +97,19 @@ export function Sheet({ open, title, onClose, className, style, children }: Shee
     if (mounted && !closing && !panelRef.current?.contains(document.activeElement)) panelRef.current?.focus();
   }, [mounted, closing]);
 
+  // 面板里换了一屏内容（阅读设置 ↔ 字体列表、改名、删掉一行）：拿着焦点的那个按钮被卸掉，焦点掉到 <body>，
+  // 落在面板外面，上面的 Tab 循环也就管不到了。内容一变就看一眼，焦点掉了就收回面板上（读屏会重念对话框的名字）
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!mounted || closing || !panel) return;
+    const observer = new MutationObserver(() => {
+      const active = document.activeElement;
+      if (!active || active === document.body) panel.focus({ preventScroll: true });
+    });
+    observer.observe(panel, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [mounted, closing]);
+
   // Esc 关闭面板。用捕获阶段并阻止传播，避免同时触发全局的"Esc 返回上一页"。
   // 输入法组字时的 Esc 是取消候选词（有的输入法 key 仍是 Escape），不能连面板带草稿一起关掉
   useEffect(() => {

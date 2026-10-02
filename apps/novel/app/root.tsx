@@ -17,7 +17,7 @@ import type { ReactNode } from 'react';
 import type { Route } from './+types/root';
 import '@danmo/design/styles/index';
 import './novel.css';
-import { ErrorPage } from '@danmo/design/components/ErrorPage';
+import { RouteErrorPage } from '@danmo/design/components/ErrorPage';
 import { ToastProvider } from '@danmo/design/components/overlays';
 import { FlightProvider } from '@danmo/design/flight/FlightContext';
 import { ThemeProvider, themeBootScript } from '@danmo/design/theme/ThemeContext';
@@ -77,22 +77,7 @@ export default function App() {
   );
 }
 
-/**
- * 出错页：loader 或渲染中的意外错误。找不到内容不走这里——loader 返回 MISSING，
- * 由页面栈在栈里渲染 404 页（见 shell/stack.tsx）；这里的 404 分支只兜住有人抛出 404 的情况。
- * 这里在 Provider 之外渲染，不能用主题、飞行等上下文；按钮用普通链接整页跳转回书城。
- */
+/** 出错页：意外错误与被抛出的 404（找不到内容平常由页面栈渲染，见 RouteErrorPage 的说明），按钮整页跳回书城 */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  const notFound = isRouteErrorResponse(error) && error.status === 404;
-  return (
-    <ErrorPage
-      kind={notFound ? 'not-found' : 'error'}
-      action={
-        <a className="btn btn--primary" href="/">
-          回到书城
-        </a>
-      }
-      detail={import.meta.env.DEV && !notFound && error instanceof Error ? error.stack : undefined}
-    />
-  );
+  return <RouteErrorPage error={error} homeLabel="回到书城" />;
 }

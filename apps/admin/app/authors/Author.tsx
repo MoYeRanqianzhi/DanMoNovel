@@ -29,9 +29,10 @@ import { Sheet } from '@danmo/design/components/overlays';
 import { Stamp } from '@danmo/design/components/Stamp';
 import { IconButton, Seal } from '@danmo/design/components/ui';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
+import { formatNumber } from '@danmo/design/lib/format';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
-import { ago, dayKai, formatNumber, sinceLabel, span } from '../format';
+import { ago, dayKai, sinceLabel, span } from '../format';
 import { useIdentity } from '../identity';
 import { NoAccess } from '../NoAccess';
 import {

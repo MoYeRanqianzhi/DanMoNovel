@@ -30,13 +30,14 @@ import {
 import { Sheet, useToast } from '@danmo/design/components/overlays';
 import { Stamp } from '@danmo/design/components/Stamp';
 import { IconButton, Logo, Seal, Segmented } from '@danmo/design/components/ui';
+import { formatCount, formatNumber } from '@danmo/design/lib/format';
 import { useClientValue } from '@danmo/design/lib/useClientValue';
 import { VERSION } from '@danmo/design/lib/version';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme, type MotionPref } from '@danmo/design/theme/ThemeContext';
 import { ThemeSwatches } from '@danmo/design/theme/ThemeSwatches';
 import { phasePath } from '../components/moon';
-import { formatAgo, formatCount, formatNumber } from '../format';
+import { formatAgo } from '../format';
 import { DAILY_GOALS, MOTTO_MAX, isSealText, saveProfile, sealVariant, useProfileEdit } from '../profile';
 import { InkLevels } from './InkLevels';
 import '../components/sheet-form.css';

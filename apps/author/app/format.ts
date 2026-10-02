@@ -1,19 +1,6 @@
 /**
- * 作者站的数字与时间格式
- *
- * 数字的千分位自己拼，不用 toLocaleString：服务端与浏览器的区域数据可能不同，水合时文字会对不上。
+ * 作者站的时间写法。数字的千分位与几万是三站共用的，在 @danmo/design/lib/format
  */
-
-/** 1286 → "1,286" */
-export function formatNumber(n: number): string {
-  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
-/** 大数字的简写：12840 → "1.3 万"，不到一万原样写 */
-export function formatCount(n: number): string {
-  if (n < 10000) return formatNumber(n);
-  return `${(n / 10000).toFixed(1).replace(/\.0$/, '')} 万`;
-}
 
 /** 距今多少分钟 → "刚刚""14 分钟前""3 小时前""昨天""5 天前" */
 export function formatAgo(minutes: number): string {

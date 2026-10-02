@@ -10,7 +10,7 @@
  * 宽屏放得下时靠左排，紧挨着星期标签。
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { formatNumber } from '../format';
+import { formatNumber } from '@danmo/design/lib/format';
 import { useClientValue } from '@danmo/design/lib/useClientValue';
 import './ink-calendar.css';
 

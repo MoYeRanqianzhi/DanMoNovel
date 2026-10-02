@@ -17,10 +17,10 @@ import { PenLine } from 'lucide-react';
 import { FANS, HOT_QUOTES, LETTERS, WORKS, type Fan, type HotQuote, type ReaderLetter } from '@danmo/data/author';
 import { chapterTitle } from '@danmo/data/chapters';
 import { Segmented } from '@danmo/design/components/ui';
+import { formatNumber } from '@danmo/design/lib/format';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { InkStroke } from '../components/InkStroke';
 import { LetterCard } from '../components/LetterCard';
-import { formatNumber } from '../format';
 import './readers.css';
 
 export interface ReadersData {

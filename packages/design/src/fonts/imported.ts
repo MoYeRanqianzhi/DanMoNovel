@@ -34,20 +34,33 @@ const DATA = 'data';
 let dbPromise: Promise<IDBDatabase> | null = null;
 
 function openDb(): Promise<IDBDatabase> {
-  dbPromise ??= new Promise((resolve, reject) => {
+  if (dbPromise) return dbPromise;
+  const p = new Promise<IDBDatabase>((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 1);
     req.onupgradeneeded = () => {
       req.result.createObjectStore(META, { keyPath: 'id' });
       req.result.createObjectStore(DATA);
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => {
-      // 打不开（例如隐私模式禁用了 IndexedDB）：下次再试，而不是永远记住这次失败
-      dbPromise = null;
-      reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      // 连接被关掉（WebKit 偶尔断开与数据库进程的连接、读者清了站点数据、别的标签页要升级库）：
+      // 下次用时重新打开，不再拿着这条死连接，否则之后列表、注册、导入全部失败，直到刷新页面
+      const drop = () => {
+        db.close();
+        if (dbPromise === p) dbPromise = null;
+      };
+      db.onclose = drop;
+      db.onversionchange = drop;
+      resolve(db);
     };
+    req.onerror = () => reject(req.error);
   });
-  return dbPromise;
+  // 打不开（隐私模式禁用了 IndexedDB，或 open 当场抛错）：下次再试，而不是永远记住这次失败
+  p.catch(() => {
+    if (dbPromise === p) dbPromise = null;
+  });
+  dbPromise = p;
+  return p;
 }
 
 const result = <T>(req: IDBRequest<T>) =>
@@ -106,20 +119,38 @@ async function addFace(id: string, data: ArrayBuffer) {
   faces.set(id, face);
 }
 
+/** 正在注册的字体：同一款同时被要好几次时只注册一次 */
+const registering = new Map<string, Promise<boolean>>();
+
 /**
  * 确保导入的字体已注册，阅读器与字体列表用到它之前调用。
  * 返回 false 表示这款字体已经不在了（被浏览器清理、在别的设备上选的、或者被删了）。
+ * 阅读器的字体副作用、列表里每一行的预览会同时要同一款（开发模式下副作用还会跑两遍）：
+ * 不合并的话两次都走到 addFace，document.fonts 里多出一个同名字体，删字体时只删得掉记下的那个
  */
-export async function registerImported(id: string): Promise<boolean> {
-  if (faces.has(id)) return true;
-  const db = await openDb();
-  const data = await result(db.transaction(DATA).objectStore(DATA).get(id) as IDBRequest<ArrayBuffer | undefined>);
-  if (!data) return false;
-  await addFace(id, data);
-  return true;
+export function registerImported(id: string): Promise<boolean> {
+  if (faces.has(id)) return Promise.resolve(true);
+  let p = registering.get(id);
+  if (!p) {
+    p = (async () => {
+      const db = await openDb();
+      const data = await result(db.transaction(DATA).objectStore(DATA).get(id) as IDBRequest<ArrayBuffer | undefined>);
+      if (!data) return false;
+      await addFace(id, data);
+      return true;
+    })().finally(() => registering.delete(id));
+    registering.set(id, p);
+  }
+  return p;
 }
 
 const newId = () => Math.random().toString(36).slice(2, 10).padEnd(8, '0');
+
+/**
+ * 读进内存前的大小上限。单款字体 Chromium 最多 128MB（addFace 会失败），合集一个文件装着好几款，放宽到 256MB；
+ * 更大的文件不读：读者在"所有文件"里误选了几 GB 的视频，整个读进内存会把标签页撑崩
+ */
+const MAX_FILE_BYTES = 256 * 1024 * 1024;
 
 /**
  * 导入读者选中的字体文件。合集里有多款字体时，用 choose 让读者挑一款（返回 null 表示取消，这时整个导入返回 null）。
@@ -129,9 +160,11 @@ export async function importFont(
   file: File,
   choose: (members: CollectionMember[]) => Promise<number | null>,
 ): Promise<ImportedFont | null> {
-  const raw = await file.arrayBuffer();
-  const format = detectFormat(raw);
+  if (file.size > MAX_FILE_BYTES) throw new FontImportError('文件太大了，不像是一款字体');
+  // 先只读文件头认格式：选错了文件（视频、压缩包）不必整个读进内存
+  const format = detectFormat(await file.slice(0, 12).arrayBuffer());
   if (!format) throw new FontImportError('这不是可以使用的字体文件');
+  const raw = await file.arrayBuffer();
 
   let data = raw;
   let name: string | null;

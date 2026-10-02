@@ -23,10 +23,11 @@ import { ALERT_ACTS, LEDGER, QUEUE, QUEUE_KINDS, REPORTS, SITE_DAYS, SITE_NEWCOM
 import type { Book } from '@danmo/data/books';
 import { Hills, HillsLegend } from '@danmo/design/charts/Hills';
 import { Seal } from '@danmo/design/components/ui';
+import { formatCount, formatNumber } from '@danmo/design/lib/format';
 import { seasonLine } from '@danmo/design/lib/season';
 import { useClientValue } from '@danmo/design/lib/useClientValue';
 import { useStack } from '@danmo/design/shell/stack';
-import { countKai, formatCount, formatNumber, span } from '../format';
+import { countKai, span } from '../format';
 import { useIdentity } from '../identity';
 import { OPENED_AT, useAuthors, useReviewLimit, useSession, visibleAuthors } from '../session';
 import { PileArt, type PileKind } from './Pile';

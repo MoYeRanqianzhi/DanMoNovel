@@ -70,10 +70,28 @@ export function FontList({ value, onChange, preview, onBack }: FontListProps) {
     rootRef.current?.closest('.sheet-panel')?.scrollTo({ top: 0 });
   }, []);
 
+  // 下载完自动换上，只在读者还开着这张列表、最后点的就是这一款、这期间也没换成别的字体时：
+  // 下载要一两秒，读者可能已经点了另一款、选了系统字体或者关了面板，不能事后把他的选择盖掉
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const wanted = useRef<string | null>(null);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
   const selectPlatform = (f: PlatformFont) => {
     if (fontReady(client, f.id)) return onChange(f.id);
     // 客户端里还没下载：点一下就开始下载，下载完自动换上
-    if (!client.progress.has(f.id)) downloadFont(f.id, () => onChange(f.id));
+    if (client.progress.has(f.id)) return;
+    const before = value;
+    wanted.current = f.id;
+    downloadFont(f.id, () => {
+      if (alive.current && wanted.current === f.id && valueRef.current === before) onChange(f.id);
+    });
   };
 
   const removePlatform = (f: PlatformFont) => {
@@ -328,7 +346,8 @@ function ImportedRow({ font, preview, selected, onSelect, onDeleted }: ImportedR
           maxLength={40}
           autoFocus
           onKeyDown={(e) => {
-            if (e.key === 'Enter') commit(e.currentTarget.value);
+            // 输入法确认候选词的那一下回车不算（Safari 里这时 isComposing 已经是 false，要看 keyCode 229），见 cjk-input 记忆
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) commit(e.currentTarget.value);
           }}
           onBlur={(e) => commit(e.currentTarget.value)}
         />

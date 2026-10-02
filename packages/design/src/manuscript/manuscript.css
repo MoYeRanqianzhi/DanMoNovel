@@ -30,6 +30,8 @@
   --ms-rule: color-mix(in oklab, var(--blush) 58%, var(--ink));
   --ms-rule-opacity: 0.55;
   position: relative;
+  /* 印（.ms__stamp）与浮签（.ms-slip）的 z-index 只在稿纸里比：不关住的话，上面推进来一页、淡入的那一会儿它们会压在新页上 */
+  isolation: isolate;
   width: 100%;
 }
 /* 夜间配色的墨是浅色，同样的浓度在深色纸上显得太亮，夜里写字晃眼：格线再淡一些 */

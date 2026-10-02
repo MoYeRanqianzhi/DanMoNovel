@@ -17,7 +17,7 @@
  * - 预览没有任何参数能改变长度与位置，同一章每次返回同一段，并且限频；
  * - 自动订阅的范围由服务端检查（只能订正在读的那章之后 AUTO_AHEAD 章以内），客户端出错也订不掉整本书。
  */
-import { SHELF, getBook, type Book } from './books';
+import { BOOKS, SHELF, getBook, type Book } from './books';
 import { chapterParagraphs, chapterTitle } from './chapters';
 
 /** 每本书前 30 章免费，之后是订阅章节（示例规则；正式版由作者或编辑按书设置） */
@@ -38,10 +38,22 @@ export type ChapterAccess = 'free' | 'owned' | 'locked';
 /**
  * 本地存储里的一份账户数据：读一次后缓存在内存里，写入时同步更新；变化时通知订阅者。
  * parse 校验读出来的值（本地存储是外部输入），不合法时给出默认值。阅读器的书签与笔记也用它（reader/marks.ts）
+ *
+ * 别的标签页写了同一份记录（storage 事件只发给其他标签页）：丢掉缓存、通知订阅者，下次读时重新从本地存储取。
+ * 不这样做的话，两个标签页各拿着自己的旧缓存整份写回，后写的会把先写的盖掉（一边记的笔记、另一边扣的书币就丢了）。
+ * 记录都是模块顶层建的单例，监听挂上就不摘。
  */
 export function localRecord<T>(key: string, parse: (raw: unknown) => T) {
   let value: T | null = null;
   const listeners = new Set<() => void>();
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+      // key 为 null 是别的标签页清空了整个本地存储
+      if (e.key !== key && e.key !== null) return;
+      value = null;
+      listeners.forEach((l) => l());
+    });
+  }
   return {
     get(): T {
       if (value !== null) return value;
@@ -81,7 +93,17 @@ const owned = localRecord<Record<string, number[]>>('danmo:owned', (raw) => {
   return out;
 });
 
+/**
+ * 章号是否在这本书里（整数、从 0 起、小于总章数）。正式接口对越界的章号一律拒绝；
+ * 阅读器自己已经挡过（ensureChapter），模拟接口照同样的规矩再判一次，接后端时照着写不会漏
+ */
+function inBook(bookId: string, index: number): boolean {
+  const book = BOOKS.find((b) => b.id === bookId);
+  return !!book && Number.isInteger(index) && index >= 0 && index < book.chapters;
+}
+
 export function chapterAccess(bookId: string, index: number): ChapterAccess {
+  if (!inBook(bookId, index)) return 'locked';
   if (index < FREE_CHAPTERS) return 'free';
   // 示例书架：读完的书整本已订阅，在读的书读到的章节及之前已订阅
   const entry = SHELF.find((e) => e.bookId === bookId);
@@ -164,6 +186,8 @@ function textOf(bookId: string, index: number): ChapterText {
 /** 取第 index 章（从 0 开始）的正文；未解锁时返回 locked */
 export async function fetchChapter(bookId: string, index: number): Promise<ChapterResponse> {
   await roundTrip();
+  // 没有这一章：正式接口回 404，调用方按"取失败"处理
+  if (!inBook(bookId, index)) throw new Error('没有这一章');
   if (chapterAccess(bookId, index) === 'locked') return { status: 'locked' };
   return { status: 'ok', text: textOf(bookId, index) };
 }
@@ -226,6 +250,7 @@ export type PreviewResponse = { status: 'ok'; lead: ChapterLead } | { status: 'l
 /** 取第 index 章的预览（订阅页用） */
 export async function fetchPreview(bookId: string, index: number): Promise<PreviewResponse> {
   await roundTrip();
+  if (!inBook(bookId, index)) throw new Error('没有这一章');
   const now = Date.now();
   while (previewHits.length && now - previewHits[0] > 60_000) previewHits.shift();
   if (previewHits.length >= PREVIEW_PER_MINUTE) return { status: 'limited' };

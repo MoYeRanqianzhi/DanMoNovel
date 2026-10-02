@@ -10,8 +10,8 @@
  * 付印之后记"推荐"（session.ts 的 printShowcase）。正式版付印后小说站的书城跟着换，原型两站不共享状态。
  */
 import { useState, type CSSProperties, type ReactNode } from 'react';
-import { getStaff, type Showcase } from '@danmo/data/admin';
-import { BOOKS, TASTE_TAGS, formatWords, getBook, type Book } from '@danmo/data/books';
+import { getStaff } from '@danmo/data/admin';
+import { BOOKS, TASTE_TAGS, formatWords, getBook, type Book, type Showcase } from '@danmo/data/books';
 import { toChineseNumber } from '@danmo/data/chapters';
 import { Book3D, POSES } from '@danmo/design/book3d/Book3D';
 import { Sheet } from '@danmo/design/components/overlays';

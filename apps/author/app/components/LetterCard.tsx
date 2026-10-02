@@ -11,7 +11,8 @@ import { AUTHOR, WORKS, type ReaderLetter } from '@danmo/data/author';
 import { chapterTitle } from '@danmo/data/chapters';
 import { Stamp } from '@danmo/design/components/Stamp';
 import { Seal, TagMark } from '@danmo/design/components/ui';
-import { formatAgo, formatNumber } from '../format';
+import { formatNumber } from '@danmo/design/lib/format';
+import { formatAgo } from '../format';
 import { sealVariant, useProfileEdit } from '../profile';
 import './letter.css';
 

@@ -18,6 +18,7 @@ import { useState, type CSSProperties } from 'react';
 import { Award, ChevronLeft, ChevronRight, Feather, Flame, Search } from 'lucide-react';
 import {
   BOOKS,
+  SHOWCASE,
   TASTE_TAGS,
   formatAdded,
   formatHeat,
@@ -32,17 +33,6 @@ import { useStack, type ScreenHero, type ScreenProps } from '@danmo/design/shell
 import { BookRing, ringSlot } from './BookRing';
 import './store.css';
 
-/** 书环上的书（顺序即环上的顺序）：编辑推荐，原型固定七本 */
-const RING_IDS = [
-  '1002100000010003', // 雨停之前
-  '1003100000010001', // 星轨同行
-  '1002100000010006', // 镜头之外
-  '1002100000010002', // 潮汐来信
-  '1001100000010003', // 折梅寄远
-  '1002100000010001', // 他的第七封信
-  '1001100000010001', // 云岫不归
-];
-
 /** 书城页的数据：全部在架书目（榜单、新书、目录、找书结果都从这里排出来）、书环、口味标签 */
 export interface StoreData {
   books: Book[];
@@ -52,7 +42,8 @@ export interface StoreData {
 
 /** 书城的 loader：原型直接取示例书目；正式版改为调用 Go 接口 */
 export function loadStore(): StoreData {
-  return { books: BOOKS, ring: RING_IDS.map(getBook), tags: TASTE_TAGS };
+  // 书环是编辑在管理站"橱窗"里挑的七本（顺序即环上的顺序）；正式版由接口下发，这里读同一份示例数据
+  return { books: BOOKS, ring: SHOWCASE.ring.map(getBook), tags: TASTE_TAGS };
 }
 
 /** 书城的主角：书环正对读者的那本（打开时书环停在第一本）。公开数据，可以随 HTML 进 CDN */

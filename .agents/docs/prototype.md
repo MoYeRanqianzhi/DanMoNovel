@@ -37,7 +37,7 @@ packages/data/src/
   posts.ts      发现页的示例帖子 POSTS、帖子类别 POST_KINDS、formatPostTime
   comments.ts   阅读器的示例段评：paragraphCommentCount、paragraphComments（第 10 节"书签、划线、想法与段评"）
   author.ts     作者站的示例数据（第 13 节）：AUTHOR、WORKS、volumesOf、MESSAGES、LETTERS、statsOf、FANS、REVIEWS（朱批）、今日字数
-  manuscripts.ts 写作页与审核页的示例稿件：manuscriptOf、wordCount、draftWords、hasDraft
+  manuscripts.ts 写作页与审核页的示例稿件：manuscriptOf、wordCount、draftWords
   admin.ts      管理站的示例数据（第 16 节）：身份与权限、工作人员、审核队列、作者名册、设置页的三份（橱窗、告示、站规）、举报、全站三十天的数、账簿
 packages/design/src/
   styles/       index.ts（按顺序引入字体与 tokens → themes → base → transitions → layout）、tokens.css（@property 注册）、
@@ -55,7 +55,7 @@ packages/design/src/
                 columns 定一行几张，compact 是阅读设置里的紧凑版；点了要不要收起面板由调用方决定）
   manuscript/   稿纸（第 14 节）：Manuscript.tsx + manuscript.css、danmo-grid.woff2（方格补字字体）与 danmo-grid-OFL.txt
   charts/       Hills.tsx + hills.css（远山与图例 HillsLegend，第 13 节；作者站数据页、管理站总览共用）
-  lib/          util.ts（cls、seededRandom、clamp、lerp）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts、
+  lib/          util.ts（cls、seededRandom、lerp）、format.ts（formatNumber、formatCount）、version.ts（VERSION）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts、
                 curve.ts（q、smooth、hash：服务端与浏览器画得一字不差的曲线工具，第 13 节）
   fonts/        catalog.ts（平台字体目录、系统字体、字体 id 与字体栈）、imported.ts（导入字体：IndexedDB 与 FontFace）、
                 client.ts（模拟客户端的字体下载）、FontList.tsx + font-list.css（字体列表）、sfnt.ts（格式识别、读字体名、拆合集）
@@ -86,7 +86,7 @@ apps/author/app/       作者站（SSR，第 13、15 节）：公开首页 /、�
   local.ts      本机改过的封面与作品信息；profile.ts 本机改过的签名、闲章与每日目标
 apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false，第 16 节）：总览 /、审核 /review、作者 /authors、身份 /staff、日志 /audit、设置 /settings、我 /me、404
   identity.ts   以某个身份预览（原型专用）；session.ts 这次打开期间的决定、处理过的举报、名册与作者的改动、校样与新记的账；NoAccess.tsx 管不着的一页；
-                format.ts 时长、数字（千分位与几万）、入职、人数、量词前的汉字数字与日子
+                format.ts 时长、入职、人数、量词前的汉字数字与日子（千分位与几万在 design/lib/format.ts）
   review/       审核：Review.tsx（案卷与两栏）、Detail.tsx（一份案卷）、Annotator.tsx（选字下朱批）、review.css
   staff/        身份：Staff.tsx（印谱与名帖）、Dossier.tsx（面板：印的释文、名帖、札子）、rules.ts（谁能对谁做什么、理由）、staff.css
   audit/        日志：Audit.tsx（一卷流水账）、audit.css
@@ -801,7 +801,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 
 - **骨架**：root.tsx（默认主题缃叶）；shell.tsx 四个标签页：书房 /desk、作品 /works、互动 /readers、数据 /stats，侧栏底部是"我" /me（窄屏从书房右上角的闲章进入）；写作页不是标签页。
   - http.ts：PUBLIC_CACHE、PRIVATE_CACHE、privateMeta（标题加 noindex）、NOT_FOUND_META。
-  - format.ts：formatNumber 自己拼千分位（服务端与浏览器的区域数据可能不同，toLocaleString 会水合不匹配）、formatCount（万）、formatAgo。
+  - format.ts：formatAgo。formatNumber 自己拼千分位（服务端与浏览器的区域数据可能不同，toLocaleString 会水合不匹配）、formatCount（万）与管理站共用，在 design/lib/format.ts（2026-10-02 前两站各一份）。
   - 公开首页 / 是落地页（handle.bare），见本节末尾；"我"里退出登录回到这里。作品与封面工作室见第 15 节。
 - **数据**：packages/data/src/author.ts 与 manuscripts.ts。
   - AuthorProfile 的 sealStyle 是闲章的刻法：白文（满底朱红、字留白，Seal 的 solid）或朱文（红字红边，outline）；示例是白文"栖迟"。签名、闲章、刻法与每日目标可以在"我"里改（本机覆盖，见下文 profile.ts）。
@@ -1036,7 +1036,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 举报 REPORTS（r1~r4）：`Report {id, kind, excerpt, reason, count, minutesAgo}`，由总览的举报面板处理（见下面"总览"）。
   - 全站的数（总览的"今日"）：SITE_DAYS `{reads, chapters}` 各三十个数，最后一个是今天（读的人周末多、昨天放假第一天最多；章节每天一千二上下，周日少一点）；SITE_NEWCOMERS 今天新来的读者。
   - 设置页（见下面"设置"）：
-    - 橱窗 SHOWCASE `{ring, fresh}`：ring 七本与小说站 Store.tsx 的 RING_IDS 同序；fresh 四格与小说站现在按上架日期取的四本一致。SHOWCASE_EDITION `{no: 12, by: 's4', minutesAgo: 3000}` 对得上 l5。
+    - 橱窗 SHOWCASE `{ring, fresh}`（2026-10-02 起在 books.ts：小说站书城的书环直接读 ring，原先 Store.tsx 另抄一份 RING_IDS；放在 admin.ts 会把整份管理站示例数据带进小说站客户端包）；fresh 四格与小说站现在按上架日期取的四本一致。SHOWCASE_EDITION `{no: 12, by: 's4', minutesAgo: 3000}` 对得上 l5。
     - 告示 NOTICES（n3 十月征文 10-01~10-31、n2 停机维护 10-03、n1 九月书单 09-01~09-30），起止是写死的 YYYY-MM-DD；n3、n2 对得上 l10、l1。
     - 站规 POLICY 七条 `PolicyArticle {id, name, before, after, control, value}`；control 是 count `{unit, min, max, step?}` 或 choice `{options}`。
       第四条（deadline）的值是 REVIEW_LIMIT_MINUTES / 60，步长六小时、六到七十二。POLICY_EDITION `{no: 7, by: 's3', minutesAgo: 1800}` 对得上 l7。

@@ -16,7 +16,6 @@ import {
   POLICY,
   POLICY_EDITION,
   ROLES,
-  SHOWCASE,
   SHOWCASE_EDITION,
   STAFF,
   getRole,
@@ -31,11 +30,10 @@ import {
   type QueueItem,
   type Report,
   type RoleId,
-  type Showcase,
   type StaffMember,
 } from '@danmo/data/admin';
 import type { ReviewNote } from '@danmo/data/author';
-import { getBook } from '@danmo/data/books';
+import { SHOWCASE, getBook, type Showcase } from '@danmo/data/books';
 import { chapterTitle, toChineseNumber } from '@danmo/data/chapters';
 import { countKai, rangeLabel } from './format';
 

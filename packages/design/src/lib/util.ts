@@ -1,5 +1,5 @@
 /**
- * 通用小工具：类名拼接、可复现的伪随机数。
+ * 通用小工具：类名拼接、可复现的伪随机数、线性插值。
  * 只放被多个模块共享、且与业务无关的函数。
  */
 
@@ -28,11 +28,6 @@ export function seededRandom(seed: string): () => number {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-/** 把数值限制在 [min, max] 区间 */
-export function clamp(v: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, v));
 }
 
 /** 线性插值 */
