@@ -24,6 +24,13 @@
  *
  * 方向：rtl 为真时下一页在左边（竖排的默认方向，或横排打开了反向翻页），书脊在右侧，
  * 左右平移、左右覆盖随之反向；上下两种模式不受影响，下一页总从下方来。
+ *
+ * ┌ 对开（宽屏横排，计划第 4.1 节第 5 项）──────────────────────────────┐
+ * │ 一屏是摊开的一本书：左右两页。还是同一个多栏容器，只是窗口宽 = 两栏 + 中缝，  │
+ * │ 栏宽 colW 是一页的宽；第 i 屏 = 左移 i 个"两栏 + 两道栏距"。页码按屏数。      │
+ * │ 翻书以中缝为轴：往后翻时右页掀起、翻到左边，背面是下一屏的左页；往回翻反过来。 │
+ * │ 平移、覆盖照旧整屏移动。                                                    │
+ * └──────────────────────────────────────────────────────────────────┘
  */
 import { memo, useLayoutEffect, useRef, type CSSProperties, type ReactNode, type Ref } from 'react';
 import type { ChapterText } from '@danmo/data/api';
@@ -35,12 +42,16 @@ import { charRect } from './textpoints';
 
 /** 一页正文窗口的几何信息 */
 export interface Geometry {
-  /** 窗口（一页正文区域）的宽高 */
+  /** 窗口（一屏正文区域）的宽高；对开时窗口宽是两栏加中缝 */
   winW: number;
   winH: number;
-  /** 横排多栏的栏距；窗口会裁掉它，只影响翻页步长 */
+  /** 横排一栏（一页）的宽：单页时等于 winW */
+  colW: number;
+  /** 横排多栏的栏距：单页时窗口会裁掉它，只影响翻页步长；对开时它就是中缝 */
   gap: number;
   vertical: boolean;
+  /** 对开：一屏是左右两页 */
+  spread: boolean;
 }
 
 /** 一页的位置：第几章第几页（页码 -1 表示"这一章的最后一页"，是页数量出来之前的占位） */
@@ -162,7 +173,7 @@ export function Flow({
     : {
         width: g.winW,
         height: g.winH,
-        columnWidth: g.winW,
+        columnWidth: g.colW,
         columnGap: g.gap,
         transform: `translateX(${-index * (g.winW + g.gap)}px)`,
       };
@@ -173,10 +184,13 @@ export function Flow({
   );
 }
 
-/** 统计当前排版下的页数 */
+/**
+ * 统计当前排版下的页数（对开时是屏数）。横排：N 栏的总宽是 N·colW + (N-1)·gap，
+ * 一屏走 winW + gap；对开的最后一屏可能只有左页，所以向上取整（减去一点点，免得小数误差多出一页）
+ */
 export function countPages(flow: HTMLElement, g: Geometry): number {
   if (g.vertical) return Math.max(1, Math.ceil(flow.scrollWidth / g.winW - 0.02));
-  return Math.max(1, Math.round((flow.scrollWidth + g.gap) / (g.winW + g.gap)));
+  return Math.max(1, Math.ceil((flow.scrollWidth + g.gap) / (g.winW + g.gap) - 0.02));
 }
 
 /**
@@ -197,15 +211,18 @@ export function pageOfPoint(flow: HTMLElement, g: Geometry, pt: TextPoint): numb
  * 分页模式下每层页面都是一个 PageFrame；阅读器另有一个不可见的 PageFrame，用它的正文区量出窗口的可用尺寸。
  * 纹理跟着 <html data-paper> 走（读者在"背景"面板里选的纸），画在每一页上，所以翻页时纹理随书页一起动。
  * ribbon：这一页夹着书签，页顶垂下一条丝带（'fresh' 是刚夹上的，丝带从页顶落下来；翻到夹着书签的页时丝带本来就在）。
+ * book：对开时给书名。左页页眉写书名、右页页眉写章名（书的老规矩），中间画一道书脊的阴影。
  */
 export function PageFrame({
   title,
+  book,
   foot,
   bodyRef,
   ribbon,
   children,
 }: {
   title: ReactNode;
+  book?: string;
   foot?: ReactNode;
   bodyRef?: Ref<HTMLDivElement>;
   ribbon?: boolean | 'fresh';
@@ -214,8 +231,10 @@ export function PageFrame({
   return (
     <>
       <PaperTexture />
+      {book && <i className="rd-page__spine" aria-hidden="true" />}
       {ribbon && <i className="rd-ribbon" data-fresh={ribbon === 'fresh' || undefined} aria-hidden="true" />}
       <header className="rd-page__head">
+        {book && <span className="rd-page__book">{book}</span>}
         <span>{title}</span>
       </header>
       <div ref={bodyRef} className="rd-page__body">
@@ -255,16 +274,25 @@ interface PagedViewProps {
   mode: PagedMode;
   /** 下一页在左边：书脊在右侧，左右平移、左右覆盖反向 */
   rtl: boolean;
+  /** 对开：翻书时以中缝为轴翻半屏 */
+  spread: boolean;
   /** 渲染一整页（PageFrame：页眉、正文或状态页、页脚） */
   renderPage: (ref: PageRef) => ReactNode;
   /** 翻页动画播完时调用；调用方在这里更新当前页并清除 turn */
   onTurnEnd: () => void;
 }
 
-export function PagedView({ current, turn, mode, rtl, renderPage, onTurnEnd }: PagedViewProps) {
+const keyOf = (ref: PageRef) => `${ref.chapter}:${ref.page}`;
+/** 只露出左半屏或右半屏（对开翻书时，不动的半屏与翻起的那一张都是整屏裁出来的） */
+const halfClip = (side: 'left' | 'right') => (side === 'left' ? 'inset(0 50% 0 0)' : 'inset(0 0 0 50%)');
+
+export function PagedView({ current, turn, mode, rtl, spread, renderPage, onTurnEnd }: PagedViewProps) {
   const layerRefs = useRef(new Map<Role, HTMLDivElement>());
+  /** 对开翻书时翻起的那一张（两面：正面是这一屏动的半页，背面是下一屏的另一半页） */
+  const leafRef = useRef<HTMLDivElement>(null);
   const onEndRef = useRef(onTurnEnd);
   onEndRef.current = onTurnEnd;
+  const spreadFlip = spread && mode === 'flip';
 
   // 布局副作用：新的一层挂上去的同一帧就开始动画，避免闪现静止的首帧
   useLayoutEffect(() => {
@@ -273,7 +301,29 @@ export function PagedView({ current, turn, mode, rtl, renderPage, onTurnEnd }: P
     const forward = turn.dir === 1;
     const anims: Animation[] = [];
 
-    if (mode === 'flip') {
+    if (spreadFlip) {
+      // 对开：动的那半页以中缝为轴翻过去。右页往左翻转到 -180°，左页往右翻转到 180°
+      const leaf = leafRef.current;
+      const movingRight = forward !== rtl;
+      const opts: KeyframeAnimationOptions = { duration: 680, easing: 'cubic-bezier(.45,.05,.3,1)', fill: 'both' };
+      if (leaf) {
+        const end = movingRight ? -180 : 180;
+        anims.push(
+          leaf.animate(
+            { transform: ['perspective(2600px) rotateY(0deg)', `perspective(2600px) rotateY(${end}deg)`] },
+            opts,
+          ),
+        );
+        // 正面掀起时越来越暗（转到侧面时最暗），背面落下时由暗转亮
+        const front = leaf.querySelector('.rd-leaf__face:not(.rd-leaf__face--back) .rd-page__shade');
+        const back = leaf.querySelector('.rd-leaf__face--back .rd-page__shade');
+        if (front) anims.push(front.animate([{ opacity: 0 }, { opacity: 0.3, offset: 0.5 }, { opacity: 0.3 }], opts));
+        if (back) anims.push(back.animate([{ opacity: 0.3 }, { opacity: 0.3, offset: 0.5 }, { opacity: 0 }], opts));
+      }
+      // 翻起的那一张落在下面一屏中缝附近的阴影：翻得越高越淡
+      const underShade = get('under')?.querySelector('.rd-page__shade');
+      if (underShade) anims.push(underShade.animate([{ opacity: 0.22 }, { opacity: 0 }], opts));
+    } else if (mode === 'flip') {
       // 书脊在左：页面向左掀起（负角度）；书脊在右：向右掀起（正角度）
       const edge = rtl ? 94 : -94;
       const lift = [`perspective(2000px) rotateY(0deg)`, `perspective(2000px) rotateY(${edge}deg)`];
@@ -318,21 +368,53 @@ export function PagedView({ current, turn, mode, rtl, renderPage, onTurnEnd }: P
       cancelled = true;
       anims.forEach((a) => a.cancel());
     };
-  }, [turn, mode, rtl]);
+    // spreadFlip 由 spread 与 mode 决定
+  }, [turn, mode, rtl, spread]);
+
+  /** 登记某个角色的页面层（React 19 的 ref 清理函数：换了角色时先注销旧角色） */
+  const roleRef = (role: Role) => (el: HTMLDivElement | null) => {
+    if (!el) return;
+    layerRefs.current.set(role, el);
+    return () => {
+      if (layerRefs.current.get(role) === el) layerRefs.current.delete(role);
+    };
+  };
+
+  if (turn && spreadFlip) {
+    const movingRight = (turn.dir === 1) !== rtl;
+    const moving = movingRight ? 'right' : 'left';
+    const still = movingRight ? 'left' : 'right';
+    // 底下是要翻到的那一屏（key 与翻完后的当前页相同，翻完原地变成当前页）；
+    // 上面是这一屏不动的半页（key 与翻之前的当前页相同，翻之前的那一层原地裁成半页）；最上面是翻起的那一张
+    return (
+      <div className="rd-paged" data-mode={mode} data-spread="">
+        <div key={keyOf(turn.to)} ref={roleRef('under')} className="rd-page rd-page--under" aria-hidden="true">
+          {renderPage(turn.to)}
+          <div className="rd-page__shade" />
+        </div>
+        <div key={keyOf(current)} className="rd-page rd-page--still" style={{ clipPath: halfClip(still) }} aria-hidden="true">
+          {renderPage(current)}
+        </div>
+        <div ref={leafRef} className="rd-leaf" data-side={moving} aria-hidden="true">
+          <div className="rd-page rd-leaf__face" style={{ clipPath: halfClip(moving) }}>
+            {renderPage(current)}
+            <div className="rd-page__shade" />
+          </div>
+          <div className="rd-page rd-leaf__face rd-leaf__face--back" style={{ clipPath: halfClip(still) }}>
+            {renderPage(turn.to)}
+            <div className="rd-page__shade" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="rd-paged" data-mode={mode}>
+    <div className="rd-paged" data-mode={mode} data-spread={spread ? '' : undefined}>
       {layersFor(current, turn, mode).map(({ ref, role }) => (
         <div
-          key={`${ref.chapter}:${ref.page}`}
-          ref={(el) => {
-            // React 19 的 ref 清理函数：同一页面层换了角色（下层 → 当前）时，先注销旧角色再登记新角色
-            if (!el) return;
-            layerRefs.current.set(role, el);
-            return () => {
-              if (layerRefs.current.get(role) === el) layerRefs.current.delete(role);
-            };
-          }}
+          key={keyOf(ref)}
+          ref={roleRef(role)}
           className={cls('rd-page', `rd-page--${role}`)}
           data-hinge={rtl ? 'right' : 'left'}
           aria-hidden={role !== 'current' && role !== 'incoming' ? true : undefined}

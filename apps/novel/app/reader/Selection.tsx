@@ -278,7 +278,7 @@ interface Box {
   bottom: number;
 }
 
-/** 选区的位置：整体的外框，首字与末字的框（画手柄） */
+/** 选区的位置：浮条贴着的外框（对开跨页时只取一页，见 anchorRects），首字与末字的框（画手柄） */
 interface SelBox {
   box: Box;
   first: Box;
@@ -343,6 +343,41 @@ function textRectsOf(range: Range): DOMRect[] {
   return out;
 }
 
+/** 屏幕上的一点（视口坐标） */
+export interface ScreenPoint {
+  x: number;
+  y: number;
+}
+
+/**
+ * 浮条贴着哪些框：分页的横排正文是多栏，对开时一屏有左右两栏（两页），选区或划线可能从左页跨到右页，
+ * 两页的外框是大半个屏幕，浮条会落在书脊上压住字。所以只取露在窗口里的一栏：
+ * 给了 near（读者点划线的地方）取离它最近的框所在的那一栏，否则取最后一个框所在的那一栏
+ * （选区是末字所在的那一页，读者刚松手的地方）。竖排与滚动模式不分栏（column-width 是 auto），整块算。
+ * 窗口外的栏（单页时前后几页、对开时前后几屏）本来就看不见，先去掉。
+ */
+function anchorRects(root: HTMLElement, rects: DOMRect[], near: ScreenPoint | null = null): DOMRect[] {
+  const cs = getComputedStyle(root);
+  const colW = parseFloat(cs.columnWidth);
+  const win = root.parentElement;
+  if (!(colW > 0) || !win) return rects;
+  const step = colW + (parseFloat(cs.columnGap) || 0);
+  const view = win.getBoundingClientRect();
+  // 多栏容器左移了若干屏（transform 算在 getBoundingClientRect 里），它的左缘就是第 0 栏的左缘
+  const origin = root.getBoundingClientRect().left;
+  const columnOf = (r: DOMRect) => Math.floor((r.left + r.width / 2 - origin) / step);
+  const shown = rects.filter((r) => r.width > 0 && r.right > view.left && r.left < view.right);
+  if (!shown.length) return rects;
+  /** 一点到一个框的距离（点在框里是 0） */
+  const dist = (r: DOMRect, p: ScreenPoint) =>
+    Math.hypot(Math.max(r.left - p.x, 0, p.x - r.right), Math.max(r.top - p.y, 0, p.y - r.bottom));
+  const pick = near
+    ? shown.reduce((best, r) => (dist(r, near) < dist(best, near) ? r : best))
+    : shown[shown.length - 1];
+  const col = columnOf(pick);
+  return shown.filter((r) => columnOf(r) === col);
+}
+
 /**
  * 量出选区的位置，并把选区登记成 ::highlight(rd-sel)。
  * tick 变了就重量（滚动、翻页、重新排版之后）。不支持高亮接口的浏览器另外画一层半透明的框（rects）
@@ -359,7 +394,7 @@ function useSelBox(env: SelectionEnv, sel: TextSel | null, tick: unknown) {
     }
     const base = reader.getBoundingClientRect();
     const textRects = textRectsOf(range);
-    const box = unionBox(textRects, base);
+    const box = unionBox(anchorRects(root, textRects), base);
     const firstR = charRect(root, sel.start);
     const lastR = charRect(root, { p: sel.end.p, o: Math.max(0, sel.end.o - 1) });
     if (!box || !firstR || !lastR) {
@@ -381,8 +416,8 @@ function useSelBox(env: SelectionEnv, sel: TextSel | null, tick: unknown) {
   return geo;
 }
 
-/** 一条划线在屏幕上的外框（点开划线时浮层贴着它） */
-function useNoteBox(env: SelectionEnv, note: Note | null, tick: unknown): Box | null {
+/** 一条划线在屏幕上的外框（点开划线时浮层贴着它；跨页时只取一页，见 anchorRects） */
+function useNoteBox(env: SelectionEnv, note: Note | null, near: ScreenPoint | null, tick: unknown): Box | null {
   const [box, setBox] = useState<Box | null>(null);
   useLayoutEffect(() => {
     const reader = env.readerRef.current;
@@ -390,8 +425,8 @@ function useNoteBox(env: SelectionEnv, note: Note | null, tick: unknown): Box | 
     if (!reader || !note || !root) return setBox(null);
     const base = reader.getBoundingClientRect();
     const rects = Array.from(root.querySelectorAll(`mark[data-note="${note.id}"]`)).flatMap((m) => Array.from(m.getClientRects()));
-    setBox(unionBox(rects, base));
-  }, [note, tick]);
+    setBox(unionBox(anchorRects(root, rects, near), base));
+  }, [note, near, tick]);
   return box;
 }
 
@@ -413,10 +448,14 @@ function Floating({ box, touch, className, children }: { box: Box; touch: boolea
     const gap = touch ? TOUCH_GAP : GAP;
     const W = parent.clientWidth;
     const H = parent.clientHeight;
+    // 浮条不进刘海、圆角与状态栏下面：浮层的四边内边距就是要让开的安全区（reader.css 的 .rd-select），
+    // 上方放不下（会进状态栏）就放到选区下方
+    const cs = getComputedStyle(parent);
+    const safe = { x: parseFloat(cs.paddingLeft) || 0, top: parseFloat(cs.paddingTop) || 0, bottom: parseFloat(cs.paddingBottom) || 0 };
     const center = (box.left + box.right) / 2;
-    const below = box.top - gap - h < 12;
-    const top = below ? Math.min(box.bottom + gap, H - h - 12) : box.top - gap - h;
-    const left = Math.min(Math.max(10, center - w / 2), W - w - 10);
+    const below = box.top - gap - h < 12 + safe.top;
+    const top = below ? Math.min(box.bottom + gap, H - h - 12 - safe.bottom) : box.top - gap - h;
+    const left = Math.min(Math.max(10 + safe.x, center - w / 2), W - w - 10 - safe.x);
     setPlace({ left, top, arrow: Math.min(Math.max(16, center - left), w - 16), below });
   }, [box.left, box.top, box.right, box.bottom, touch]);
   return (
@@ -468,13 +507,15 @@ interface OverlayProps {
   actions: SelectionActions;
   /** 点开的划线；没有就是 null */
   note: Note | null;
+  /** 读者点划线的地方：划线跨两页时，小浮层贴着点的那一页；刚划完的线是 null（贴着末尾那一页） */
+  noteNear: ScreenPoint | null;
   noteActions: NoteActions;
 }
 
-export function SelectionOverlay({ env, selection, tick, touch, actions, note, noteActions }: OverlayProps) {
+export function SelectionOverlay({ env, selection, tick, touch, actions, note, noteNear, noteActions }: OverlayProps) {
   const { sel, dragging } = selection;
   const geo = useSelBox(env, sel, tick);
-  const noteBox = useNoteBox(env, sel ? null : note, tick);
+  const noteBox = useNoteBox(env, sel ? null : note, noteNear, tick);
 
   return (
     <div className="rd-select" data-vertical={env.vertical || undefined}>

@@ -5,9 +5,10 @@
  * 保证它们总在底部导航与飞行层之上（层级表见 docs/design/design-language.md）。
  * 服务端没有 document：Portal 只在浏览器中挂载之后才渲染。
  */
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useMounted } from '../lib/useClientValue';
+import { cls } from '../lib/util';
 import './overlays.css';
 
 /* ---------------- Sheet ---------------- */
@@ -17,6 +18,12 @@ interface SheetProps {
   /** 面板标题，同时作为对话框的读屏名称 */
   title: string;
   onClose: () => void;
+  /**
+   * 加在浮层根元素上的类名与样式：页面要换一种摆法时用（例如阅读器在宽屏把面板贴着下栏放，见 reader.css）。
+   * 面板挂在 <body> 下，读不到页面里的 CSS 变量，页面要传的尺寸从 style 带进来
+   */
+  className?: string;
+  style?: CSSProperties;
   children: ReactNode;
 }
 
@@ -25,7 +32,7 @@ interface SheetProps {
  * 关闭时先播放收起动画再卸载；打开时把焦点移入面板，关闭后把焦点还给触发它的按钮。
  * 面板里的内容已经自己拿了焦点时（例如 autoFocus 的输入框）不抢：React 在提交阶段就给它聚焦了，早于这里的副作用。
  */
-export function Sheet({ open, title, onClose, children }: SheetProps) {
+export function Sheet({ open, title, onClose, className, style, children }: SheetProps) {
   const [mounted, setMounted] = useState(open);
   const [closing, setClosing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -67,7 +74,7 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
 
   if (!mounted) return null;
   return createPortal(
-    <div className="sheet-root" data-closing={closing || undefined}>
+    <div className={cls('sheet-root', className)} style={style} data-closing={closing || undefined}>
       <div className="sheet-scrim" onClick={onClose} />
       <div ref={panelRef} className="sheet-panel sheet" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
         <div className="sheet-panel__grip" aria-hidden="true" />

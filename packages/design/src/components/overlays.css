@@ -94,12 +94,13 @@
   }
 }
 
-/* ---------------- Toast：一张小纸条从底部浮起 ---------------- */
+/* ---------------- Toast：一张小纸条从底部浮起 ----------------
+ * --toast-bottom：页面底部另有浮起的工具条时，由页面写在根元素上，提示升到它上方（例如阅读器唤出下栏时，见 Reader.tsx） */
 .toast-region {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 28px);
+  bottom: var(--toast-bottom, calc(var(--tabbar-h) + var(--safe-bottom) + 28px));
   z-index: 70;
   display: flex;
   justify-content: center;
@@ -131,7 +132,7 @@
 }
 @media (min-width: 900px) {
   .toast-region {
-    bottom: 36px;
+    bottom: var(--toast-bottom, 36px);
     padding-left: calc(var(--rail-w) + var(--safe-left));
   }
 }

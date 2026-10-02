@@ -20,13 +20,27 @@
   background-color: var(--reader-paper);
 }
 
+/*
+ * 横放的刘海屏：纸铺到屏幕边（.reader 盖住 .screen 让出的安全区），字不进刘海与圆角下面。
+ * --rd-safe-x 是左右各让的宽度：两边让得一样多，书页、对开的中缝、翻页的轴都还在纸的正中，
+ * 不用另算偏移。宽屏时左边是侧栏、左边的刘海已经由侧栏让过（layout.css），只看右边。
+ * 用到它的：滚动模式的页眉、正文、页脚（.reader 的左右内边距）；分页的每一页（.rd-page 的左右内边距，
+ * 不可见的页框也是 .rd-page，量出的正文尺寸已经扣掉了它）；上下两栏、书签丝带、选择浮条的左右边界。
+ */
 .reader {
+  --rd-safe-x: max(var(--safe-left), var(--safe-right));
   position: absolute;
   inset: 0;
   isolation: isolate;
   display: flex;
   flex-direction: column;
+  padding-inline: var(--rd-safe-x);
   color: var(--reader-ink);
+}
+@media (min-width: 900px) {
+  .reader {
+    --rd-safe-x: var(--safe-right);
+  }
 }
 
 /* ---- 页眉 / 页脚：安静的小字与红线 ---- */
@@ -91,13 +105,14 @@
   overflow: hidden;
 }
 
-/* 一整页：纸（纸色 + 背景纹理）、页眉、正文区、页脚 */
+/* 一整页：纸（纸色 + 背景纹理）、页眉、正文区、页脚。纸铺满整页，页眉、正文、页脚让开左右的刘海 */
 .rd-page {
   position: absolute;
   inset: 0;
   isolation: isolate;
   display: flex;
   flex-direction: column;
+  padding-inline: var(--rd-safe-x);
   background-color: var(--reader-paper);
   backface-visibility: hidden;
 }
@@ -538,8 +553,8 @@
 /* ---- 工具栏：两张浮起的纸条，从上下边缘滑入 ---- */
 .rd-bar {
   position: absolute;
-  left: 10px;
-  right: 10px;
+  left: calc(10px + var(--rd-safe-x));
+  right: calc(10px + var(--rd-safe-x));
   z-index: 6;
   border-radius: var(--radius-l);
   box-shadow:
@@ -571,7 +586,7 @@
   .rd-bar {
     left: 50%;
     right: auto;
-    width: min(640px, calc(100% - 40px));
+    width: min(640px, calc(100% - 40px - 2 * var(--rd-safe-x)));
     translate: -50% 0;
   }
 }
@@ -1154,7 +1169,7 @@
 .rd-ribbon {
   position: absolute;
   top: 0;
-  right: max(30px, calc((100% - 820px) / 2 + 30px));
+  right: max(calc(30px + var(--rd-safe-x)), calc((100% - 820px) / 2 + 30px));
   z-index: 2;
   width: 14px;
   height: calc(var(--safe-top) + 44px);
@@ -1196,11 +1211,14 @@
   color: var(--thread);
 }
 
-/* ---- 选择的浮层：手柄、工具条、划线的小浮层。在亮度遮罩（z-index 7）之上，夜里也看得清 ---- */
+/* ---- 选择的浮层：手柄、工具条、划线的小浮层。在亮度遮罩（z-index 7）之上，夜里也看得清 ----
+ * 四边的内边距是安全区：不影响里面的定位（绝对定位按内边距盒算），只是告诉浮条能放到哪里——
+ * 不进刘海、圆角与状态栏下面（Selection.tsx 的 Floating 读它） */
 .rd-select {
   position: absolute;
   inset: 0;
   z-index: 8;
+  padding: var(--safe-top) var(--rd-safe-x) var(--safe-bottom);
   pointer-events: none;
 }
 /* 不支持 ::highlight 的浏览器：选区画成半透明的框 */
@@ -1858,5 +1876,126 @@
     bottom: calc(var(--sp-6) * -1);
     margin-bottom: calc(var(--sp-6) * -1);
     padding-bottom: 16px;
+  }
+}
+
+/* ============================================================
+ * 对开（宽屏横排，pages.tsx 的 Geometry.spread）：一屏是摊开的一本书
+ * 页眉页脚跟着两页一样宽（--rd-spread-w 是两栏加中缝，由 Reader 写入），左页页眉写书名、右页写章名；
+ * 中间一道书脊的阴影；翻书时动的那半页以中缝为轴翻过去（.rd-leaf，动画在 PagedView 里）。
+ * ============================================================ */
+.rd-paged[data-spread] .rd-page__head,
+.rd-paged[data-spread] .rd-page__foot {
+  width: min(100%, calc(var(--rd-spread-w) + 52px));
+}
+.rd-paged[data-spread] .rd-page__head {
+  justify-content: space-between;
+  gap: 24px;
+}
+.rd-page__book {
+  font-family: var(--font-kai);
+}
+/* 书脊：两页在中缝处弯下去的阴影，中间一道细细的折痕。z-index -1：在纸纹之上、文字之下 */
+.rd-page__spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: -1;
+  width: min(16%, 200px);
+  translate: -50% 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--shadow-rgb) / 0.045) 36%,
+    rgb(var(--shadow-rgb) / 0.12) 49.4%,
+    rgb(var(--shadow-rgb) / 0.2) 50%,
+    rgb(var(--shadow-rgb) / 0.1) 50.6%,
+    rgb(var(--shadow-rgb) / 0.04) 64%,
+    transparent
+  );
+}
+/* 丝带挂在右页外侧的页边上：右页页眉的章名靠右写，挂在正文上方会压住它 */
+.rd-paged[data-spread] .rd-ribbon {
+  right: max(calc(10px + var(--rd-safe-x)), calc((100% - var(--rd-spread-w)) / 2 - 30px));
+}
+
+/* 翻起的那一张：两面，正面是这一屏动的半页，背面（先转过 180°）是下一屏的另一半页；转过 90° 之后背面朝外 */
+.rd-leaf {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+.rd-leaf__face--back {
+  transform: rotateY(180deg);
+}
+/* 明暗：离书脊越远的一侧越暗（页面在翻转），落下的背面由暗转亮 */
+.rd-leaf[data-side='right'] .rd-leaf__face:not(.rd-leaf__face--back) .rd-page__shade,
+.rd-leaf[data-side='left'] .rd-leaf__face--back .rd-page__shade {
+  background: linear-gradient(90deg, transparent 50%, #000);
+}
+.rd-leaf[data-side='left'] .rd-leaf__face:not(.rd-leaf__face--back) .rd-page__shade,
+.rd-leaf[data-side='right'] .rd-leaf__face--back .rd-page__shade {
+  background: linear-gradient(270deg, transparent 50%, #000);
+}
+/* 下面一屏：翻起的那一张在中缝两边落下的阴影 */
+.rd-paged[data-spread] .rd-page--under .rd-page__shade {
+  background: linear-gradient(90deg, transparent 30%, #000 50%, transparent 70%);
+}
+
+/* ============================================================
+ * 宽屏的面板：贴着下栏浮起（Reader.tsx 给阅读器的五个面板加了 .rd-sheet，--rd-dock 是停靠的高度）
+ * 桌面端的面板本来是屏幕正中的一张纸卡（overlays.css），在阅读器里它会同时压住上下两栏，离按下的按钮也远。
+ * 这里改成和下栏一样宽、停在下栏上方 12px，像是从下栏里抽出来的一张纸；遮罩淡一些，书页还看得见。
+ * 矮的宽屏（横放的大手机，如 932×430）停在下栏上方只剩一小条，不停靠，仍是正中的纸卡。
+ * 两种都在阅读器里居中（和上下两栏对齐），而不是在整个屏幕里：阅读器从侧栏右边起。
+ * 选择器比 overlays.css 的高一级：生产构建里共享的样式表比页面的晚加载，同级的写法会被盖掉。
+ * ============================================================ */
+@media (min-width: 900px) {
+  .sheet-root.rd-sheet .sheet-panel {
+    left: calc(50% + (var(--rail-w) + var(--safe-left)) / 2);
+  }
+}
+@media (min-width: 900px) and (min-height: 600px) {
+  .sheet-root.rd-sheet .sheet-scrim {
+    background: color-mix(in srgb, var(--scrim) 45%, transparent);
+  }
+  .sheet-root.rd-sheet .sheet-panel {
+    top: auto;
+    bottom: calc(var(--rd-dock) + var(--safe-bottom));
+    /* 宽度和下栏一样，扣掉两边让给刘海的宽度
+     * （宽屏时阅读器的 --rd-safe-x 就是 --safe-right，面板挂在 <body> 下读不到它，直接用 --safe-right） */
+    width: min(640px, calc(100% - var(--rail-w) - var(--safe-left) - 40px - 2 * var(--safe-right)));
+    max-height: calc(100dvh - var(--rd-dock) - var(--safe-bottom) - var(--safe-top) - 88px);
+    translate: -50% 0;
+    transform-origin: 50% 100%;
+    /* 和上下两栏同一种影子：同一家的纸 */
+    box-shadow:
+      0 0 0 1px var(--line),
+      0 22px 48px -24px rgb(var(--shadow-rgb) / 0.6);
+    animation-name: rd-dock-in;
+  }
+  .sheet-root.rd-sheet[data-closing] .sheet-panel {
+    animation-name: rd-dock-out;
+  }
+  /* 目录面板三页一样高（换页不跳），停靠之后可用的高度矮一些 */
+  .sheet-root.rd-sheet .rd-dir {
+    min-height: min(calc(100dvh - var(--rd-dock) - 200px), 560px);
+  }
+}
+@keyframes rd-dock-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+}
+@keyframes rd-dock-out {
+  to {
+    opacity: 0;
+    transform: translateY(12px);
   }
 }

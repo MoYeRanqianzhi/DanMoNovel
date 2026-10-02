@@ -100,13 +100,24 @@ import {
 } from './pages';
 import { BackgroundPanel, SettingsPanel } from './panels';
 import { CommentsPanel, ThoughtEditor } from './remarks';
-import { SelectionOverlay, useTextSelection, type NoteActions, type SelectionActions, type SelectionEnv, type TextSel } from './Selection';
+import {
+  SelectionOverlay,
+  useTextSelection,
+  type NoteActions,
+  type ScreenPoint,
+  type SelectionActions,
+  type SelectionEnv,
+  type TextSel,
+} from './Selection';
 import { LEADING, useReaderSettings, type PagedMode } from './settings';
 import { charRect, firstVisiblePoint, fracOfPoint, pointSide, textBetween, type Flowing } from './textpoints';
 import './reader.css';
 
 /** 滚动模式同时挂着的章数上限 */
 const MAX_SECTIONS = 5;
+
+/** 对开时每页一行至少放得下这么多字，才改成左右两页（窄了宁可单页） */
+const SPREAD_MIN = 18;
 
 /** 读者在书里的位置：第几章、章内比例（0~1）。分页取当前页在本章的比例，滚动取视口顶端 */
 interface Place {
@@ -232,6 +243,8 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   const [dirTab, setDirTab] = useState<DirTab>('toc');
   /** 点开的那条划线（浮出它的小浮层） */
   const [activeNote, setActiveNote] = useState<string | null>(null);
+  /** 读者点在划线的哪里：对开时一条划线可能跨两页，小浮层贴着点的那一页（刚划完的线是 null） */
+  const [noteNear, setNoteNear] = useState<ScreenPoint | null>(null);
   /** 写想法的面板：给已有的划线写（noteId），或给刚选中的字写（sel，保存时才划线） */
   const [thought, setThought] = useState<{ noteId: string } | { sel: TextSel } | null>(null);
   /** 段评面板：哪一章哪一段；quote 是先选中文字再点"段评"时引的字 */
@@ -287,10 +300,19 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     const availW = Math.max(160, size.w - margin * 2);
     const winH = Math.max(160, size.h - 12);
     if (settings.vertical) {
-      return { winW: Math.max(pitch, Math.floor(availW / pitch) * pitch), winH, gap: 0, vertical: true };
+      const winW = Math.max(pitch, Math.floor(availW / pitch) * pitch);
+      return { winW, colW: winW, winH, gap: 0, vertical: true, spread: false };
     }
-    // 横排每行最多约 34 个字，桌面宽屏上不让一行拉得过长
-    return { winW: Math.min(availW, Math.round(settings.fontSize * 34)), winH, gap: margin * 2, vertical: false };
+    const gap = margin * 2;
+    // 对开（计划第 4.1 节第 5 项"宽屏默认对开两页"）：放得下两栏、每栏至少 SPREAD_MIN 个字时，一屏是左右两页，
+    // 每页最多约 30 个字一行（比单页的 34 个字窄一些，两页并排时眼睛不用走太远）
+    const pair = Math.min(Math.round(settings.fontSize * 30), Math.floor((availW - gap) / 2));
+    if (pair >= settings.fontSize * SPREAD_MIN) {
+      return { winW: pair * 2 + gap, colW: pair, winH, gap, vertical: false, spread: true };
+    }
+    // 单页：横排每行最多约 34 个字，桌面宽屏上不让一行拉得过长
+    const winW = Math.min(availW, Math.round(settings.fontSize * 34));
+    return { winW, colW: winW, winH, gap, vertical: false, spread: false };
   }, [size.w, size.h, margin, pitch, settings.vertical, settings.fontSize]);
 
   // 网页字体是按需分片加载的，加载完成后字形宽度会变，需要重新分页
@@ -807,6 +829,17 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     if (selection.sel) setChrome(false);
   }, [selection.sel]);
 
+  // 工具栏唤出时，轻提示（"已夹上书签"等）升到下栏上方，不压住下栏的按钮。
+  // 提示挂在 <body> 下读不到阅读器上的变量，所以写在根元素上（overlays.css 的 --toast-bottom），收起或离开阅读器时撤掉
+  useEffect(() => {
+    if (!chrome) return;
+    const root = document.documentElement;
+    root.style.setProperty('--toast-bottom', `calc(${bar.h + 22}px + var(--safe-bottom))`);
+    return () => {
+      root.style.removeProperty('--toast-bottom');
+    };
+  }, [chrome, bar.h]);
+
   // 改了排版（字号、字体、行距、方向、翻页方式、段评显示）：选择与划线的浮层都收起
   useEffect(() => {
     selection.clear();
@@ -858,6 +891,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     line: (s) => {
       const id = saveLine(s, lastStyle.current, '');
       selection.clear();
+      setNoteNear(null);
       setActiveNote(id);
     },
     thought: (s) => {
@@ -953,7 +987,10 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     if (chrome) return setChrome(false);
     // 点在划线上：浮出这条划线的小浮层（不管点在页面的哪一侧）
     const mark = e.target instanceof Element ? e.target.closest<HTMLElement>('mark[data-note]') : null;
-    if (mark?.dataset.note) return setActiveNote(mark.dataset.note);
+    if (mark?.dataset.note) {
+      setNoteNear({ x: e.clientX, y: e.clientY });
+      return setActiveNote(mark.dataset.note);
+    }
     if (!paged) return setChrome(true);
     const r = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width;
@@ -1023,7 +1060,14 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     '--rd-leading': leading,
     '--rd-pitch': `${pitch}px`,
     '--rd-font': fontStack(settings.font),
+    '--rd-spread-w': `${g.winW}px`,
   } as CSSProperties;
+
+  /**
+   * 宽屏时阅读器的面板贴着下栏浮起（reader.css 的 .rd-sheet）：下栏唤出时停在它上方 12px，
+   * 没唤出时（写想法、段评是从正文里打开的）停在底边。面板挂在 <body> 下读不到阅读器上的变量，停靠的高度从这里带进去
+   */
+  const dock = { '--rd-dock': `${chrome ? bar.h + 22 : 24}px` } as CSSProperties;
 
   /** 某一章的正文或状态页（分页模式的一页、滚动模式的一段共用） */
   const noticeFor = (i: number, status: 'locked' | 'failed' | 'loading' | 'idle') =>
@@ -1067,6 +1111,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     return (
       <PageFrame
         title={chapterTitle(book, ref.chapter)}
+        book={g.spread ? book.title : undefined}
         foot={<PageFoot value={(ref.chapter + frac) / book.chapters} label={label} />}
         ribbon={onPage.length ? (freshMark(onPage) ? 'fresh' : true) : undefined}
       >
@@ -1120,6 +1165,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
               turn={turn}
               mode={settings.mode as PagedMode}
               rtl={rtl}
+              spread={g.spread}
               renderPage={renderPage}
               onTurnEnd={onTurnEnd}
             />
@@ -1272,7 +1318,13 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
         <span>回到{shownOrigin && chapterTitle(book, shownOrigin.chapter)}</span>
       </button>
 
-      <Sheet open={panel === 'settings'} title={fontsOpen ? '选择字体' : '阅读设置'} onClose={() => setPanel(null)}>
+      <Sheet
+        open={panel === 'settings'}
+        title={fontsOpen ? '选择字体' : '阅读设置'}
+        onClose={() => setPanel(null)}
+        className="rd-sheet"
+        style={dock}
+      >
         {fontsOpen ? (
           <FontList
             value={settings.font}
@@ -1284,10 +1336,10 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
           <SettingsPanel book={book} settings={settings} update={update} onOpenFonts={() => setFontsOpen(true)} />
         )}
       </Sheet>
-      <Sheet open={panel === 'background'} title="背景" onClose={() => setPanel(null)}>
+      <Sheet open={panel === 'background'} title="背景" onClose={() => setPanel(null)} className="rd-sheet" style={dock}>
         <BackgroundPanel settings={settings} update={update} />
       </Sheet>
-      <Sheet open={panel === 'toc'} title={book.title} onClose={() => setPanel(null)}>
+      <Sheet open={panel === 'toc'} title={book.title} onClose={() => setPanel(null)} className="rd-sheet" style={dock}>
         <DirectoryPanel
           book={book}
           current={chapter}
@@ -1301,7 +1353,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
           onRemoveNote={(id) => removeNote(book.id, id)}
         />
       </Sheet>
-      <Sheet open={!!thought} title="写想法" onClose={() => setThought(null)}>
+      <Sheet open={!!thought} title="写想法" onClose={() => setThought(null)} className="rd-sheet" style={dock}>
         {shownThought && (
           <ThoughtEditor
             key={'noteId' in shownThought ? shownThought.noteId : `${shownThought.sel.chapter}:${shownThought.sel.start.p}:${shownThought.sel.start.o}`}
@@ -1322,7 +1374,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
           />
         )}
       </Sheet>
-      <Sheet open={!!talk} title="段评" onClose={() => setTalk(null)}>
+      <Sheet open={!!talk} title="段评" onClose={() => setTalk(null)} className="rd-sheet" style={dock}>
         {shownTalk && (
           <CommentsPanel
             key={`${shownTalk.chapter}:${shownTalk.p}`}
@@ -1347,6 +1399,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
         touch={touch}
         actions={selActions}
         note={openNote}
+        noteNear={noteNear}
         noteActions={noteActions}
       />
     </div>
