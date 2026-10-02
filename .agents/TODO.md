@@ -2,7 +2,7 @@
 
 详细规格、设计要点与进度见 [计划检查点](plan/2026-09-26-top-level-plan-and-ui-prototype.md)。完成或取消的条目直接删除。
 [三站 UI 原型](plan/2026-09-29-three-site-ui-prototype.md)（用户 2026-09-29 设定的目标）已完成，本地 tag v0.1.0-alpha.1（2026-10-02，未推送），等用户审查；真实功能与后端在审查通过后再开始。
-[站娘耽耽、墨姐](plan/2026-10-02-mascots.md)：设定已定稿（[设定稿](../docs/design/mascots.md)），等插画；插画到位后把品牌书的封面与内页换成她们的画。
+[站娘耽耽、墨姐](plan/2026-10-02-mascots.md)：设定已定稿（[设定稿](../docs/design/mascots.md)），[生图提示词](../docs/design/mascot-prompts.md)已写好，等用户用 GPT Image 2.5 出两张三视图；三视图定稿后再出品牌书的封面与内页，接进品牌书。
 
 ## 用户第二轮反馈（2026-09-27）
 
