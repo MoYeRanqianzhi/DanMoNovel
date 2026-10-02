@@ -1,11 +1,10 @@
 /**
- * 阅读器的三个面板内容：阅读设置、背景、章节目录（外层的 Sheet 由 Reader 提供）
+ * 阅读器的两个面板内容：阅读设置、背景（外层的 Sheet 由 Reader 提供；目录面板在 directory.tsx）
  */
-import { AArrowDown, AArrowUp, ChevronRight, Lock, Sun, SunDim } from 'lucide-react';
+import { AArrowDown, AArrowUp, ChevronRight, Sun, SunDim } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
-import { AUTO_AHEAD, FREE_CHAPTERS, chapterAccess, setAutoSubscribe } from '@danmo/data/api';
+import { AUTO_AHEAD, FREE_CHAPTERS, setAutoSubscribe } from '@danmo/data/api';
 import type { Book } from '@danmo/data/books';
-import { chapterTitle } from '@danmo/data/chapters';
 import { IconButton, Segmented } from '@danmo/design/components/ui';
 import { fontStack } from '@danmo/design/fonts/catalog';
 import { useFontName } from '@danmo/design/fonts/FontList';
@@ -105,7 +104,7 @@ function ModeGlyph({ mode }: { mode: TurnMode }) {
 }
 
 /**
- * 阅读设置：字号、行距、字体、排版、翻页，最后是本书的自动订阅（这本书有订阅章节时才有）。
+ * 阅读设置：字号、行距、字体、排版、翻页，然后是段评，最后是本书的自动订阅（这本书有订阅章节时才有）。
  * 设置不拆分（reader-menu 记忆），以后新的设置项按组接在后面。
  * 自动订阅开关在订阅页上也有；开了以后就不会再看到订阅页，所以这里要能关。
  */
@@ -212,6 +211,20 @@ export function SettingsPanel({
           aria-checked={settings.reverse}
           disabled={!paged}
           onClick={() => update({ reverse: !settings.reverse })}
+        />
+      </div>
+      <div className="rd-setting">
+        <span className="rd-setting__label">
+          显示段评
+          <small className="rd-setting__hint">段末标出这一段有几条段评</small>
+        </span>
+        <button
+          type="button"
+          role="switch"
+          className="switch"
+          aria-label="显示段评"
+          aria-checked={settings.comments}
+          onClick={() => update({ comments: !settings.comments })}
         />
       </div>
       {book.chapters > FREE_CHAPTERS && (
@@ -322,21 +335,5 @@ export function BackgroundPanel({
         </div>
       </Row>
     </div>
-  );
-}
-
-/** 目录：当前章染成红线色；未解锁的章节右侧带一把小锁（目录只在浏览器里打开，可以直接读订阅记录） */
-export function TocPanel({ book, current, onPick }: { book: Book; current: number; onPick: (i: number) => void }) {
-  return (
-    <ol className="toc-list">
-      {Array.from({ length: book.chapters }, (_, i) => (
-        <li key={i}>
-          <button type="button" aria-current={i === current ? 'true' : undefined} onClick={() => onPick(i)}>
-            {chapterTitle(book, i)}
-            {chapterAccess(book.id, i) === 'locked' && <Lock className="toc-lock" aria-label="订阅章节" />}
-          </button>
-        </li>
-      ))}
-    </ol>
   );
 }

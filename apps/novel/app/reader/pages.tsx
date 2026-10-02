@@ -29,7 +29,9 @@ import { memo, useLayoutEffect, useRef, type CSSProperties, type ReactNode, type
 import type { ChapterText } from '@danmo/data/api';
 import { cls } from '@danmo/design/lib/util';
 import { PaperTexture } from '@danmo/design/paper/PaperTexture';
+import type { Note, TextPoint } from './marks';
 import type { PagedMode } from './settings';
+import { charRect } from './textpoints';
 
 /** 一页正文窗口的几何信息 */
 export interface Geometry {
@@ -58,17 +60,87 @@ function toVerticalPunctuation(s: string): string {
   return s.replace(/“/g, '「').replace(/”/g, '」').replace(/‘/g, '『').replace(/’/g, '』');
 }
 
-/** 一章的正文：标题 + 段落。同一份元素会被渲染到多层页面与测量层里，所以要 memo */
-export const ChapterContent = memo(function ChapterContent({ text, vertical }: { text: ChapterText; vertical: boolean }) {
+/**
+ * 一段里的划线：把这一段切成几截，划了线的那几截包在 <mark> 里（样式见 reader.css 的 .rd-line）。
+ * 跨段的划线在每一段各有一截；带想法的划线只在最后一截上做记号（data-thought）。
+ * 划线不会重叠（marks.ts 的 addNote 会把重叠的并起来）；万一本机记录里有重叠的，后一条从前一条的末尾接着画。
+ * 只包文字、不加任何宽度，所以划不划线分页都一样。
+ */
+function linesIn(text: string, index: number, notes: readonly Note[] | undefined): ReactNode {
+  if (!notes?.length) return text;
+  const spans = notes
+    .filter((n) => n.start.p <= index && index <= n.end.p)
+    .map((n) => ({ note: n, from: n.start.p === index ? n.start.o : 0, to: n.end.p === index ? n.end.o : text.length }))
+    .sort((a, b) => a.from - b.from);
+  if (!spans.length) return text;
+  const out: ReactNode[] = [];
+  let at = 0;
+  for (const { note, from: f, to } of spans) {
+    const from = Math.max(f, at);
+    if (from >= to) continue;
+    if (from > at) out.push(text.slice(at, from));
+    out.push(
+      <mark
+        key={note.id}
+        className="rd-line"
+        data-style={note.style}
+        data-note={note.id}
+        data-thought={note.thought && note.end.p === index ? '' : undefined}
+      >
+        {text.slice(from, to)}
+      </mark>,
+    );
+    at = to;
+  }
+  if (at < text.length) out.push(text.slice(at));
+  return out;
+}
+
+/**
+ * 一章的正文：标题 + 段落。同一份元素会被渲染到多层页面与测量层里，所以要 memo
+ * （notes、comments 要由调用方按章缓存好，同一章每次给同一个数组，才不会让每层页面都重新渲染）。
+ *
+ * - 每段带 data-p（段号）：书签、划线、选择都按"第几段第几个字"找位置（textpoints.ts）。
+ * - notes：这一章的划线。comments：每段的段评条数（下标是段号），不显示段评时不给。
+ *   段评条数画在段末一个小气泡里（.rd-cmt），数字用 CSS 的 attr() 画，气泡里没有文字，数偏移时也跳过它（data-extra）。
+ *   气泡不进 Tab 顺序：每层页面都是整章，Tab 到页外的气泡会让裁出一页的窗口滚动，打乱分页。
+ * - "原型示例正文"的说明段不画段评。
+ */
+export const ChapterContent = memo(function ChapterContent({
+  text,
+  vertical,
+  notes,
+  comments,
+}: {
+  text: ChapterText;
+  vertical: boolean;
+  notes?: readonly Note[];
+  comments?: readonly number[];
+}) {
   const fix = vertical ? toVerticalPunctuation : (s: string) => s;
   return (
     <>
       <h2 className="rd-title">{text.title}</h2>
-      {text.paragraphs.map((p, i) => (
-        <p key={i} className={p.startsWith('（原型示例') ? 'rd-note' : undefined}>
-          {fix(p)}
-        </p>
-      ))}
+      {text.paragraphs.map((p, i) => {
+        const note = p.startsWith('（原型示例');
+        const n = note ? 0 : (comments?.[i] ?? 0);
+        return (
+          <p key={i} data-p={i} className={note ? 'rd-note' : undefined}>
+            {linesIn(fix(p), i, notes)}
+            {n > 0 && (
+              <button
+                type="button"
+                className="rd-cmt"
+                data-extra=""
+                data-p={i}
+                data-n={n > 99 ? '99+' : n}
+                tabIndex={-1}
+                aria-label={`${n} 条段评`}
+              />
+            )}
+          </p>
+        );
+      })}
     </>
   );
 });
@@ -108,24 +180,41 @@ export function countPages(flow: HTMLElement, g: Geometry): number {
 }
 
 /**
+ * 正文里某个字在第几页（从 0 数）：按 flow 这一份的排版量，flow 是测量层里第 0 页的 Flow。
+ * 横排看字落在第几栏（栏宽 + 栏距一步），竖排看字离正文右缘几个窗口宽。找不到这个字返回 null
+ */
+export function pageOfPoint(flow: HTMLElement, g: Geometry, pt: TextPoint): number | null {
+  const r = charRect(flow, pt);
+  if (!r) return null;
+  const box = flow.getBoundingClientRect();
+  const mid = r.left + r.width / 2;
+  const page = g.vertical ? Math.floor((box.right - mid) / g.winW) : Math.floor((mid - box.left) / (g.winW + g.gap));
+  return Math.max(0, page);
+}
+
+/**
  * 一整页的框架：背景纹理、页眉、正文区、页脚。
  * 分页模式下每层页面都是一个 PageFrame；阅读器另有一个不可见的 PageFrame，用它的正文区量出窗口的可用尺寸。
  * 纹理跟着 <html data-paper> 走（读者在"背景"面板里选的纸），画在每一页上，所以翻页时纹理随书页一起动。
+ * ribbon：这一页夹着书签，页顶垂下一条丝带（'fresh' 是刚夹上的，丝带从页顶落下来；翻到夹着书签的页时丝带本来就在）。
  */
 export function PageFrame({
   title,
   foot,
   bodyRef,
+  ribbon,
   children,
 }: {
   title: ReactNode;
   foot?: ReactNode;
   bodyRef?: Ref<HTMLDivElement>;
+  ribbon?: boolean | 'fresh';
   children?: ReactNode;
 }) {
   return (
     <>
       <PaperTexture />
+      {ribbon && <i className="rd-ribbon" data-fresh={ribbon === 'fresh' || undefined} aria-hidden="true" />}
       <header className="rd-page__head">
         <span>{title}</span>
       </header>

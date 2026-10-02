@@ -35,8 +35,11 @@ export type ChapterResponse = { status: 'ok'; text: ChapterText } | { status: 'l
 /** 读者能否阅读某一章：免费、已订阅、未解锁 */
 export type ChapterAccess = 'free' | 'owned' | 'locked';
 
-/** 本地存储里的一份账户数据：读一次后缓存在内存里，写入时同步更新；变化时通知订阅者 */
-function localRecord<T>(key: string, parse: (raw: unknown) => T) {
+/**
+ * 本地存储里的一份账户数据：读一次后缓存在内存里，写入时同步更新；变化时通知订阅者。
+ * parse 校验读出来的值（本地存储是外部输入），不合法时给出默认值。阅读器的书签与笔记也用它（reader/marks.ts）
+ */
+export function localRecord<T>(key: string, parse: (raw: unknown) => T) {
   let value: T | null = null;
   const listeners = new Set<() => void>();
   return {

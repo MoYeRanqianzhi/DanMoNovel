@@ -22,6 +22,14 @@
  * 背景纹理分页时画在每一页上（PageFrame），滚动时画在阅读器底上、不随正文滚动；
  * 亮度用最上面一层黑色遮罩压暗（.rd-dim，不透明度取自 <html> 上的 --rd-dim，见 settings.ts）。
  *
+ * 书签、划线、想法、段评（计划第 4 节第 4、5 项）：
+ * - 位置都按"第几段第几个字"记（marks.ts），在哪一页是按当前排版算出来的：分页时用测量层量（pageOfPoint），
+ *   滚动时看那个字在不在视野里。上栏的书签按钮夹上或取下这一页（这一屏）的书签，夹着书签的页顶垂下一条丝带。
+ * - 目录面板分目录、书签、笔记三页（directory.tsx）；跳到书签、笔记也算"跳"，可以跳回。分页时先按字数比例落到大致的页，
+ *   量好页数后按那个字精确落页（landAt）；滚动时把那个字滚到视野上方。
+ * - 选择（Selection.tsx）：鼠标拖、触屏长按后拖；选中后的工具条是复制、划线、想法、段评。点已有的划线浮出它的小浮层。
+ * - 段末的小气泡是段评条数（设置里可以关），点开是这一段的段评（remarks.tsx）。
+ *
  * 服务端渲染：阅读页也是公开页面（可被 CDN 缓存），但服务端只输出本章的试读开头
  * （标题与开头的一小段，按字数封顶，见 api.ts 的 chapterLead；订阅页的预览也是这一段），
  * 供搜索引擎收录与读屏器读取；完整正文在浏览器里另行获取并分页。
@@ -37,15 +45,17 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type WheelEvent as ReactWheelEvent,
 } from 'react';
 import { flushSync } from 'react-dom';
 import { ALargeSmall, ArrowLeft, Bookmark, BookmarkCheck, List, Lock, Sun, Undo2 } from 'lucide-react';
-import { chapterAccess, chapterLead } from '@danmo/data/api';
+import { chapterAccess, chapterLead, type ChapterText } from '@danmo/data/api';
 import { BOOKS, isBookNo, type Book } from '@danmo/data/books';
 import { chapterTitle } from '@danmo/data/chapters';
+import { paragraphCommentCount } from '@danmo/data/comments';
 import { Sheet, useToast } from '@danmo/design/components/overlays';
 import { IconButton, ThreadProgress } from '@danmo/design/components/ui';
 import { useElementSize } from '@danmo/design/lib/useElementSize';
@@ -56,10 +66,38 @@ import { FontList } from '@danmo/design/fonts/FontList';
 import { registerImported } from '@danmo/design/fonts/imported';
 import { PaperTexture } from '@danmo/design/paper/PaperTexture';
 import { autoSubscribeAhead, chapterState, prefetchAround, useChapterCache } from './chapters';
+import { DirectoryPanel, type DirTab } from './directory';
+import {
+  addBookmark,
+  addNote,
+  commentKey,
+  comparePoints,
+  removeBookmarks,
+  removeNote,
+  updateNote,
+  useBookMarks,
+  useMyComments,
+  type LineStyle,
+  type Note,
+  type TextPoint,
+} from './marks';
 import { FailedNotice, LockedNotice, PendingNotice } from './notices';
-import { ChapterContent, Flow, PageFrame, PagedView, countPages, type Geometry, type PageRef, type Turn } from './pages';
-import { BackgroundPanel, SettingsPanel, TocPanel } from './panels';
+import {
+  ChapterContent,
+  Flow,
+  PageFrame,
+  PagedView,
+  countPages,
+  pageOfPoint,
+  type Geometry,
+  type PageRef,
+  type Turn,
+} from './pages';
+import { BackgroundPanel, SettingsPanel } from './panels';
+import { CommentsPanel, ThoughtEditor } from './remarks';
+import { SelectionOverlay, useTextSelection, type NoteActions, type SelectionActions, type SelectionEnv, type TextSel } from './Selection';
 import { LEADING, useReaderSettings, type PagedMode } from './settings';
+import { charRect, firstVisiblePoint, fracOfPoint, pointSide, textBetween, type Flowing } from './textpoints';
 import './reader.css';
 
 /** 滚动模式同时挂着的章数上限 */
@@ -144,11 +182,23 @@ export function findReading(bookId: string, chapterParam: string | undefined): R
   };
 }
 
-/** 两次测量的各章页数是否相同（相同就不更新状态，免得无谓地重新渲染） */
-function sameCounts(a: Record<number, number>, b: Record<number, number>): boolean {
-  const keys = Object.keys(a);
-  return keys.length === Object.keys(b).length && keys.every((k) => a[Number(k)] === b[Number(k)]);
+/** 两次测量的结果（各章页数、各书签在第几页）是否相同（相同就不更新状态，免得无谓地重新渲染） */
+function sameCounts<K extends string | number>(a: Record<K, number>, b: Record<K, number>): boolean {
+  const keys = Object.keys(a) as K[];
+  return keys.length === Object.keys(b).length && keys.every((k) => a[k] === b[k]);
 }
+
+/** 书签处的一小段文字：从书签那个字起取 EXCERPT 个字，段落之间不留空，截断时加省略号 */
+const EXCERPT = 36;
+function excerptAt(paragraphs: readonly string[], pt: TextPoint): string {
+  let text = '';
+  for (let p = pt.p; p < paragraphs.length && text.length < EXCERPT; p++) {
+    text += paragraphs[p].slice(p === pt.p ? pt.o : 0);
+  }
+  return text.length > EXCERPT ? `${text.slice(0, EXCERPT)}…` : text;
+}
+
+const NO_IDS: string[] = [];
 
 export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   const { back, retarget } = useStack();
@@ -173,7 +223,16 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   const [scrollStart, setScrollStart] = useState({ chapter: data.chapter, frac: 0, key: 0 });
   const [chrome, setChrome] = useState(false);
   const [panel, setPanel] = useState<'toc' | 'background' | 'settings' | null>(null);
-  const [bookmarked, setBookmarked] = useState(false);
+  /** 目录面板停在哪一页（这次打开阅读器期间记着） */
+  const [dirTab, setDirTab] = useState<DirTab>('toc');
+  /** 点开的那条划线（浮出它的小浮层） */
+  const [activeNote, setActiveNote] = useState<string | null>(null);
+  /** 写想法的面板：给已有的划线写（noteId），或给刚选中的字写（sel，保存时才划线） */
+  const [thought, setThought] = useState<{ noteId: string } | { sel: TextSel } | null>(null);
+  /** 段评面板：哪一章哪一段；quote 是先选中文字再点"段评"时引的字 */
+  const [talk, setTalk] = useState<{ chapter: number; p: number; quote?: string } | null>(null);
+  /** 最近一次指针是触屏：选择的浮条离字远一些，让出手柄 */
+  const [touch, setTouch] = useState(false);
   const [fontTick, setFontTick] = useState(0);
   /** 阅读设置面板里正在看字体列表（每次打开面板都从阅读设置开始） */
   const [fontsOpen, setFontsOpen] = useState(false);
@@ -193,6 +252,17 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   /** 工具栏下栏：量出它的高度，唤出时"回到第 N 章"升到它上方 */
   const barRef = useRef<HTMLDivElement>(null);
   const bar = useElementSize(barRef);
+  /** .reader：选择的浮层、书签与划线的位置都相对于它量 */
+  const readerRef = useRef<HTMLDivElement>(null);
+  /** 本书的书签与笔记、我发过的段评（只在浏览器里有） */
+  const marks = useBookMarks(book.id);
+  const myComments = useMyComments();
+  /** 跳到某个字：分页时等这一章量好页数再精确落页，滚动时等这一段挂上再滚到它 */
+  const landAt = useRef<{ chapter: number; point: TextPoint } | null>(null);
+  /** 跳到某条笔记：落下后那几个字闪一下 */
+  const flashNote = useRef<string | null>(null);
+  /** 最近一次划线用的样式：下一次划线沿用 */
+  const lastStyle = useRef<LineStyle>('wave');
 
   // 不可见页框的正文区：量出正文窗口的可用尺寸。分页、滚动两种模式量的都是它，元素始终不变
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -249,6 +319,47 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
 
   const current = ready ? chapterState(book, chapter) : null;
   const pending = !current || current.status === 'loading' || current.status === 'idle';
+
+  /** 某一章的段落原文；还没取到返回 null */
+  const paragraphsOf = (i: number): readonly string[] | null => {
+    const st = chapterState(book, i);
+    return st.status === 'ready' ? st.text.paragraphs : null;
+  };
+
+  /** 各章的划线：按章分好，同一章在划线没变时是同一个数组 */
+  const notesByChapter = useMemo(() => {
+    const m = new Map<number, Note[]>();
+    for (const n of marks.notes) {
+      const list = m.get(n.chapter);
+      if (list) list.push(n);
+      else m.set(n.chapter, [n]);
+    }
+    return m;
+  }, [marks.notes]);
+
+  /** 各章每段的段评条数（示例数据 + 我发的）；关了段评显示就没有。按章缓存，段评或开关变了整个换掉 */
+  const commentCache = useMemo(() => new Map<number, number[]>(), [book.id, myComments, settings.comments]);
+  const commentsOf = (i: number, paragraphs: readonly string[]) => {
+    if (!settings.comments) return undefined;
+    let counts = commentCache.get(i);
+    if (!counts) {
+      counts = paragraphs.map(
+        (_, p) => paragraphCommentCount(book.id, i, p) + (myComments[commentKey(book.id, i, p)]?.length ?? 0),
+      );
+      commentCache.set(i, counts);
+    }
+    return counts;
+  };
+
+  /** 一章的正文（分页的每层页面、测量层、滚动的每一段都用它，排版完全一致） */
+  const contentOf = (i: number, text: ChapterText) => (
+    <ChapterContent
+      text={text}
+      vertical={settings.vertical}
+      notes={notesByChapter.get(i)}
+      comments={commentsOf(i, text.paragraphs)}
+    />
+  );
 
   useEffect(() => {
     if (ready && !pending) setBooted(true);
@@ -371,12 +482,26 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
       next[i] = countPages(flow, g);
     });
     setCounts((prev) => (sameCounts(prev, next) ? prev : next));
-  }, [measureKey, g, fontTick, settings.font, settings.leading, settings.vertical]);
+  }, [measureKey, g, fontTick, settings.font, settings.leading, settings.vertical, commentCache]);
 
   // 页数量出来或变了：把当前页落到有效范围里
   useLayoutEffect(() => {
     const n = counts[pos.chapter];
     if (!paged || n === undefined) return;
+    // 跳到某个字（书签、笔记）：这一章量好了，按那个字落到它所在的那一页
+    const land = landAt.current;
+    if (land && land.chapter === pos.chapter) {
+      const flow = measureRefs.current.get(pos.chapter);
+      const exact = flow ? pageOfPoint(flow, g, land.point) : null;
+      if (exact !== null) {
+        landAt.current = null;
+        const page = Math.min(n - 1, exact);
+        seenCount.current = { chapter: pos.chapter, n };
+        fracRef.current = page / n;
+        if (page !== pos.page) setPos({ chapter: pos.chapter, page });
+        return;
+      }
+    }
     const seen = seenCount.current;
     seenCount.current = { chapter: pos.chapter, n };
     let page = pos.page;
@@ -387,11 +512,98 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     if (page !== pos.page) setPos({ chapter: pos.chapter, page });
   }, [counts, pos, paged]);
 
+  /** 各书签在它那一章的第几页（分页模式；只量测量层里有的章：当前章与前后各一章） */
+  const [markPages, setMarkPages] = useState<Record<string, number>>({});
+  useLayoutEffect(() => {
+    if (!paged) return;
+    const next: Record<string, number> = {};
+    for (const b of marks.bookmarks) {
+      const flow = measureRefs.current.get(b.chapter);
+      const page = flow ? pageOfPoint(flow, g, b.point) : null;
+      if (page !== null) next[b.id] = page;
+    }
+    setMarkPages((prev) => (sameCounts(prev, next) ? prev : next));
+  }, [paged, counts, marks.bookmarks, g, fontTick, settings.font, settings.leading, settings.vertical, commentCache]);
+
+  /** 某一页夹着的书签 */
+  const marksOnPage = (ref: PageRef) => {
+    const n = counts[ref.chapter];
+    if (!n) return NO_IDS;
+    const index = ref.page < 0 ? n - 1 : ref.page;
+    const ids = marks.bookmarks.filter((b) => b.chapter === ref.chapter && markPages[b.id] === index).map((b) => b.id);
+    return ids.length ? ids : NO_IDS;
+  };
+
+  /** 正文的走向：分页横排是多栏、滚动横排是一行行往下，竖排都是一列列往左 */
+  const flowing: Flowing = settings.vertical ? 'vertical' : paged ? 'cols' : 'rows';
+
+  /** 滚动模式：这一屏里夹着的书签（滚动、换章、书签变了都重新看） */
+  const [screenMarks, setScreenMarks] = useState<string[]>(NO_IDS);
+  useLayoutEffect(() => {
+    if (paged) return;
+    const el = readerRef.current;
+    const scroller = el?.querySelector('.rd-scroll');
+    if (!el || !scroller) return setScreenMarks(NO_IDS);
+    const view = scroller.getBoundingClientRect();
+    const ids = marks.bookmarks
+      .filter((b) => {
+        const root = el.querySelector(`.rd-sec[data-chapter="${b.chapter}"] .rd-flow`);
+        return root && pointSide(root, b.point, view, flowing) === 0;
+      })
+      .map((b) => b.id);
+    setScreenMarks((prev) => (prev.length === ids.length && prev.every((id, i) => id === ids[i]) ? prev : ids.length ? ids : NO_IDS));
+  }, [paged, scrollFrac, chapter, marks.bookmarks, scrollStart.key, size.w, size.h, flowing, current?.status]);
+
+  /** 眼前（这一页或这一屏）夹着的书签 */
+  const hereMarks = paged ? marksOnPage(pos) : screenMarks;
+  /** 刚夹上的书签：丝带从页顶落下来（翻到夹着书签的页时丝带本来就在，不落） */
+  const freshMark = (ids: string[]) => ids.some((id) => (marks.bookmarks.find((b) => b.id === id)?.at ?? 0) > Date.now() - 1500);
+
+  /**
+   * 眼前的第一个字：书签夹在这里。分页取当前页的窗口，滚动取滚动区；
+   * 滚动时可能同时挂着几章，取第一个真正露在视野里的字。眼前没有正文（状态页）返回 null
+   */
+  const visibleStart = (): { chapter: number; point: TextPoint } | null => {
+    const el = readerRef.current;
+    if (!el) return null;
+    if (paged) {
+      const root = el.querySelector('.rd-page--current .rd-flow');
+      const win = el.querySelector('.rd-page--current .rd-window');
+      const point = root && win ? firstVisiblePoint(root, win.getBoundingClientRect(), flowing) : null;
+      return point ? { chapter: pos.chapter, point } : null;
+    }
+    const scroller = el.querySelector('.rd-scroll');
+    if (!scroller) return null;
+    const view = scroller.getBoundingClientRect();
+    for (const sec of Array.from(el.querySelectorAll<HTMLElement>('.rd-sec[data-chapter]'))) {
+      const root = sec.querySelector('.rd-flow');
+      const point = root && firstVisiblePoint(root, view, flowing);
+      if (root && point && pointSide(root, point, view, flowing) === 0) return { chapter: Number(sec.dataset.chapter), point };
+    }
+    return null;
+  };
+
+  /** 上栏的书签按钮：眼前夹着书签就取下，没有就夹上一枚 */
+  const toggleBookmark = () => {
+    if (hereMarks.length) {
+      removeBookmarks(book.id, hereMarks);
+      toast('已取下书签');
+      return;
+    }
+    const spot = visibleStart();
+    const paragraphs = spot && paragraphsOf(spot.chapter);
+    if (!spot || !paragraphs) return toast('这一页还没有正文，夹不了书签');
+    addBookmark(book.id, { chapter: spot.chapter, point: spot.point, excerpt: excerptAt(paragraphs, spot.point) });
+    toast('已夹上书签');
+  };
+
   /* ---------------- 翻页与跳章 ---------------- */
 
   const turnBy = useCallback(
     (dir: 1 | -1) => {
       if (turn) return;
+      selection.clear();
+      setActiveNote(null);
       const st = chapterState(book, pos.chapter);
       let to: PageRef | null = null;
       if (st.status === 'ready') {
@@ -418,6 +630,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
       setPos(to);
       if (to.chapter !== pos.chapter) retarget(`/read/${book.id}/${to.chapter + 1}`);
     },
+    // selection.clear 每次渲染都是新的函数，但只是清掉选择，用哪一次渲染的都一样
     [turn, book, pos, counts, reduced, retarget, toast, readOn],
   );
 
@@ -444,12 +657,16 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
    * 到某一章的某个位置（章内比例）。没取到的章先显示加载页。
    * 分页模式等这一章的页数量出来，再按比例落到对应的页（上面"页数量出来或变了"的那段）；
    * 滚动模式重新挂一条从这个位置开始的滚动视图。
-   * keepChrome：用进度条跳时工具栏不收起，方便接着拖
+   * keepChrome：用进度条跳时工具栏不收起，方便接着拖。
+   * point：要落到的那个字（书签、笔记）。分页时量好页数后按它精确落页，滚动时等那一段挂上后把它滚到视野上方
    */
-  const goTo = (to: Place, keepChrome = false) => {
+  const goTo = (to: Place, keepChrome = false, point?: TextPoint) => {
     if (!keepChrome) setChrome(false);
     setPanel(null);
     setTurn(null);
+    selection.clear();
+    setActiveNote(null);
+    landAt.current = point ? { chapter: to.chapter, point } : null;
     setBooted(true);
     setPos({ chapter: to.chapter, page: 0 });
     fracRef.current = to.frac;
@@ -461,14 +678,53 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   };
 
   /** 跳到别处：先记下原位置（连跳几次，原位置仍是第一次跳之前那里），重新开始计"读了多少" */
-  const leap = (to: Place, keepChrome = false) => {
+  const leap = (to: Place, keepChrome = false, point?: TextPoint) => {
     const from = here();
     if (!near(from, to)) {
       if (!originRef.current) keepOrigin(from);
       readSince.current = 0;
     }
-    goTo(to, keepChrome);
+    goTo(to, keepChrome, point);
   };
+
+  /** 跳到某一章的某个字（目录面板里的书签、笔记）：先按字数比例落到大致的地方；笔记落下后闪一下 */
+  const leapToPoint = (i: number, point: TextPoint, noteId?: string) => {
+    const paragraphs = paragraphsOf(i);
+    flashNote.current = noteId ?? null;
+    leap({ chapter: i, frac: paragraphs ? fracOfPoint(paragraphs, point) : 0 }, false, point);
+  };
+
+  // 滚动模式跳到某个字：那一段挂上、正文到了，就把那个字滚到视野上方（横排离顶 18%，竖排离右 12%）
+  useLayoutEffect(() => {
+    const land = landAt.current;
+    if (paged || !land) return;
+    const el = readerRef.current;
+    const scroller = el?.querySelector<HTMLElement>('.rd-scroll');
+    const root = el?.querySelector(`.rd-sec[data-chapter="${land.chapter}"] .rd-flow`);
+    const r = root && charRect(root, land.point);
+    if (!scroller || !r) return;
+    landAt.current = null;
+    const box = scroller.getBoundingClientRect();
+    if (settings.vertical) scroller.scrollLeft -= box.right - box.width * 0.12 - r.right;
+    else scroller.scrollTop += r.top - box.top - box.height * 0.18;
+  }, [paged, scrollStart.key, current?.status, settings.vertical]);
+
+  // 跳到笔记之后：那几个字在眼前了就闪一下（红线色的底慢慢褪去）
+  useEffect(() => {
+    const id = flashNote.current;
+    const el = readerRef.current;
+    if (!id || !el) return;
+    const found = el.querySelectorAll(`.rd-page--current mark[data-note="${id}"], .rd-sec mark[data-note="${id}"]`);
+    if (!found.length) return;
+    flashNote.current = null;
+    if (reduced) return;
+    found.forEach((m) =>
+      m.animate(
+        { backgroundColor: ['color-mix(in srgb, var(--thread) 30%, transparent)', 'transparent'] },
+        { duration: 1600, easing: 'ease-out' },
+      ),
+    );
+  }, [pos, counts, scrollStart.key, current?.status, reduced]);
 
   /** 跳到某一章的开头（目录、上一章、下一章、进度条） */
   const jumpTo = (i: number, keepChrome = false) => {
@@ -511,19 +767,167 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     [keepOrigin],
   );
 
+  /* ---------------- 选择、划线、想法、段评 ---------------- */
+
+  /** 选择要知道的阅读器状态：读者眼前的那一份正文、某个节点在哪一章 */
+  const env: SelectionEnv = {
+    readerRef,
+    vertical: settings.vertical,
+    rootOf: (i) => {
+      const el = readerRef.current;
+      if (!el) return null;
+      if (paged) return i === pos.chapter ? el.querySelector<HTMLElement>('.rd-page--current .rd-flow') : null;
+      return el.querySelector<HTMLElement>(`.rd-sec[data-chapter="${i}"] .rd-flow`);
+    },
+    chapterAt: (node) => {
+      const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element);
+      if (!el) return null;
+      if (paged) return el.closest('.rd-page--current .rd-flow') ? pos.chapter : null;
+      const sec = el.closest<HTMLElement>('.rd-sec[data-chapter]');
+      return sec && el.closest('.rd-flow') ? Number(sec.dataset.chapter) : null;
+    },
+    paragraphsOf,
+  };
+  const selection = useTextSelection(env);
+
+  // 选中了字：工具栏收起，免得两种浮条叠在一起
+  useEffect(() => {
+    if (selection.sel) setChrome(false);
+  }, [selection.sel]);
+
+  // 改了排版（字号、字体、行距、方向、翻页方式、段评显示）：选择与划线的浮层都收起
+  useEffect(() => {
+    selection.clear();
+    setActiveNote(null);
+    // 只在排版相关的设置变化时执行
+  }, [settings.fontSize, settings.font, settings.leading, settings.vertical, settings.mode, settings.comments]);
+
+  /** 选区里的原文 */
+  const quoteOf = (s: TextSel) => textBetween(paragraphsOf(s.chapter) ?? [], s.start, s.end);
+
+  /** 复制：附上出处（content-protection-goal 记忆：复制是支持的，正式版由服务端按配额给出并附出处） */
+  const copyText = (text: string, i: number) => {
+    const source = `——摘自《${book.title}》${chapterTitle(book, i)} · 耽墨小说`;
+    const done = navigator.clipboard?.writeText(`${text}\n${source}`);
+    if (!done) return toast('没能复制，这个浏览器不让网页写剪贴板');
+    done.then(
+      () => toast('已复制，附上了出处'),
+      () => toast('没能复制，请再试一次'),
+    );
+  };
+
+  /**
+   * 划一道线（可以带想法）。与同一章里已有的划线重叠时并成一条：范围取并集、想法接起来、样式用这一次的，
+   * 旧的删掉（同一处只留一条，正文里不会叠两层线）。返回新划线的编号
+   */
+  const saveLine = (s: TextSel, style: LineStyle, thoughtText: string): string => {
+    const over = marks.notes.filter(
+      (n) => n.chapter === s.chapter && comparePoints(n.start, s.end) < 0 && comparePoints(s.start, n.end) < 0,
+    );
+    let { start, end } = s;
+    for (const n of over) {
+      if (comparePoints(n.start, start) < 0) start = n.start;
+      if (comparePoints(n.end, end) > 0) end = n.end;
+    }
+    const thoughts = [...over.map((n) => n.thought), thoughtText].filter(Boolean);
+    return addNote(
+      book.id,
+      { chapter: s.chapter, start, end, style, quote: textBetween(paragraphsOf(s.chapter) ?? [], start, end), thought: thoughts.join('\n') },
+      over.map((n) => n.id),
+    );
+  };
+
+  const selActions: SelectionActions = {
+    copy: (s) => {
+      copyText(quoteOf(s), s.chapter);
+      selection.clear();
+    },
+    // 划线用上一次的样式，划完浮出这条划线的小浮层，可以马上换样式、写想法
+    line: (s) => {
+      const id = saveLine(s, lastStyle.current, '');
+      selection.clear();
+      setActiveNote(id);
+    },
+    thought: (s) => {
+      selection.clear();
+      setThought({ sel: s });
+    },
+    // 段评写给选区开头那一段；引的字只取这一段里的
+    comment: (s) => {
+      const paragraphs = paragraphsOf(s.chapter) ?? [];
+      const end = s.end.p === s.start.p ? s.end : { p: s.start.p, o: paragraphs[s.start.p]?.length ?? 0 };
+      selection.clear();
+      setTalk({ chapter: s.chapter, p: s.start.p, quote: textBetween(paragraphs, s.start, end) });
+    },
+  };
+
+  const noteActions: NoteActions = {
+    style: (n, style) => {
+      lastStyle.current = style;
+      updateNote(book.id, n.id, { style });
+    },
+    thought: (n) => {
+      setActiveNote(null);
+      setThought({ noteId: n.id });
+    },
+    copy: (n) => {
+      copyText(n.quote, n.chapter);
+      setActiveNote(null);
+    },
+    remove: (n) => {
+      removeNote(book.id, n.id);
+      setActiveNote(null);
+      toast('已擦掉这道线');
+    },
+  };
+
+  const openNote = activeNote ? (marks.notes.find((n) => n.id === activeNote) ?? null) : null;
+
+  // 有选择或点开了划线时：Esc 先收起它们（不返回上一页），Ctrl/⌘+C 复制选中的字
+  useEffect(() => {
+    if (!selection.sel && !activeNote) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        selection.clear();
+        setActiveNote(null);
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && selection.sel) {
+        e.preventDefault();
+        selActions.copy(selection.sel);
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+    // 选择或点开的划线变了才重新挂（回调里用的都是这一次渲染的值）
+  }, [selection.sel, activeNote]);
+
   /* ---------------- 点击、滑动、滚轮、键盘 ---------------- */
 
   const down = useRef<{ x: number; y: number } | null>(null);
-  /** 点在状态页的按钮上（订阅、重试）或订阅笺上：交给它们，不当作翻页或唤出工具栏 */
+  /** 点在状态页的按钮上（订阅、重试）、订阅笺上或段评气泡上：交给它们，不当作翻页、选择或唤出工具栏 */
   const fromControl = (e: ReactPointerEvent) =>
     e.target instanceof Element && !!e.target.closest('button, a, input, .rd-lock__card');
   const onPointerDown = (e: ReactPointerEvent) => {
-    down.current = fromControl(e) ? null : { x: e.clientX, y: e.clientY };
+    setTouch(e.pointerType !== 'mouse');
+    if (fromControl(e)) {
+      down.current = null;
+      return;
+    }
+    down.current = { x: e.clientX, y: e.clientY };
+    selection.down(e);
+  };
+  const onPointerCancel = (e: ReactPointerEvent) => {
+    down.current = null;
+    selection.cancel(e);
   };
   const onPointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
     const d = down.current;
     down.current = null;
+    // 这一下归选择（选完了，或者是点一下取消选择）：不翻页、不唤出工具栏
+    if (selection.up(e)) return;
     if (!d) return;
+    // 划线的小浮层开着：点哪里都先收起它
+    if (activeNote) return setActiveNote(null);
     const dx = e.clientX - d.x;
     const dy = e.clientY - d.y;
     if (paged) {
@@ -534,12 +938,23 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     }
     if (Math.abs(dx) > 10 || Math.abs(dy) > 10) return; // 是拖动或滚动，不是点击
     if (chrome) return setChrome(false);
+    // 点在划线上：浮出这条划线的小浮层（不管点在页面的哪一侧）
+    const mark = e.target instanceof Element ? e.target.closest<HTMLElement>('mark[data-note]') : null;
+    if (mark?.dataset.note) return setActiveNote(mark.dataset.note);
     if (!paged) return setChrome(true);
     const r = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width;
     if (x < 1 / 3) turnBy(rtl ? 1 : -1);
     else if (x > 2 / 3) turnBy(rtl ? -1 : 1);
     else setChrome(true);
+  };
+
+  /** 点段末的段评气泡：打开这一段的段评 */
+  const onBodyClick = (e: ReactMouseEvent) => {
+    const b = e.target instanceof Element ? e.target.closest<HTMLElement>('.rd-cmt') : null;
+    if (!b) return;
+    const sec = b.closest<HTMLElement>('.rd-sec[data-chapter]');
+    setTalk({ chapter: paged ? pos.chapter : Number(sec?.dataset.chapter ?? chapter), p: Number(b.dataset.p) });
   };
 
   // 鼠标滚轮翻页：一次滚动手势只翻一页
@@ -553,9 +968,9 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   };
 
   useEffect(() => {
-    if (!isTop || panel || !paged) return;
+    if (!isTop || panel || thought || talk || !paged) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       let dir: 0 | 1 | -1 = 0;
       if (['ArrowDown', 'PageDown', ' '].includes(e.key)) dir = 1;
       if (['ArrowUp', 'PageUp'].includes(e.key)) dir = -1;
@@ -568,7 +983,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isTop, panel, paged, rtl, turnBy]);
+  }, [isTop, panel, thought, talk, paged, rtl, turnBy]);
 
   /* ---------------- 渲染 ---------------- */
 
@@ -580,6 +995,15 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
 
   /** 跳回上写的那一章：淡出时 origin 已经清掉，仍显示原来那一章 */
   const shownOrigin = origin ?? lastOrigin.current;
+
+  // 想法、段评面板收起时还要播 260ms 的动画，内容不能先没了：记住最后一次打开的是什么
+  const lastThought = useRef(thought);
+  if (thought) lastThought.current = thought;
+  const shownThought = thought ?? lastThought.current;
+  const thoughtNote = shownThought && 'noteId' in shownThought ? marks.notes.find((n) => n.id === shownThought.noteId) : undefined;
+  const lastTalk = useRef(talk);
+  if (talk) lastTalk.current = talk;
+  const shownTalk = talk ?? lastTalk.current;
 
   const vars = {
     '--rd-size': `${settings.fontSize}px`,
@@ -618,7 +1042,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
           style={{ width: g.winW, height: g.winH }}
         >
           <Flow g={g} index={index}>
-            <ChapterContent text={st.text} vertical={settings.vertical} />
+            {contentOf(ref.chapter, st.text)}
           </Flow>
         </div>
       );
@@ -626,8 +1050,13 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
       body = noticeFor(ref.chapter, st.status);
       if (st.status === 'locked') label = '订阅章节';
     }
+    const onPage = st.status === 'ready' ? marksOnPage(ref) : NO_IDS;
     return (
-      <PageFrame title={chapterTitle(book, ref.chapter)} foot={<PageFoot value={(ref.chapter + frac) / book.chapters} label={label} />}>
+      <PageFrame
+        title={chapterTitle(book, ref.chapter)}
+        foot={<PageFoot value={(ref.chapter + frac) / book.chapters} label={label} />}
+        ribbon={onPage.length ? (freshMark(onPage) ? 'fresh' : true) : undefined}
+      >
         {body}
       </PageFrame>
     );
@@ -639,13 +1068,13 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     if (st.status !== 'ready') return noticeFor(i, st.status);
     return (
       <div className="rd-flow" data-writing={settings.vertical ? 'vertical' : 'horizontal'} data-arrived={arrivedNow || undefined}>
-        <ChapterContent text={st.text} vertical={settings.vertical} />
+        {contentOf(i, st.text)}
       </div>
     );
   };
 
   return (
-    <div className="reader" style={vars} data-mode={settings.mode} data-returning={origin ? '' : undefined}>
+    <div ref={readerRef} className="reader" style={vars} data-mode={settings.mode} data-returning={origin ? '' : undefined}>
       {/* 滚动模式的背景纹理画在阅读器底上，正文在它上面滚动；分页模式画在每一页上（PageFrame） */}
       {!paged && <PaperTexture />}
 
@@ -659,7 +1088,11 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
           className="rd-body"
           data-paged
           onPointerDown={onPointerDown}
+          onPointerMove={selection.move}
           onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          onClick={onBodyClick}
+          onContextMenu={(e) => e.preventDefault()}
           onWheel={onWheel}
         >
           {leadIn ? (
@@ -698,7 +1131,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
                         };
                       }}
                     >
-                      <ChapterContent text={st.text} vertical={settings.vertical} />
+                      {contentOf(i, st.text)}
                     </Flow>
                   </div>
                 );
@@ -711,7 +1144,15 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
           <header className="rd-head">
             <span>{chapterTitle(book, chapter)}</span>
           </header>
-          <div className="rd-body" onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
+          <div
+            className="rd-body"
+            onPointerDown={onPointerDown}
+            onPointerMove={selection.move}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerCancel}
+            onClick={onBodyClick}
+            onContextMenu={(e) => e.preventDefault()}
+          >
             {leadIn ? (
               <LeadIn data={data} />
             ) : (
@@ -732,6 +1173,10 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
           <footer className="rd-foot">
             <PageFoot value={(chapter + scrollFrac) / book.chapters} label={`${Math.round(scrollFrac * 100)}%`} />
           </footer>
+          {/* 滚动时丝带挂在阅读器的页顶：这一屏里夹着书签 */}
+          {screenMarks.length > 0 && (
+            <i className="rd-ribbon rd-ribbon--screen" data-fresh={freshMark(screenMarks) || undefined} aria-hidden="true" />
+          )}
         </>
       )}
 
@@ -745,14 +1190,13 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
           <small>{chapterTitle(book, chapter)}</small>
         </div>
         <IconButton
-          label={bookmarked ? '移除书签' : '添加书签'}
+          label={hereMarks.length ? '取下这一页的书签' : '在这一页夹上书签'}
           variant="plain"
-          onClick={() => {
-            setBookmarked((b) => !b);
-            toast(bookmarked ? '已移除书签' : '已添加书签');
-          }}
+          className="rd-bar__mark"
+          aria-pressed={hereMarks.length > 0}
+          onClick={toggleBookmark}
         >
-          {bookmarked ? <BookmarkCheck aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
+          {hereMarks.length ? <BookmarkCheck aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
         </IconButton>
       </div>
 
@@ -825,12 +1269,68 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
       <Sheet open={panel === 'background'} title="背景" onClose={() => setPanel(null)}>
         <BackgroundPanel settings={settings} update={update} />
       </Sheet>
-      <Sheet open={panel === 'toc'} title={`目录（共 ${book.chapters} 章）`} onClose={() => setPanel(null)}>
-        <TocPanel book={book} current={chapter} onPick={jumpTo} />
+      <Sheet open={panel === 'toc'} title={book.title} onClose={() => setPanel(null)}>
+        <DirectoryPanel
+          book={book}
+          current={chapter}
+          bookmarks={marks.bookmarks}
+          notes={marks.notes}
+          tab={dirTab}
+          onTab={setDirTab}
+          onChapter={(i) => jumpTo(i)}
+          onPoint={leapToPoint}
+          onRemoveBookmark={(id) => removeBookmarks(book.id, [id])}
+          onRemoveNote={(id) => removeNote(book.id, id)}
+        />
+      </Sheet>
+      <Sheet open={!!thought} title="写想法" onClose={() => setThought(null)}>
+        {shownThought && (
+          <ThoughtEditor
+            key={'noteId' in shownThought ? shownThought.noteId : `${shownThought.sel.chapter}:${shownThought.sel.start.p}:${shownThought.sel.start.o}`}
+            quote={'noteId' in shownThought ? (thoughtNote?.quote ?? '') : quoteOf(shownThought.sel)}
+            style={thoughtNote?.style ?? lastStyle.current}
+            initial={thoughtNote?.thought ?? ''}
+            onCancel={() => setThought(null)}
+            onSave={(text) => {
+              if ('noteId' in shownThought) {
+                updateNote(book.id, shownThought.noteId, { thought: text });
+                toast(text ? '想法已记下' : '已删去想法');
+              } else {
+                saveLine(shownThought.sel, lastStyle.current, text);
+                toast('想法已记下');
+              }
+              setThought(null);
+            }}
+          />
+        )}
+      </Sheet>
+      <Sheet open={!!talk} title="段评" onClose={() => setTalk(null)}>
+        {shownTalk && (
+          <CommentsPanel
+            key={`${shownTalk.chapter}:${shownTalk.p}`}
+            book={book}
+            chapter={shownTalk.chapter}
+            paragraph={shownTalk.p}
+            text={paragraphsOf(shownTalk.chapter)?.[shownTalk.p] ?? ''}
+            quote={shownTalk.quote}
+            onClearQuote={() => setTalk((t) => t && { ...t, quote: undefined })}
+          />
+        )}
       </Sheet>
 
       {/* 亮度：最上面一层黑色遮罩，连工具栏一起压暗（面板在 body 下的浮层里，不受影响） */}
       <div className="rd-dim" aria-hidden="true" />
+
+      {/* 选择的手柄与工具条、划线的小浮层：在遮罩之上（和面板一样不压暗，夜里也看得清按钮） */}
+      <SelectionOverlay
+        env={env}
+        selection={selection}
+        tick={`${pos.chapter}:${pos.page}|${scrollFrac}|${size.w}x${size.h}|${counts[pos.chapter] ?? 0}|${commentCache.size}|${notesByChapter.size}`}
+        touch={touch}
+        actions={selActions}
+        note={openNote}
+        noteActions={noteActions}
+      />
     </div>
   );
 }

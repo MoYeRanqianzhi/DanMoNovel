@@ -1,5 +1,5 @@
 /**
- * 阅读设置：字号、行距、字体、翻页方式、反向翻页、横排/竖排、背景（纸张）、亮度
+ * 阅读设置：字号、行距、字体、翻页方式、反向翻页、横排/竖排、背景（纸张）、亮度、段评显示
  *
  * 原型阶段保存在浏览器本地存储；正式版迁移到存储层并随账号同步。
  * 服务端渲染时不知道读者的设置：服务端与水合时一律用默认值（useSyncExternalStore 的服务端快照），
@@ -38,6 +38,8 @@ export interface ReaderSettings {
   brightness: number;
   /** 亮度跟随系统：不额外压暗。网页调不了屏幕亮度，"跟随系统"就是交给设备自己的亮度 */
   brightnessAuto: boolean;
+  /** 段末显示段评条数的小气泡；关掉后正文里只有字（段评仍可从选中文字后的工具条进去） */
+  comments: boolean;
 }
 
 /** 行距倍数。中文正文需要比西文更大的行距，默认 1.95 */
@@ -59,6 +61,7 @@ const DEFAULTS: ReaderSettings = {
   // 默认跟随系统；读者第一次关掉"跟随系统"时，页面会稍稍暗一点，看得出开关起了作用
   brightness: 0.85,
   brightnessAuto: true,
+  comments: true,
 };
 const STORAGE_KEY = 'danmo:reader';
 
@@ -80,6 +83,7 @@ function parse(raw: string | null): ReaderSettings {
       paper: isPaperId(r.paper) ? r.paper : DEFAULTS.paper,
       brightness: Number.isFinite(bright) && bright >= BRIGHTNESS_MIN && bright <= 1 ? bright : DEFAULTS.brightness,
       brightnessAuto: typeof r.brightnessAuto === 'boolean' ? r.brightnessAuto : DEFAULTS.brightnessAuto,
+      comments: typeof r.comments === 'boolean' ? r.comments : DEFAULTS.comments,
     };
   } catch {
     return DEFAULTS;

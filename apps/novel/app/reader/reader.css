@@ -1028,3 +1028,826 @@
 .rd-font-pick:hover {
   background: color-mix(in srgb, var(--ink) 5%, transparent);
 }
+
+/* ============================================================
+ * 书签、划线、想法、段评与选择（Reader.tsx、Selection.tsx、directory.tsx、remarks.tsx）
+ * ============================================================ */
+
+/* 正文不用浏览器的原生选择：选择是阅读器自己的一套（Selection.tsx），长按也不弹系统菜单 */
+.reader .rd-flow {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 选区：CSS Custom Highlight API，只画不改 DOM（分页不受影响）。红线色淡淡一层：选区是读者正在指的地方 */
+::highlight(rd-sel) {
+  background-color: color-mix(in srgb, var(--thread) 24%, transparent);
+}
+
+/* ---- 划线：红线波浪、淡粉荧光、墨线 ----
+ * 只改文字的装饰与底色，不加任何宽度，划不划线分页都一样。
+ * 淡粉荧光的颜色按配色的明暗取（light-dark 跟着主题的 color-scheme 走），变量写在 .rd-line 自己身上：
+ * 目录面板与写想法的面板在 body 下的浮层里，也用得到。 */
+.rd-line {
+  --rd-marker: light-dark(rgb(240 128 160 / 0.3), rgb(232 132 154 / 0.24));
+  color: inherit;
+  background: none;
+  border-radius: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.rd-line[data-style='wave'] {
+  text-decoration: underline wavy var(--thread);
+  text-decoration-thickness: 1.1px;
+  text-underline-offset: 0.32em;
+  text-decoration-skip-ink: none;
+}
+.rd-line[data-style='marker'] {
+  background: linear-gradient(to bottom, transparent 48%, var(--rd-marker) 48%, var(--rd-marker) 92%, transparent 92%);
+}
+.rd-line[data-style='ink'] {
+  text-decoration: underline solid color-mix(in srgb, var(--reader-ink, var(--ink)) 70%, transparent);
+  text-decoration-thickness: 1.4px;
+  text-underline-offset: 0.36em;
+  text-decoration-skip-ink: none;
+}
+/* 竖排：线划在字的右侧（直排书里旁线的位置），荧光涂在字的右半边 */
+.rd-flow[data-writing='vertical'] .rd-line {
+  text-underline-position: right;
+}
+.rd-flow[data-writing='vertical'] .rd-line[data-style='marker'] {
+  background: linear-gradient(to left, transparent 4%, var(--rd-marker) 4%, var(--rd-marker) 48%, transparent 48%);
+}
+/* 带想法的划线：末尾那个字的右上角一粒红点（绝对定位，不占宽度）。
+ * 点要落在字框里面：划线常常划到行末，字框外面就是裁出一页的窗口边缘，出去就被裁掉了。
+ * 跨行的划线，定位的参照是最后一行那一截（用 bottom、inset-inline-end 定，不用 top、left） */
+.rd-line[data-thought] {
+  position: relative;
+}
+.rd-line[data-thought]::after {
+  content: '';
+  position: absolute;
+  inset-inline-end: 0;
+  bottom: 0.9em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--thread);
+  box-shadow: 0 0 0 1.5px var(--reader-paper, var(--sheet));
+}
+/* 竖排：落在最后那个字的左下角 */
+.rd-flow[data-writing='vertical'] .rd-line[data-thought]::after {
+  inset-inline-end: auto;
+  bottom: 0;
+  left: 0;
+}
+
+/* ---- 段评：段末一个小气泡，写这一段有几条段评（数字用 attr() 画，气泡里没有文字） ---- */
+.rd-cmt {
+  display: inline-block;
+  min-inline-size: 1.7em;
+  margin-inline-start: 0.42em;
+  padding: 0 0.48em;
+  border-radius: 0.9em;
+  font: 500 0.56em/1.55 var(--font-sans);
+  text-indent: 0;
+  vertical-align: 0.42em;
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--reader-ink) 6%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--reader-ink) 13%, transparent);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    color var(--dur-quick) ease,
+    background-color var(--dur-quick) ease,
+    box-shadow var(--dur-quick) ease;
+}
+.rd-cmt::after {
+  content: attr(data-n);
+}
+.rd-cmt:hover {
+  color: var(--thread-ink);
+  background: color-mix(in srgb, var(--thread) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--thread) 40%, transparent);
+}
+/* 竖排：数字横着并成一格（text-combine-upright），气泡竖着贴在段末 */
+.rd-flow[data-writing='vertical'] .rd-cmt {
+  min-inline-size: 0;
+  padding: 0.42em 0;
+  margin-inline-start: 0.35em;
+  vertical-align: 0.38em;
+  text-combine-upright: all;
+}
+
+/* ---- 书签：页顶垂下的一条丝带（燕尾），红线色：书签是信息 ----
+ * 投影写在外层（filter），燕尾的形状裁在 ::before 上：clip-path 会把同一个元素的投影也裁掉 */
+.rd-ribbon {
+  position: absolute;
+  top: 0;
+  right: max(30px, calc((100% - 820px) / 2 + 30px));
+  z-index: 2;
+  width: 14px;
+  height: calc(var(--safe-top) + 44px);
+  pointer-events: none;
+  filter: drop-shadow(0 2px 2px rgb(var(--shadow-rgb) / 0.32));
+}
+.rd-ribbon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 6px), 0 100%);
+  background:
+    linear-gradient(90deg, rgb(0 0 0 / 0.12), transparent 35%, rgb(255 255 255 / 0.16) 55%, transparent 80%),
+    var(--thread);
+}
+/* 刚夹上的：从页顶落下来，到底轻轻一荡 */
+.rd-ribbon[data-fresh] {
+  transform-origin: 50% 0;
+  animation: rd-ribbon-drop 560ms var(--ease-soft) both;
+}
+@keyframes rd-ribbon-drop {
+  from {
+    transform: translateY(-100%);
+  }
+  62% {
+    transform: translateY(5%);
+  }
+  to {
+    transform: none;
+  }
+}
+/* 滚动模式：挂在阅读器的页顶，在滚动的正文之上 */
+.rd-ribbon--screen {
+  z-index: 3;
+}
+
+/* 上栏的书签按钮：夹着书签时图标用红线色 */
+.rd-bar__mark[aria-pressed='true'] svg {
+  color: var(--thread);
+}
+
+/* ---- 选择的浮层：手柄、工具条、划线的小浮层。在亮度遮罩（z-index 7）之上，夜里也看得清 ---- */
+.rd-select {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+/* 不支持 ::highlight 的浏览器：选区画成半透明的框 */
+.rd-select__rect {
+  position: absolute;
+  background: color-mix(in srgb, var(--thread) 22%, transparent);
+  mix-blend-mode: multiply;
+}
+/* 手柄：贴着首字左缘（末字右缘）的一根细线，起点的圆头在上、终点的圆头在下 */
+.rd-handle {
+  position: absolute;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--thread);
+}
+.rd-handle__knob {
+  position: absolute;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: var(--thread);
+  box-shadow: 0 1px 3px rgb(var(--shadow-rgb) / 0.45);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+}
+/* 感应区比看到的圆头大一圈，手指好按 */
+.rd-handle__knob::before {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+}
+.rd-handle[data-which='start'] .rd-handle__knob {
+  top: -11px;
+}
+.rd-handle[data-which='end'] .rd-handle__knob {
+  bottom: -11px;
+}
+/* 竖排：横在首字上缘（末字下缘）的一根细线，起点圆头在右、终点圆头在左 */
+.rd-select[data-vertical] .rd-handle {
+  width: auto;
+  height: 2px;
+  margin: -1px 0 0;
+}
+.rd-select[data-vertical] .rd-handle__knob {
+  top: 50%;
+  left: auto;
+  margin: -6px 0 0;
+}
+.rd-select[data-vertical] .rd-handle[data-which='start'] .rd-handle__knob {
+  right: -11px;
+}
+.rd-select[data-vertical] .rd-handle[data-which='end'] .rd-handle__knob {
+  bottom: auto;
+  left: -11px;
+}
+
+/* 浮条：一张小纸条，带一个指向选区的小尖角；没量好位置之前不显示（免得在左上角闪一下） */
+.rd-float {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: auto;
+  border-radius: var(--radius-l);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 16px 36px -18px rgb(var(--shadow-rgb) / 0.62);
+  animation: rd-float-in 200ms var(--ease-soft) both;
+}
+.rd-float:not([data-placed]) {
+  visibility: hidden;
+  animation: none;
+}
+.rd-float::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: calc(var(--arrow, 50%) - 7px);
+  width: 14px;
+  height: 7px;
+  background: var(--sheet);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.rd-float[data-below]::after {
+  top: auto;
+  bottom: 100%;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+@keyframes rd-float-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+}
+.rd-float[data-below] {
+  animation-name: rd-float-in-below;
+}
+@keyframes rd-float-in-below {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+.rd-tools {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+}
+.rd-tools__btn {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 52px;
+  padding: 7px 8px 5px;
+  border-radius: var(--radius-m);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  transition:
+    background-color var(--dur-quick) ease,
+    color var(--dur-quick) ease;
+}
+.rd-tools__btn svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.6;
+  color: var(--ink);
+}
+.rd-tools__btn:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+/* 划线的小浮层：上面是想法（有的话），下面一排是三种线、想法、复制、删除 */
+.rd-tools--note {
+  flex-direction: column;
+  gap: 0;
+  max-width: min(360px, calc(100% - 20px));
+}
+.rd-tools__thought {
+  max-height: 7.6em;
+  overflow-y: auto;
+  padding: 10px 12px 9px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* "想"：读者自己写的话，一枚小小的红底字（红线色：这是读者留下的信息） */
+.rd-tools__thought-mark,
+.rd-memo__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35em;
+  height: 1.35em;
+  margin-right: 0.45em;
+  border-radius: 3px;
+  font-family: var(--font-kai);
+  font-size: 0.78em;
+  line-height: 1;
+  color: var(--sheet);
+  background: var(--thread);
+  vertical-align: 0.12em;
+}
+.rd-tools__row {
+  display: flex;
+  align-items: center;
+}
+.rd-tools__styles {
+  display: flex;
+  gap: 2px;
+  margin-right: 4px;
+  padding-right: 6px;
+  border-right: 1px solid var(--line);
+}
+.rd-tools__style {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 44px;
+  border-radius: var(--radius-m);
+  transition: background-color var(--dur-quick) ease;
+}
+.rd-tools__style:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.rd-tools__style[aria-checked='true'] {
+  background: color-mix(in srgb, var(--thread) 8%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}
+.rd-sample {
+  font-family: var(--font-kai);
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+/* ============================================================
+ * 目录面板：目录、书签、笔记三页（directory.tsx）
+ * ============================================================ */
+/* 三页一样高：换页签时面板不忽高忽低（目录长、书签短）。86vh 是面板的最大高度，100px 是把手、标题与上下留白 */
+.rd-dir {
+  min-height: min(calc(86vh - 100px), 640px);
+}
+/* 页签贴在面板顶上不随列表滚走；样子同作者站封面工作室的页签：楷书名字、一行小字、选中的底下一小段红线 */
+.rd-dir__tabs {
+  position: sticky;
+  top: -10px;
+  z-index: 1;
+  display: flex;
+  margin: 0 calc(var(--sp-5) * -1) 4px;
+  padding: 0 var(--sp-5);
+  background: var(--sheet);
+  box-shadow: 0 1px 0 var(--line);
+}
+.rd-dir__tab {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 9px 0 10px;
+  color: var(--ink-2);
+  outline: none;
+  transition: color var(--dur-quick) ease;
+}
+.rd-dir__tab:hover,
+.rd-dir__tab[aria-selected='true'] {
+  color: var(--ink);
+}
+.rd-dir__name {
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+}
+.rd-dir__count {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--ink-2) 80%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+.rd-dir__tab::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  width: 28px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--thread);
+  translate: -50% 0;
+  scale: 0 1;
+  transition: scale var(--dur-base) var(--ease-soft);
+}
+.rd-dir__tab[aria-selected='true']::after {
+  scale: 1 1;
+}
+.rd-dir__tab:focus-visible {
+  border-radius: var(--radius-s);
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}
+.rd-dir__panel {
+  animation: rd-dir-in 240ms var(--ease-soft) both;
+}
+@keyframes rd-dir-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+/* 目录：章名占满一行，书签、锁、当前章的红线短横依次靠右 */
+.rd-dir__title {
+  flex: 1;
+  min-width: 0;
+}
+/* 夹了书签的章：一条小小的燕尾丝带 */
+.rd-dir__ribbon,
+.rd-mark::before,
+.rd-dir__empty-ribbon {
+  flex: none;
+  width: 7px;
+  height: 15px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 3px), 0 100%);
+  background: var(--thread);
+}
+
+/* 书签：每枚左边一条小丝带，写章名、多久以前、夹在哪里的那一小段文字 */
+.rd-marks {
+  list-style: none;
+}
+.rd-mark {
+  position: relative;
+  display: flex;
+  border-bottom: 1px solid var(--line);
+}
+.rd-mark::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 0;
+  width: 9px;
+  height: 22px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 4px), 0 100%);
+}
+.rd-mark__go {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px 4px 14px 28px;
+  text-align: left;
+}
+.rd-mark__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.rd-mark__excerpt {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.65;
+  color: var(--ink);
+  transition: color var(--dur-quick) ease;
+}
+.rd-mark__go:hover .rd-mark__excerpt {
+  color: var(--thread-ink);
+}
+.rd-mark__remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  color: var(--ink-2);
+  opacity: 0.55;
+  transition:
+    opacity var(--dur-quick) ease,
+    color var(--dur-quick) ease;
+}
+.rd-mark__remove svg {
+  width: 16px;
+  height: 16px;
+}
+.rd-mark__remove:hover,
+.rd-mark__remove:focus-visible {
+  opacity: 1;
+  color: var(--thread-ink);
+}
+
+/* 笔记：按章分组；每条是划下的字（画成它自己的线），想法接在下面一块浅底里 */
+.rd-memos__group + .rd-memos__group {
+  margin-top: 18px;
+}
+.rd-memos__chapter {
+  padding: 8px 0 6px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-kai);
+  font-weight: 400;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.rd-memos ol {
+  list-style: none;
+}
+.rd-memo {
+  padding: 13px 0 9px;
+  border-bottom: 1px solid var(--line);
+}
+.rd-memo__go {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+}
+.rd-memo__quote {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.95;
+  color: var(--ink);
+}
+.rd-memo__thought {
+  padding: 8px 11px;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  font-size: var(--fs-14);
+  line-height: 1.65;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.rd-memo__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.rd-memo__remove {
+  padding: 3px 4px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  transition: color var(--dur-quick) ease;
+}
+.rd-memo__remove:hover {
+  color: var(--thread-ink);
+}
+
+/* 空着的书签、笔记页：一个淡淡的小样，一句话 */
+.rd-dir__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 44px 0 36px;
+  text-align: center;
+}
+.rd-dir__empty p {
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  color: var(--ink);
+}
+.rd-dir__empty small {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.rd-dir__empty-ribbon {
+  width: 16px;
+  height: 40px;
+  margin-bottom: 12px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 7px), 0 100%);
+  opacity: 0.4;
+}
+.rd-dir__empty-line {
+  margin-bottom: 12px;
+  font-family: var(--font-kai);
+  font-size: 22px;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+/* ============================================================
+ * 写想法、段评（remarks.tsx）
+ * ============================================================ */
+.rd-thought-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.rd-thought-form__quote,
+.rd-talk__para {
+  margin: 0;
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid var(--line);
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.95;
+  color: var(--ink);
+}
+.rd-thought-form__quote {
+  max-height: 9.8em;
+  overflow-y: auto;
+}
+.rd-textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-size: var(--fs-16);
+  line-height: 1.7;
+  color: var(--ink);
+  background: var(--sheet-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  resize: vertical;
+  outline: none;
+  transition: box-shadow var(--dur-quick) ease;
+}
+.rd-textarea:focus {
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}
+.rd-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 段评：上面是这一段的原文，下面一条条段评，最下面写一条（贴在面板底上，列表在它上面滚） */
+.rd-talk__para {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+.rd-talk__count {
+  margin-top: 14px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.rd-talk__list {
+  list-style: none;
+}
+.rd-talk__item {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 11px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+/* 头像：一枚淡色的闲章，刻昵称的第一个字（同发现页的帖子；不用朱红，满屏红印会抢走红线承载的信息） */
+.rd-talk__avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  font-family: var(--font-brush);
+  font-size: 19px;
+  color: var(--blush-ink);
+  background: color-mix(in srgb, var(--blush) 55%, var(--sheet));
+}
+.rd-talk__item[data-mine] .rd-talk__avatar {
+  color: var(--sheet);
+  background: color-mix(in srgb, var(--ink) 72%, var(--sheet));
+}
+.rd-talk__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.rd-talk__name {
+  font-size: var(--fs-14);
+  color: var(--ink);
+}
+.rd-talk__me {
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  background: var(--sheet-2);
+}
+.rd-talk__cite {
+  margin-top: 5px;
+  padding-left: 8px;
+  border-left: 2px solid var(--line);
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.rd-talk__text {
+  margin-top: 4px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.rd-talk__like {
+  align-self: start;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  min-width: 40px;
+  padding: 2px 0;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--dur-quick) ease;
+}
+.rd-talk__like svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.7;
+}
+.rd-talk__like:hover,
+.rd-talk__like[aria-pressed='true'] {
+  color: var(--thread-ink);
+}
+.rd-talk__like[aria-pressed='true'] svg {
+  fill: currentColor;
+}
+.rd-talk__rest {
+  padding-top: 12px;
+  text-align: center;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.rd-talk__compose {
+  position: sticky;
+  bottom: calc((var(--sp-6) + var(--safe-bottom)) * -1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px calc(var(--sp-5) * -1) calc((var(--sp-6) + var(--safe-bottom)) * -1);
+  padding: 12px var(--sp-5) calc(14px + var(--safe-bottom));
+  background: var(--sheet);
+  box-shadow: 0 -1px 0 var(--line);
+}
+.rd-talk__quote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px 5px 12px;
+  border-radius: var(--radius-m);
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+  background: var(--sheet-2);
+}
+.rd-talk__quote span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rd-talk__quote button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--ink-2);
+}
+.rd-talk__quote svg {
+  width: 15px;
+  height: 15px;
+}
+.rd-talk__as {
+  margin-right: auto;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+@media (min-width: 900px) {
+  .rd-talk__compose {
+    bottom: calc(var(--sp-6) * -1);
+    margin-bottom: calc(var(--sp-6) * -1);
+    padding-bottom: 16px;
+  }
+}

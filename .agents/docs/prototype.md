@@ -32,8 +32,10 @@ packages/data/src/
   books.ts      Book 类型、书目 BOOKS、品牌书 BRAND_BOOK、示例书架 SHELF、口味标签、isBookNo/formatBookNo 与格式化函数
   chapters.ts   章节标题与试读正文（按书号为键）
   api.ts        模拟服务端（正式版换成请求 Go 接口，签名不变）：fetchChapter、chapterAccess、FREE_CHAPTERS；
-                试读开头 chapterLead 与预览 fetchPreview；字数与价格；书币余额与充值；自动订阅开关；subscribeChapters
+                试读开头 chapterLead 与预览 fetchPreview；字数与价格；书币余额与充值；自动订阅开关；subscribeChapters；
+                localRecord（本地存储里的一份账户数据，阅读器的书签与笔记也用它）
   posts.ts      发现页的示例帖子 POSTS、帖子类别 POST_KINDS、formatPostTime
+  comments.ts   阅读器的示例段评：paragraphCommentCount、paragraphComments（第 10 节"书签、划线、想法与段评"）
   author.ts     作者站的示例数据（第 13 节）：AUTHOR、WORKS、volumesOf、MESSAGES、LETTERS、statsOf、FANS、REVIEWS（朱批）、今日字数
   manuscripts.ts 写作页与审核页的示例稿件：manuscriptOf、wordCount、draftWords、hasDraft
   admin.ts      管理站的示例数据（第 16 节）：身份与权限、工作人员、审核队列、作者名册、设置页的三份（橱窗、告示、站规）、举报、全站三十天的数、账簿
@@ -543,6 +545,49 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 价格：`chapterPrice` 按每千字 5 书币。`chapterWords` 暂按全书平均值 ±15%，以章号为种子。都是原型示例。
   - 本地存储里的账户数据（订阅、余额、开关）用 `localRecord` 读写，读的时候按形状校验。
 - 竖排时弯引号换成直角引号。
+
+### 书签、目录三页、划线、想法与段评（2026-10-02，计划第 4 节第 4、5 项）
+
+- **位置**：都用 TextPoint `{ p, o }`（第几段、段内第几个 UTF-16 码元之前）记，不用页码。段号与 `ChapterText.paragraphs` 的下标一致（复用的示例正文首段"原型示例正文"也占一个号）。竖排换直角引号是一换一，偏移不变。
+- **正文的 DOM**（pages.tsx 的 ChapterContent）：每段 `<p data-p>`；划线把一段切成几截，包在 `<mark class="rd-line" data-style data-note>` 里（`linesIn`；跨段的划线每段一截，带想法的只在最后一截有 `data-thought`）；段评气泡 `<button class="rd-cmt" data-extra data-p data-n tabIndex=-1>`，数字用 `::after { content: attr(data-n) }` 画（超过 99 写 99+）。气泡与想法记号都带 `data-extra`、里面没有文字，textpoints.ts 数偏移时跳过。气泡不进 Tab 顺序：每层页面都是整章，Tab 到页外的气泡会让裁出一页的窗口滚动。
+  - ChapterContent 是 memo 的，notes、comments 由 Reader 按章缓存（`notesByChapter`、`commentCache`），同一章每次给同一个数组。划线只改装饰不加宽度，分页不变；气泡会改排版，所以测量层也画气泡，`commentCache` 进了测量的依赖。
+- **textpoints.ts**：`domPoint`/`textPointOf`（TextPoint 与文字节点位置互换）、`rangeOf`、`charRect`、`caretAt`（`caretPositionFromPoint`，没有就 `caretRangeFromPoint`）、`textBetween`（按原文取，不从页面取）、`fracOfPoint`（按字数比例）、`wordAt`（`Intl.Segmenter('zh', word)`，标点或没有分词时选一个字）、`firstVisiblePoint`（视野里第一个字：先找第一段露在视野里的段，再二分查找第一个不在视野之前的字）、`pointSide`。"在视野之前"按走向判断：横排分页 cols（前面的栏在左）、横排滚动 rows（前面的行在上）、竖排 vertical（前面的列在右）。
+- **存储**（marks.ts）：`danmo:marks` 书号 → `{ bookmarks, notes }`；`danmo:my-comments` "书号:章:段" → 我发的段评 `{ id, text, quote?, at }`。用 api.ts 的 `localRecord`，读出时逐条校验，不合法的条目丢掉。服务端快照是空的。
+  - `Bookmark { id, chapter, point, excerpt, at }`；`Note { id, chapter, start, end, style, quote, thought, at }`，style 是 wave（红线波浪）、marker（淡粉荧光）、ink（墨线）。
+  - `addNote(bookId, note, replaces)`：Reader 的 `saveLine` 把与新划线重叠的旧划线并进来（范围取并集、想法用换行接起来、样式用这一次的），旧的随 replaces 删掉，同一处只留一条。
+- **书签**：上栏按钮的状态是"眼前夹着书签"（`hereMarks`）。分页时 `markPages` 用测量层量出每枚书签在它那一章的第几页（`pageOfPoint`：横排看字落在第几栏，竖排看离正文右缘几个窗口宽），依赖与测量相同；滚动时 `screenMarks` 看书签那个字在不在滚动区里（随 scrollFrac 重算）。夹上：`visibleStart` 取眼前第一个字（分页用当前页的窗口；滚动取第一个真正露在视野里的字），摘 36 个字做 excerpt。取下：删掉眼前的几枚。
+  - 丝带：分页时画在 PageFrame 里（随书页一起翻），滚动时挂在阅读器页顶（`.rd-ribbon--screen`）。燕尾用 clip-path 裁在 ::before 上、投影用外层的 filter（同一个元素上 clip-path 会裁掉投影）。夹上不到 1.5 秒的书签 `data-fresh`，丝带从页顶落下；翻到夹着书签的页时不落。宽屏时右缘对齐 820px 的页眉。
+- **跳到书签、笔记**（`leapToPoint`）：先按 `fracOfPoint` 落到大致的地方，同时记下 `landAt`。分页模式在"页数量出来或变了"的布局副作用里，这一章量好了就按 `pageOfPoint` 精确落页；滚动模式在那一段挂上、正文到了之后把那个字滚到视野上方（横排离顶 18%，竖排离右 12%）。都走 leap，记原位置、可以跳回。笔记落下后 `flashNote`：那几个字用 WAAPI 闪一下红线色的底（减少动效时不闪）。
+- **目录面板**（directory.tsx）：Sheet 的标题是书名；三张页签（role=tablist，左右方向键切换），楷书名字、一行小字（共 N 章、几枚、几条）、选中的底下一小段红线，`position: sticky` 贴在面板顶上。三页一样高（`.rd-dir` 的 min-height 取 86vh 减去把手、标题与留白，最多 640px），换页签时面板不忽高忽低。
+  - 目录：打开时把正在读的那一章滚到面板中间；章名包在 `.rd-dir__title`（flex: 1）里，夹了书签的章右边一条小丝带，锁与当前章的红线短横照旧。
+  - 书签：按章、按在章里的先后排；左边一条小丝带，写章名、多久以前、摘的那段字（两行）；叉掉就删。
+  - 笔记：按章分组；划下的字画成它自己的线（四行），想法接在下面一块浅底里，带一枚红底的"想"；底下是多久以前与删除。
+  - 空着时一个淡淡的小样（丝带、划了波浪线的"划一道线"）、一句话、一行小字。
+- **选择**（Selection.tsx 的 `useTextSelection`）：不用浏览器的原生选择（正文 `user-select: none`、`-webkit-touch-callout: none`，正文区 `contextmenu` 阻止）。
+  - 鼠标：在正文上按下、移动超过 4px 就开始选，并把指针捉在正文区上（`setPointerCapture`：拖的途中指针会经过手柄圆头的感应区，不捉住的话松手落在手柄上，阅读器收不到）。鼠标在正文上拖不再翻页。不做双击选词：分页时点两侧是翻页，双击会先翻两页。
+  - 触屏：按住 450ms 不动（动了超过 10px 就是滑动或滚动，交还给阅读器）选中手指下的词，振动 8ms；不松手接着拖，长按选中的词始终留在选区里。滚动模式拖的时候在 `touchmove`（非被动）里阻止滚动。
+  - `up` 返回 true 表示这一下归选择（选完了，或者有选择时点一下只是取消），阅读器不再当成翻页或唤出工具栏。只在一章之内选；分页时只在当前页的那一份正文里（`env.chapterAt`）。
+  - 选区高亮用 CSS Custom Highlight API（`::highlight(rd-sel)`，红线色 24%），不支持时退回一层半透明的框。位置（`useSelBox`）逐个文字节点量（不要跨段时整段元素的框），随 tick（页、滚动、尺寸、气泡）重量。
+  - 手柄：首字左缘、末字右缘的细线，起点圆头在上、终点圆头在下（竖排是横线，圆头在右、在左）；圆头感应区四周多出 14px。拖手柄时按"手指到那个字的偏移"找字，不按手指本身。
+  - 浮条（`Floating`）：量好自己的大小再放在选区上方，放不下就放下方；水平居中、夹在阅读器里；小尖角指向选区；触屏离选区 26px（让出圆头），鼠标 14px。在亮度遮罩之上（z-index 8）。
+  - 选中后的工具条：复制（附"——摘自《书名》章名 · 耽墨小说"，content-protection-goal：复制是支持的）、划线（用上一次的样式，划完浮出这条划线的小浮层）、想法（打开写想法的面板，保存时才划线）、段评（写给选区开头那一段，引的字只取这一段里的）。
+  - 点已有的划线：浮出它的小浮层，上面是想法（有的话），下面一排是三种线的小样（一个"文"字划上这种线）、想法（改想法）、复制、删除。点别处先收起它。
+  - 翻页、跳转、改排版设置时选择与小浮层都收起；选中了字时上下两栏收起。Esc 先收起它们（捕获阶段，不返回上一页）；Ctrl/⌘+C 复制选中的字。
+- **想法**（remarks.tsx 的 ThoughtEditor）：上面是划下的字，下面写想法（上限 1000 字）。新写的不能是空的；改已有的想法时清空再保存就是删掉想法。
+- **段评**（remarks.tsx 的 CommentsPanel）：上面这一段的原文（四行），"N 条段评"，我发的在最前（深色闲章头像、"我"），其余按点赞排、能点赞；最多列 12 条，其余写"还有 N 条"。写字框贴在面板底上（sticky），引的字可以叉掉；以"夜读人"发表（原型的示例账号，存在本机；正式版要登录、由服务端审核）。
+  - 示例数据（packages/data/src/comments.ts）：两本书的第一章有几段手写的评论（贴着正文），其余按"书号:章:段"的 FNV-1a 散列给数：约八成没有，有的多半个位数，少数几十、上百。通用评论的昵称不与手写的重复。
+  - 设置面板在"反向翻页"之后加了"显示段评"开关（settings.ts 的 comments，默认开）。关掉后正文里没有气泡，段评仍可从选中文字后的工具条进去。
+- **键盘**：分页模式的翻页键在写想法、段评面板打开时也让开（原先只看 panel），textarea 里按键不翻页。
+- **验收**（2026-10-02，开发服务器与生产构建）：
+  - 390×844 薛涛笺：气泡、夹书签（丝带落下、按钮红色、本机记录）、翻到第二页丝带不在、翻回来在且不再落；目录面板三页同高（726/725/725）；鼠标拖选"江小满按住卷子，偏头看了一眼窗"→ 工具条 → 划线（波浪）→ 小浮层换淡粉荧光 → 写想法（红点在"窗"的右上角，划线划到行末时点也在窗口里）→ 点划线浮出带想法的小浮层；点首段的气泡 → 段评面板 → 发表 → 计数 69→70、气泡跟着变；跳到第三章再从笔记页跳回第一章第一页（回到了原位置，跳回随之消失）；合成的触屏长按选中"，"再拖到下一行，工具条离选区更远。
+  - 滚动模式：丝带随书签那一屏滚出去而收起；在新的一屏夹书签（书签落在第 8 段开头）；拖选与工具条。
+  - 竖排、长夜（《檐下听雪》）：竖着拖选一列，手柄横在字上下，波浪线在字的右侧，气泡里的数字横着并成一格。
+  - 1440×900：跨行拖选、工具条、丝带对齐页眉右缘。
+  - 生产构建（react-router-serve）：阅读页无水合警告；浮条是 absolute、划线是波浪（共用样式排在后面也没有盖掉）。类型检查与三站构建通过。
+- **已知不足**：
+  - 选择只在一章、分页时只在一页之内；拖到页外不会自动翻页。
+  - 读屏模式与 Canvas 绘制正文属于"正文保护"，没有做；内置复制没有接登录与配额。
+  - 轻提示在阅读器里浮在下栏的进度行上（原先就有）。
 
 ## 11. 数据（packages/data）
 
