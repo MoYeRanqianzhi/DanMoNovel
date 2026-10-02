@@ -13,6 +13,36 @@
   transform: rotate(-6deg);
 }
 
+/* 账簿里事由的小戳（日志页、总览的账簿共用）：一枚墨色的小戳，歪一点；查账时要一眼看到的用红线色 */
+.ink-stamp {
+  display: inline-block;
+  padding: 2px 6px 1px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--font-kai);
+  font-size: 14px;
+  line-height: 1.25;
+  letter-spacing: 0.08em;
+  color: color-mix(in oklab, var(--ink) 80%, transparent);
+  rotate: -4deg;
+}
+.ink-stamp[data-alert] {
+  color: var(--thread-ink);
+}
+/* 墨迹未干：刚记下的一行先洇着，过一会儿才干（日志页、总览的账簿共用；日志页按 animationName 认它，改名要一起改） */
+@keyframes ink-wet {
+  from {
+    filter: blur(0.6px);
+    text-shadow:
+      0 0 0.6px currentColor,
+      0 0 8px color-mix(in oklab, var(--ink) 30%, transparent);
+  }
+  to {
+    filter: none;
+    text-shadow: none;
+  }
+}
+
 /* 管不着的一页（NoAccess.tsx）：几方要拿的印、一句说明、去"我"换印 */
 .no-access {
   display: flex;

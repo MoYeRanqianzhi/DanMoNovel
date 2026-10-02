@@ -43,6 +43,9 @@ import { countKai, rangeLabel } from './format';
  */
 export const OPENED_AT = Date.now();
 
+/** 记下之后多久之内，那一笔的墨迹还没干：日志的一行、总览的账簿、身份页的名帖都按它（一分钟） */
+export const WET_MS = 60_000;
+
 /** 审核的三方印：准（通过）、退（退回修改）、驳（驳回，只给新书上架） */
 export type Verdict = '准' | '退' | '驳';
 
@@ -209,7 +212,7 @@ export function useSession(): Session {
 }
 
 /** 账簿上写的对象：哪本书的哪一章、新书、封面或简介 */
-export function describe(item: QueueItem): string {
+function describe(item: QueueItem): string {
   const book = `《${item.book.title}》`;
   switch (item.kind) {
     case 'chapter':
@@ -301,7 +304,7 @@ let rosterFor: Session['staff'] | null = null;
 let roster: Member[] = [];
 
 /** 名册（按 STAFF 的次序），叠上这次打开期间的改动。改动没变时返回同一个数组 */
-export function rosterOf(session: Session): Member[] {
+function rosterOf(session: Session): Member[] {
   if (session.staff !== rosterFor) {
     rosterFor = session.staff;
     roster = STAFF.map((s) => {
@@ -382,7 +385,7 @@ let authorsFor: Session['authors'] | null = null;
 let authorRoster: AuthorEntry[] = [];
 
 /** 作者名册（按 AUTHORS 的次序），叠上这次打开期间的改动。改动没变时返回同一个数组 */
-export function authorsOf(session: Session): AuthorEntry[] {
+function authorsOf(session: Session): AuthorEntry[] {
   if (session.authors !== authorsFor) {
     authorsFor = session.authors;
     authorRoster = AUTHORS.map((a) => {

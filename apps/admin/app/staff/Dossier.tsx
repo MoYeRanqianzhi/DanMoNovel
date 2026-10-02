@@ -14,12 +14,11 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { ROLES, can, getRole, type EditorGroup, type Role, type RoleId } from '@danmo/data/admin';
-import { toChineseNumber } from '@danmo/data/chapters';
 import { Sheet } from '@danmo/design/components/overlays';
 import { Stamp } from '@danmo/design/components/Stamp';
 import { Seal, Segmented } from '@danmo/design/components/ui';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
-import { headcount, sinceLabel } from '../format';
+import { dayKai, headcount, sinceLabel } from '../format';
 import type { Member } from '../session';
 import {
   SELF_NOTE,
@@ -392,12 +391,6 @@ interface OrderSlipProps {
   onSeal: (s: Sealed) => void;
 }
 
-/** 今天的日子："十月二日" */
-function today(): string {
-  const d = new Date();
-  return `${toChineseNumber(d.getMonth() + 1)}月${toChineseNumber(d.getDate())}日`;
-}
-
 function OrderSlip({ order, roster, me, onBack, onClose, onSeal }: OrderSlipProps) {
   const ref = useFocusOnOpen();
   const { reduced } = useTheme();
@@ -405,7 +398,10 @@ function OrderSlip({ order, roster, me, onBack, onClose, onSeal }: OrderSlipProp
   const [targetId, setTargetId] = useState(order.target);
   const [picked, setPicked] = useState(order.role);
   const target = roster.find((m) => m.id === targetId);
-  const [group, setGroup] = useState<EditorGroup>(target?.group ?? GROUPS[0]);
+  // 编辑分到哪一组：没动过就跟着选中的人（他原来的组，没有就现代组）。不能在挂载时一次算定——
+  // 从页头或印的释文进来时还没选人，那时定下的"现代组"会在选了人之后照旧沿用，把古代组的人悄悄改了组
+  const [chosenGroup, setGroup] = useState<EditorGroup | null>(null);
+  const group = chosenGroup ?? target?.group ?? GROUPS[0];
   const [note, setNote] = useState('');
   /** 按下钤印那一刻的札子；没按时为空 */
   const [sealed, setSealed] = useState<Sealed | null>(null);
@@ -547,7 +543,7 @@ function OrderSlip({ order, roster, me, onBack, onClose, onSeal }: OrderSlipProp
           附注：{text.note ?? <span className="slip__blank"><span className="sr-only">没写</span></span>}
         </p>
         <div className="slip__foot">
-          <span className="slip__date">{today()}</span>
+          <span className="slip__date">{dayKai(Date.now())}</span>
           <span className="slip__sign">
             经手
             <span className="slip__slot">

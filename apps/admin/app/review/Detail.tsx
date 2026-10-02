@@ -12,7 +12,7 @@
  *   盖下去印落在纸头（章节、新书）或案由上（封面、简介），读屏播报结果；之后可以撤回（账簿另记一笔）、看下一份。
  * 正式版的决定写进服务端：通过的章节按作者设定的时间发布，退回的章节作者在写作页看到总批与朱批（署名只写"审核"）。
  */
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { QUEUE_KINDS, getStaff, type QueueItem, type QueueKind } from '@danmo/data/admin';
 import type { Book } from '@danmo/data/books';
@@ -89,9 +89,11 @@ interface DetailProps {
   next?: QueueItem;
   /** 打开下一份（宽屏换地址，窄屏替换这一页，见 Review.tsx） */
   onNext: (item: QueueItem) => void;
+  /** 这一份是"下一份"换上来的：挂上时把焦点收到标题上（按钮随上一份卸掉了，焦点没处去） */
+  focusTitle?: boolean;
 }
 
-export function Detail({ item, screen, next, onNext }: DetailProps) {
+export function Detail({ item, screen, next, onNext, focusTitle }: DetailProps) {
   const { back } = useStack();
   const { me } = useIdentity();
   const session = useSession();
@@ -104,7 +106,12 @@ export function Detail({ item, screen, next, onNext }: DetailProps) {
   const [stamped, setStamped] = useState(0);
   const [status, setStatus] = useState('');
   const sheetRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const authors = useAuthors();
+
+  useEffect(() => {
+    if (focusTitle) titleRef.current?.focus({ preventScroll: true });
+  }, [focusTitle]);
   const limit = useReviewLimit();
 
   // 责任编辑从作者名册查（叠上这次打开期间的改动：作者页给新作者盖了"约"，这里也换成接手的编辑）
@@ -182,7 +189,7 @@ export function Detail({ item, screen, next, onNext }: DetailProps) {
         <BookSlot slotId={screen.slot('hero')} book={item.book} width={64} {...POSES.thumb} shadow={false} label={null} />
         <div className="review-case__text">
           <p className="review-case__kind">{kindName}</p>
-          <h1 className="review-case__title" id="review-detail-title">
+          <h1 ref={titleRef} tabIndex={-1} className="review-case__title" id="review-detail-title">
             《{item.book.title}》<span>{what}</span>
           </h1>
           <p className="review-case__meta">
@@ -355,6 +362,17 @@ interface TrayProps {
 
 /** 印盒：总批、常用语、三方印；盖过之后换成结果、撤回与下一份 */
 function Tray({ item, summary, notes, decided, next, onNext, onDecide, onUndo }: TrayProps) {
+  const undoRef = useRef<HTMLButtonElement>(null);
+  const summaryRef = useRef<HTMLTextAreaElement>(null);
+  // 盖章、撤回会把刚按下的按钮连同整个印盒换掉，焦点会掉到 <body>：盖完章交给"撤回"，撤回后交给总批。
+  // 比较上一次的结果（而不是"第一次不算"）：开发模式下副作用会跑两遍，挂载时不能抢焦点
+  const lastDecided = useRef(decided);
+  useEffect(() => {
+    if (lastDecided.current === decided) return;
+    lastDecided.current = decided;
+    if (decided) undoRef.current?.focus();
+    else summaryRef.current?.focus();
+  }, [decided]);
   const reason = summary.trim().length > 0;
   /** 封面与简介没有稿纸，退回的理由只能写在总批里 */
   const hasText = item.kind === 'chapter' || item.kind === 'book';
@@ -379,7 +397,7 @@ function Tray({ item, summary, notes, decided, next, onNext, onDecide, onUndo }:
         <Seal text={decided} size={34} />
         <p className="tray__outcome">{outcome(item, decided, notes)}</p>
         <div className="tray__after">
-          <button type="button" className="btn btn--ghost" onClick={onUndo}>
+          <button ref={undoRef} type="button" className="btn btn--ghost" onClick={onUndo}>
             撤回
           </button>
           {next && (
@@ -395,6 +413,7 @@ function Tray({ item, summary, notes, decided, next, onNext, onDecide, onUndo }:
   return (
     <section className="tray" aria-label="批语与决定">
       <textarea
+        ref={summaryRef}
         className="tray__summary"
         value={summary}
         maxLength={SUMMARY_MAX}

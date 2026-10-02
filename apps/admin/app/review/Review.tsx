@@ -65,6 +65,8 @@ export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
   const wide = useIsWide();
   const { push, retarget } = useStack();
   const [kind, setKind] = useState<QueueKind | null>(data.kind ?? null);
+  /** 宽屏上用"下一份"换上来的那一份（它挂上时焦点收到标题上）；点左边的案卷换的不算，焦点还在那张案卷上 */
+  const [arrived, setArrived] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   // 宽屏上换一份案卷是 retarget（还是这一页）：整页滚回顶上，从新案卷的案由读起。
@@ -92,6 +94,7 @@ export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
 
   /** 打开一份案卷：宽屏换地址（同一页），窄屏进栈 */
   const open = (q: QueueItem) => {
+    setArrived(null);
     if (wide) retarget(`/review/${q.id}`);
     else push(pathOf(q), { flightFrom: caseSlot(q), book: q.book });
   };
@@ -107,6 +110,7 @@ export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
     if (wide) {
       // 筛着的这一种审完了、下一份是别的种类：放下筛选，左边才看得到它
       if (kind && q.kind !== kind) setKind(null);
+      setArrived(q.id);
       return retarget(`/review/${q.id}`);
     }
     const from = screen.fromSlot;
@@ -168,7 +172,14 @@ export function ReviewScreen({ data, screen }: ScreenProps<ReviewData>) {
       </aside>
 
       {item ? (
-        <Detail key={item.id} item={item} screen={screen} next={next} onNext={(q) => openNext(item, q)} />
+        <Detail
+          key={item.id}
+          item={item}
+          screen={screen}
+          next={next}
+          onNext={(q) => openNext(item, q)}
+          focusTitle={arrived === item.id}
+        />
       ) : (
         <div className="review-idle">
           <div className="review-idle__box" aria-hidden="true">

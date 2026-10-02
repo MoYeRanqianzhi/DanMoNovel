@@ -24,13 +24,10 @@ import { useTheme } from '@danmo/design/theme/ThemeContext';
 import { countKai, headcount } from '../format';
 import { useIdentity } from '../identity';
 import { NoAccess } from '../NoAccess';
-import { appoint, disable, forceLogout, resetTwoFactor, revoke, useRoster, type Member } from '../session';
+import { WET_MS, appoint, disable, forceLogout, resetTwoFactor, revoke, useRoster, type Member } from '../session';
 import { Dossier, type Opened, type Sealed } from './Dossier';
 import { RULES, appointedBy, appoints, seenLabel } from './rules';
 import './staff.css';
-
-/** 改了之后多久之内回到这一页，名帖上的墨迹还没干（与日志页一样一分钟） */
-const WET_MS = 60_000;
 
 /** 印谱上的一根红线：从能任命的身份连到被任命的身份 */
 interface Thread {
@@ -279,7 +276,6 @@ function SealRow({ focus, counts, onHot, onOpen }: SealRowProps) {
             <button
               type="button"
               className="seal-row__seal"
-              data-focus={role.id === focus || undefined}
               aria-label={`${role.name}，${headcount(counts[i])}：看这方印的释文`}
               onPointerEnter={() => onHot(role.id)}
               onPointerLeave={() => onHot(null)}
@@ -373,7 +369,6 @@ function RoleGroup({ role, holders, leaving, me, fresh, onOpen, onHot, onGone }:
   return (
     <section
       className="seal-group"
-      id={`staff-${role.id}`}
       aria-labelledby={titleId}
       onPointerEnter={() => onHot(role.id)}
       onPointerLeave={() => onHot(null)}

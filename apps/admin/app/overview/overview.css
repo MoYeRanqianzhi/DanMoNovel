@@ -330,37 +330,10 @@
     align-self: center;
   }
 }
-/* 事由：一枚墨色的小戳，歪一点；查账时要一眼看到的用红线色（与日志页的 .ledger-stamp 一样） */
-.ov-stamp {
-  display: inline-block;
-  padding: 2px 6px 1px;
-  border: 1.5px solid currentColor;
-  border-radius: 3px;
-  font-family: var(--font-kai);
-  font-size: 14px;
-  line-height: 1.25;
-  letter-spacing: 0.08em;
-  color: color-mix(in oklab, var(--ink) 80%, transparent);
-  rotate: -4deg;
-}
-.ov-stamp[data-alert] {
-  color: var(--thread-ink);
-}
-/* 这次新记、一分钟之内的：墨迹未干 */
+/* 事由的小戳是 admin.css 的 .ink-stamp（与日志页同一枚） */
+/* 这次新记、一分钟之内的：墨迹未干（ink-wet 在 admin.css） */
 .ov-line[data-wet] > :not(.ov-line__who) {
-  animation: ov-wet 3.2s ease-out both;
-}
-@keyframes ov-wet {
-  from {
-    filter: blur(0.6px);
-    text-shadow:
-      0 0 0.6px currentColor,
-      0 0 8px color-mix(in oklab, var(--ink) 30%, transparent);
-  }
-  to {
-    filter: none;
-    text-shadow: none;
-  }
+  animation: ink-wet 3.2s ease-out both;
 }
 
 /* ---- 举报的面板（Reports.tsx）：一条一张纸条，删去或留下 ---- */

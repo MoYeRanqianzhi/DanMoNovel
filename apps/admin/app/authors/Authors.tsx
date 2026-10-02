@@ -15,7 +15,7 @@ import { POSES } from '@danmo/design/book3d/Book3D';
 import { Seal, TagMark } from '@danmo/design/components/ui';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
-import { ago, headcount } from '../format';
+import { ago, clock, headcount } from '../format';
 import { useIdentity } from '../identity';
 import { NoAccess } from '../NoAccess';
 import { OPENED_AT, useAuthors, visibleAuthors, type AuthorEntry } from '../session';
@@ -153,7 +153,7 @@ function Envelope({ a, slotId, onOpen }: EnvelopeProps) {
         </span>
         <span className="envelope__chop">
           <Seal text={a.seal} size={22} variant={a.sealStyle === '白文' ? 'solid' : 'outline'} />
-          <span>{a.level}</span>
+          <span className="envelope__level">{a.level}</span>
         </span>
         <span className="envelope__from">{editor ? `${editor.group ?? ''} ${editor.name}` : '编辑部'} 缄</span>
       </span>
@@ -191,7 +191,7 @@ function Postmark({ id, at }: { id: string; at: number }) {
       </text>
       <text className="envelope__postmark-arc">
         <textPath href={`#pm-bottom-${id}`} startOffset="50%" textAnchor="middle">
-          {pad(d.getHours())}:{pad(d.getMinutes())}
+          {clock(at)}
         </textPath>
       </text>
     </svg>

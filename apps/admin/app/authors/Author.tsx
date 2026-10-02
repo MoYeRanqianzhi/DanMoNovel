@@ -32,7 +32,7 @@ import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { formatNumber } from '@danmo/design/lib/format';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
-import { ago, dayKai, sinceLabel, span } from '../format';
+import { ago, clock, dayKai, sinceLabel, span } from '../format';
 import { useIdentity } from '../identity';
 import { NoAccess } from '../NoAccess';
 import {
@@ -232,7 +232,7 @@ function AuthorBody({ a, me, heroSlot, stamped, onStamp, onMemo, onLetter }: Bod
                 return (
                   <li key={l.at}>
                     <span className="author-letters__when">
-                      {dayKai(l.at)} {new Date(l.at).toTimeString().slice(0, 5)} · {by}寄出
+                      {dayKai(l.at)} {clock(l.at)} · {by}寄出
                     </span>
                     <span className="author-letters__text">{l.text}</span>
                     <Seal text={by} size={26} variant="outline" className="author-letters__seal" />

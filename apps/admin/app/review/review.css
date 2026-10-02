@@ -7,6 +7,8 @@
  * ============================================================ */
 .review {
   min-height: 100%;
+  /* 理由浮条（.tray__why）与"批"字小印（.annotate-pin）的 z-index 只在这一页里比，不压到淡入的新页上 */
+  isolation: isolate;
 }
 @media (max-width: 899.98px) {
   .review[data-has-item] .review-queue,
@@ -142,12 +144,12 @@
   text-align: left;
   color: var(--ink);
 }
-/* 按钮的伪元素伸满整张案卷：整张都能点，读屏只读书名 */
+/* 按钮的伪元素伸满整张案卷：整张都能点，读屏只读书名。圆角跟着案卷（按钮自己没有圆角，inherit 拿到的是直角） */
 .case__title::after {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: inherit;
+  border-radius: var(--radius-m);
 }
 .case__title:focus-visible {
   outline: none;
@@ -235,6 +237,10 @@
   font-weight: 400;
   font-size: 1.6rem;
   line-height: 1.3;
+}
+/* "下一份"换上来时焦点收在标题上（tabindex=-1，Detail.tsx）：标题不是控件，不画焦点圈，Tab 往下走才落到控件上 */
+.review-case__title:focus {
+  outline: none;
 }
 /* 案由（第几章、换一张封面）整段一起折行：放不下时整段换到书名下面，不在章名中间断开 */
 .review-case__title span {

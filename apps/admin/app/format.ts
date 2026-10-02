@@ -6,6 +6,12 @@
  */
 import { toChineseNumber } from '@danmo/data/chapters';
 
+/** 一个时刻的几点几分："09:05"（日志的每一行、总览的账簿、作者页的信、名册信封上的邮戳） */
+export function clock(at: number): string {
+  const d = new Date(at);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 /** 距今多久："刚才""5 分钟前""3 小时前""2 天前" */
 export function ago(minutes: number): string {
   if (minutes < 1) return '刚才';

@@ -60,7 +60,7 @@ export function MeScreen() {
           <div className="me-hand__text">
             <h1 className="me-hand__name">
               {me.name}
-              <Seal text={me.name} size={30} variant="outline" className="me-hand__chop" />
+              <Seal text={me.name} size={30} variant="outline" />
             </h1>
             <p className="me-hand__role">
               {role.name}

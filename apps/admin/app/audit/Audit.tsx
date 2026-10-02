@@ -20,10 +20,10 @@ import { useToast } from '@danmo/design/components/overlays';
 import { Seal, TagMark } from '@danmo/design/components/ui';
 import { seasonOf } from '@danmo/design/lib/season';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
-import { countKai } from '../format';
+import { clock, countKai } from '../format';
 import { useIdentity } from '../identity';
 import { NoAccess } from '../NoAccess';
-import { OPENED_AT, useSession, type FreshEntry } from '../session';
+import { OPENED_AT, WET_MS, useSession, type FreshEntry } from '../session';
 import './audit.css';
 
 /**
@@ -36,9 +36,6 @@ const ACT_GROUPS: readonly { name: string; acts: readonly LedgerAct[] }[] = [
   { name: '站规', acts: ['修订'] },
   { name: '签约', acts: ['签约'] },
 ];
-
-/** 记下之后多久之内打开日志，这一笔的墨迹还没干 */
-const WET_MS = 60_000;
 
 /** 核对时每一道骑缝停多久 */
 const CHECK_STEP_MS = 480;
@@ -112,12 +109,6 @@ function dateLabel(day: number): string {
 function shortDate(day: number): string {
   const d = new Date(day);
   return `${d.getMonth() + 1}.${d.getDate()}`;
-}
-
-/** 一行的时刻："09:05" */
-function clock(t: number): string {
-  const d = new Date(t);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 export function AuditScreen() {
@@ -389,7 +380,7 @@ function LedgerLine({ line, wet, onDry }: { line: Line; wet: boolean; onDry: (id
       className="ledger-line"
       data-wet={wet || undefined}
       onAnimationEnd={(e) => {
-        if (e.animationName === 'ledger-wet') onDry(line.id);
+        if (e.animationName === 'ink-wet') onDry(line.id);
       }}
     >
       <time className="ledger-line__time" dateTime={new Date(line.at).toISOString()}>
@@ -400,7 +391,7 @@ function LedgerLine({ line, wet, onDry }: { line: Line; wet: boolean; onDry: (id
         <span className="sr-only">{person?.name}</span>
       </span>
       <span className="ledger-line__act">
-        <span className="ledger-stamp" data-alert={ALERT_ACTS.has(line.act) || undefined}>
+        <span className="ink-stamp" data-alert={ALERT_ACTS.has(line.act) || undefined}>
           {line.act}
         </span>
       </span>

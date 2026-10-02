@@ -27,9 +27,9 @@ import { formatCount, formatNumber } from '@danmo/design/lib/format';
 import { seasonLine } from '@danmo/design/lib/season';
 import { useClientValue } from '@danmo/design/lib/useClientValue';
 import { useStack } from '@danmo/design/shell/stack';
-import { countKai, span } from '../format';
+import { clock, countKai, span } from '../format';
 import { useIdentity } from '../identity';
-import { OPENED_AT, useAuthors, useReviewLimit, useSession, visibleAuthors } from '../session';
+import { OPENED_AT, WET_MS, useAuthors, useReviewLimit, useSession, visibleAuthors } from '../session';
 import { PileArt, type PileKind } from './Pile';
 import { Reports } from './Reports';
 import './overview.css';
@@ -45,9 +45,6 @@ const QUEUE_PILES: Record<QueueKind, { name: string; unit: string }> = {
 /** 账簿摘几笔 */
 const EXCERPT = 5;
 
-/** 记下之后多久之内墨迹未干（与日志页一样） */
-const WET_MS = 60_000;
-
 /** 几点钟说什么问候 */
 function hello(hour: number, name: string): string {
   if (hour < 5 || hour >= 23) return `夜深了，${name}`;
@@ -60,15 +57,14 @@ function hello(hour: number, name: string): string {
 /** 账簿一行的时刻：今天写几点几分，昨天写"昨天"加时刻，再早的写几月几日 */
 function when(at: number): string {
   const d = new Date(at);
-  const clock = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   const today = new Date();
   const days = Math.round(
     (new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() -
       new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) /
       86_400_000,
   );
-  if (days === 0) return clock;
-  if (days === 1) return `昨天 ${clock}`;
+  if (days === 0) return clock(at);
+  if (days === 1) return `昨天 ${clock(at)}`;
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
@@ -267,7 +263,7 @@ export function OverviewScreen() {
                     )}
                     <span className="ov-line__target">{e.target}</span>
                     <span className="ov-line__act">
-                      <span className="ov-stamp" data-alert={ALERT_ACTS.has(e.act) || undefined}>
+                      <span className="ink-stamp" data-alert={ALERT_ACTS.has(e.act) || undefined}>
                         {e.act}
                       </span>
                     </span>

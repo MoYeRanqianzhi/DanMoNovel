@@ -70,7 +70,7 @@ const BOARDS = [
 ];
 
 /** 一格的名字："书环第三本""'新书上架'第二格" */
-export function slotName(shelf: Shelf, index: number): string {
+function slotName(shelf: Shelf, index: number): string {
   const { name, unit } = SHELF_NAMES[shelf];
   return `${name}第${toChineseNumber(index + 1)}${unit}`;
 }

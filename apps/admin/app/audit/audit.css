@@ -208,22 +208,7 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
 }
-/* 事由：一枚墨色的小戳，歪一点；查账时要一眼看到的用红线色 */
-.ledger-stamp {
-  display: inline-block;
-  padding: 2px 6px 1px;
-  border: 1.5px solid currentColor;
-  border-radius: 3px;
-  font-family: var(--font-kai);
-  font-size: 14px;
-  line-height: 1.25;
-  letter-spacing: 0.08em;
-  color: color-mix(in oklab, var(--ink) 80%, transparent);
-  rotate: -4deg;
-}
-.ledger-stamp[data-alert] {
-  color: var(--thread-ink);
-}
+/* 事由的小戳是 admin.css 的 .ink-stamp（总览的账簿也用） */
 .ledger-line__target {
   font-family: var(--font-kai);
   font-size: var(--fs-16);
@@ -235,24 +220,13 @@
   color: var(--ink-2);
 }
 
-/* 刚记下不久：墨迹未干，过一会儿才干（干了就不再播：筛掉又筛回来的行不重播，见 Audit.tsx 的 dried） */
+/* 刚记下不久：墨迹未干，过一会儿才干（干了就不再播：筛掉又筛回来的行不重播，见 Audit.tsx 的 dried）。
+ * ink-wet 在 admin.css（总览的账簿也用） */
 .ledger-line[data-wet] > :not(.ledger-line__who) {
-  animation: ledger-wet 3.2s ease-out both;
+  animation: ink-wet 3.2s ease-out both;
 }
 .ledger-line[data-wet] .ledger-line__who .seal {
   animation: ledger-wet-seal 1.6s ease-out both;
-}
-@keyframes ledger-wet {
-  from {
-    filter: blur(0.6px);
-    text-shadow:
-      0 0 0.6px currentColor,
-      0 0 8px color-mix(in oklab, var(--ink) 30%, transparent);
-  }
-  to {
-    filter: none;
-    text-shadow: none;
-  }
 }
 @keyframes ledger-wet-seal {
   from {

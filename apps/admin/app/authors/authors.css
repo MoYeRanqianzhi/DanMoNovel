@@ -92,7 +92,11 @@
 }
 .envelope {
   position: relative;
-  width: 156px;
+  /* 跟着格子的宽度，最宽 156：320 宽的手机上两列各只有 129，写死 156 两只信封会叠住。
+   * 信封自己是尺寸容器：窄下来时底下那一行在下面的 @container 里收一收 */
+  container-type: inline-size;
+  width: 100%;
+  max-width: 156px;
   height: 264px;
   transition: transform var(--dur-base) var(--ease-soft);
 }
@@ -213,6 +217,15 @@
   font-family: var(--font-kai);
   font-size: 11px;
   color: var(--ink-2);
+}
+/* 信封窄过 150（320 宽的手机）：名章旁的等级字放不下、会压到落款上，先收起（等级在按钮的读屏名称与作者页里都有），落款小一号 */
+@container (max-width: 150px) {
+  .envelope__level {
+    display: none;
+  }
+  .envelope__from {
+    font-size: 10px;
+  }
 }
 
 /* 右上角的邮票：书正对着，外面一圈白边，四边是齿孔（信封纸色的小半圆咬进去） */
