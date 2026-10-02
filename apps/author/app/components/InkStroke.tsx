@@ -12,7 +12,8 @@
  * seed 让每一笔的笔头、腰身与几缕的长短略有不同（同一个 seed 每次画得一样，服务端与浏览器一致）。
  */
 import type { CSSProperties } from 'react';
-import { lerp } from '@danmo/design/lib/util';
+import { q } from '@danmo/design/lib/curve';
+import { cls, lerp } from '@danmo/design/lib/util';
 import './ink-stroke.css';
 
 interface InkStrokeProps {
@@ -21,9 +22,6 @@ interface InkStrokeProps {
   seed?: number;
   className?: string;
 }
-
-/** 保留一位小数：路径随 HTML 一起下发，不必写十几位 */
-const q = (v: number) => Math.round(v * 10) / 10;
 
 /**
  * 起笔，坐标系 16 × 16：左上角是切进来的笔尖，左边斜着往右下收，左下角是按下去的笔肚；
@@ -94,7 +92,7 @@ export function InkStroke({ weight, seed = 0, className }: InkStrokeProps) {
   const b = ((seed * 53) % 5) / 5;
   return (
     <span
-      className={['ink-stroke', className].filter(Boolean).join(' ')}
+      className={cls('ink-stroke', className)}
       style={{ '--ink-w': w, '--ink-a': 0.34 + w * 0.42 } as CSSProperties}
       aria-hidden="true"
     >

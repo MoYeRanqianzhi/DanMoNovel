@@ -7,12 +7,13 @@
  */
 import { data } from 'react-router';
 import { MISSING } from '@danmo/design/shell/stack';
+import { NOT_FOUND_META, PUBLIC_CACHE } from '../http';
 
 export const loader = () => data(MISSING, { status: 404 });
 
-export const headers = () => ({ 'Cache-Control': 'public, max-age=60, s-maxage=600' });
+export const headers = () => PUBLIC_CACHE;
 
-export const meta = () => [{ title: '找不到这一页 - 耽墨作者站' }, { name: 'robots', content: 'noindex' }];
+export const meta = () => NOT_FOUND_META;
 
 /** 页面由页面栈渲染（handle.Screen），路由本身不直接渲染任何东西 */
 export default function NotFoundRoute() {

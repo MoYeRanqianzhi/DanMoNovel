@@ -7,10 +7,10 @@
 export const PUBLIC_CACHE = { 'Cache-Control': 'public, max-age=60, s-maxage=600' };
 export const PRIVATE_CACHE = { 'Cache-Control': 'private, no-store' };
 
-export const SITE_NAME = '耽墨作者站';
+const SITE_NAME = '耽墨作者站';
 
 /** 每页的标题：页面名在前、站名在后 */
-export const pageTitle = (name: string) => `${name} - ${SITE_NAME}`;
+const pageTitle = (name: string) => `${name} - ${SITE_NAME}`;
 
 /** 个人页面的 meta：标题加 noindex */
 export const privateMeta = (name: string) => [{ title: pageTitle(name) }, { name: 'robots', content: 'noindex' }];

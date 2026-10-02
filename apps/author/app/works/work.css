@@ -244,9 +244,8 @@
 }
 
 /* ---- 作品信息的面板：通用的表单样式在 components/sheet-form.css，这里只有标签 ---- */
-.work-tags {
-  display: flex;
-  flex-wrap: wrap;
+/* 面板里改标签：一个个圆角的小签，比页面上的书签形标签挤一点（同一个 .work-tags，只改间距） */
+.work-tags--edit {
   gap: 8px;
 }
 .work-tags__tag {

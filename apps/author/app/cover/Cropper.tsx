@@ -7,7 +7,9 @@
  * - 标记（封面的"耽墨文库"、书脊的"耽"、封底的条码与朱印）可以拖动、拉右下角缩放，
  *   也可以聚焦后用方向键移动、加减号缩放；大小有上下限（MARKS），不能拖出画面，
  *   书脊的印只能在薄书也露得出的中间一段里。封面标记的字色（浅、深）一开始按标记下面的明暗自动选。
- * - 完成：按规格导出 PNG（renderFace），封面同时取好书脊与封底要用的颜色。
+ * - 图片同样能用键盘调：取景的舞台能 Tab 到，方向键挪图片（与拖动同一个方向），加减号缩放。
+ * - 完成：按规格导出 PNG（renderFace），封面同时取好书脊与封底要用的颜色。导出途中取消，导出的结果作废。
+ * - 焦点：打开时收进裁剪器、Tab 只在裁剪器里转，关掉时还给打开它的按钮（与 Sheet 一样）。
  *
  * 状态以"源图上的裁取区域"与"导出图上的标记位置"保存，与屏幕尺寸无关：窗口缩放、手机转屏都不会跑位。
  * 背景是中性的深色（像暗房），看图片的颜色不受当前配色的影响。
@@ -29,6 +31,7 @@ import {
   type RenderedFace,
 } from '@danmo/design/book3d/coverArt';
 import { luminance } from '@danmo/design/book3d/coverStyle';
+import { keepFocusInside } from '@danmo/design/components/overlays';
 import { Segmented } from '@danmo/design/components/ui';
 import './cropper.css';
 
@@ -57,8 +60,13 @@ export function Cropper({ face, src, bookNo, onDone, onCancel }: CropperProps) {
   const aspect = spec.height / spec.width;
   const markH = markAspect(face, bookNo);
   const limits = MARKS[face];
+  const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const doneRef = useRef<HTMLButtonElement>(null);
+  /** 还挂着：导出要等字体与编码，等的时候被取消（卸载）了，结果就不能再交出去 */
+  const alive = useRef(true);
+  /** 取消用最新的回调：调用方每次渲染都给一个新函数，不能让下面的副作用跟着重装（会把焦点又抢一次） */
+  const cancelRef = useRef(onCancel);
+  cancelRef.current = onCancel;
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [error, setError] = useState('');
   const [stage, setStage] = useState({ w: 0, h: 0 });
@@ -95,17 +103,24 @@ export function Cropper({ face, src, bookNo, onDone, onCancel }: CropperProps) {
     return () => ro.disconnect();
   }, []);
 
-  /* ---- Esc 取消（捕获阶段拦下，免得同时触发"Esc 返回上一页"）；打开时焦点给"完成" ---- */
+  /* ---- 打开：焦点收进裁剪器，关掉时还给打开它的按钮；Esc 取消（捕获阶段拦下，免得同时触发"Esc 返回上一页"） ---- */
   useEffect(() => {
-    doneRef.current?.focus();
+    alive.current = true;
+    const opener = document.activeElement as HTMLElement | null;
+    // 聚焦整个对话框（"完成"在图读出来之前是禁用的，聚焦不上）
+    rootRef.current?.focus();
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.isComposing) return;
+      if (e.key !== 'Escape' || e.isComposing || e.keyCode === 229) return;
       e.stopPropagation();
-      onCancel();
+      cancelRef.current();
     };
     window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [onCancel]);
+    return () => {
+      alive.current = false;
+      window.removeEventListener('keydown', onKey, true);
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, []);
 
   /* ---- 几何 ---- */
   const iw = img?.naturalWidth ?? 1;
@@ -240,12 +255,36 @@ export function Cropper({ face, src, bookNo, onDone, onCancel }: CropperProps) {
     }
   };
 
+  /* ---- 键盘挪图片：方向键与拖动同一个方向（按右，图片往右走），Shift 走大步；加减号以取景框中心缩放 ---- */
+  const onStageKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
+    const step = e.shiftKey ? 32 : 8;
+    const moves: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0],
+      ArrowRight: [step, 0],
+      ArrowUp: [0, -step],
+      ArrowDown: [0, step],
+    };
+    if (moves[e.key]) {
+      e.preventDefault();
+      const [dx, dy] = moves[e.key];
+      setCrop((c) => clampCrop({ ...c, x: c.x - dx / (frameW / c.w), y: c.y - dy / (frameW / c.w) }));
+    } else if (e.key === '+' || e.key === '=' || e.key === '-') {
+      e.preventDefault();
+      zoomAt(fx + frameW / 2, fy + frameH / 2, e.key === '-' ? 1 / 1.08 : 1.08);
+    }
+  };
+
   const finish = async () => {
     if (!img || busy) return;
     setBusy(true);
+    setError('');
     try {
-      onDone(await renderFace(face, img, { x: crop.x, y: crop.y, width: crop.w, height: crop.w * aspect }, mark, bookNo));
+      const rendered = await renderFace(face, img, { x: crop.x, y: crop.y, width: crop.w, height: crop.w * aspect }, mark, bookNo);
+      // 等导出的这一会儿被取消了：结果作废，不能再改草稿（换掉原图、把这一面改成图片）
+      if (alive.current) onDone(rendered);
     } catch {
+      if (!alive.current) return;
       setError('导出没有成功，再试一次');
       setBusy(false);
     }
@@ -256,7 +295,15 @@ export function Cropper({ face, src, bookNo, onDone, onCancel }: CropperProps) {
   const markScreen = { left: fx + mark.x / k, top: fy + mark.y / k, width: mark.width / k, height: (mark.width * markH) / k };
 
   return createPortal(
-    <div className="cropper" role="dialog" aria-modal="true" aria-label={TITLES[face]}>
+    <div
+      ref={rootRef}
+      className="cropper"
+      role="dialog"
+      aria-modal="true"
+      aria-label={TITLES[face]}
+      tabIndex={-1}
+      onKeyDown={keepFocusInside}
+    >
       <header className="cropper__bar">
         <button type="button" className="btn btn--ghost cropper__cancel" onClick={onCancel}>
           取消
@@ -267,7 +314,7 @@ export function Cropper({ face, src, bookNo, onDone, onCancel }: CropperProps) {
             {spec.width} × {spec.height} · PNG
           </p>
         </div>
-        <button ref={doneRef} type="button" className="btn btn--primary cropper__done" disabled={!img || busy} onClick={finish}>
+        <button type="button" className="btn btn--primary cropper__done" disabled={!img || busy} onClick={finish}>
           {busy ? '导出中' : '完成'}
         </button>
       </header>
@@ -275,6 +322,10 @@ export function Cropper({ face, src, bookNo, onDone, onCancel }: CropperProps) {
       <div
         ref={stageRef}
         className="cropper__stage"
+        role="group"
+        tabIndex={0}
+        aria-label="图片：拖动或用方向键移动，滚轮、双指或按加减号缩放"
+        onKeyDown={onStageKey}
         onPointerDown={onStageDown}
         onPointerMove={onStageMove}
         onPointerUp={onStageUp}
@@ -321,7 +372,12 @@ export function Cropper({ face, src, bookNo, onDone, onCancel }: CropperProps) {
             </div>
           </>
         )}
-        {error && <p className="cropper__error">{error}</p>}
+        {/* 对话框是 aria-modal：要念的话放在对话框里、带 role="alert" */}
+        {error && (
+          <p className="cropper__error" role="alert">
+            {error}
+          </p>
+        )}
       </div>
 
       <footer className="cropper__tools">

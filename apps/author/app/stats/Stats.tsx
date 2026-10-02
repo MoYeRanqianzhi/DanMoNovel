@@ -144,7 +144,10 @@ export function StatsScreen({ data }: ScreenProps<StatsData>) {
         <p className="stats-lead">
           今天 {formatCount(today)} 人在读，最多的一天 {formatCount(Math.max(...reads))}
         </p>
+        {/* 三张图都按书号重新挂载：换书时探针（触屏上手指松开后留着的那一天、那一章、那个时辰）跟着清掉，
+            不然新书的图上冒出上一本的序号，章数少了还会越界写出 NaN% */}
         <Hills
+          key={book.id}
           far={reads}
           near={stats.collects}
           tip={(i) => `在读 ${formatCount(reads[i])} · 新收藏 ${formatNumber(stats.collects[i])}`}
@@ -163,7 +166,13 @@ export function StatsScreen({ data }: ScreenProps<StatsData>) {
             </span>
           )}
         </p>
-        <FollowStroke retention={stats.retention} volumes={volumes} marks={rises} chapterName={(i) => chapterTitle(book, i)} />
+        <FollowStroke
+          key={book.id}
+          retention={stats.retention}
+          volumes={volumes}
+          marks={rises}
+          chapterName={(i) => chapterTitle(book, i)}
+        />
       </section>
 
       <section className="stats-section stats-hours" aria-labelledby="stats-hours">
@@ -171,7 +180,7 @@ export function StatsScreen({ data }: ScreenProps<StatsData>) {
           读者什么时候读
         </h2>
         <div className="stats-hours__body">
-          <HourDial hours={stats.hours} />
+          <HourDial key={book.id} hours={stats.hours} />
           <div className="stats-hours__text">
             <p className="stats-lead">
               <span className="stats-hours__when">

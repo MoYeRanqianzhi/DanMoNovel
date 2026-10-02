@@ -17,7 +17,7 @@
  * 关掉或刷新标签页时由浏览器提醒。
  *
  * 飞行：书从作品页（或书房）的书位飞进舞台，返回时飞回去（handle.back = 'hop'）。
- * 飞回去的书是 applyLocalCover 换过的那本（保存过的样子），所以"不保存"时先把舞台上的书换回保存的样子再离开，
+ * 飞回去的书是 applyLocal 换过的那本（保存过的样子），所以"不保存"时先把舞台上的书换回保存的样子再离开，
  * 起飞的书与舞台上的书才一样。
  *
  * 封面工作室是个人页面：服务端按登录的作者渲染（原型用示例数据），缓存头为 private。
@@ -40,7 +40,6 @@ import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
 import { Cropper } from './Cropper';
 import {
-  FACES,
   blobsOf,
   composeEdit,
   defaultEdit,
@@ -51,7 +50,7 @@ import {
   type Draft,
 } from './draft';
 import { BackPanel, FACE_NAMES, FrontPanel, IMAGE_TYPES, SpinePanel, type StudioApi } from './panels';
-import { applyEdit, clearCoverEdit, coverBlobs, releaseBlob, saveCoverEdit, urlOf, useCoverEdit, useLocalBooks } from '../local';
+import { FACES, applyEdit, clearCoverEdit, coverBlobs, releaseBlob, saveCoverEdit, urlOf, useCoverEdit, useLocalBooks } from '../local';
 import './cover.css';
 
 export interface CoverData {

@@ -9,6 +9,8 @@
   position: fixed;
   inset: 0;
   z-index: 60;
+  /* 打开时焦点收在对话框本身（tabindex=-1）：不画焦点圈 */
+  outline: none;
   display: flex;
   flex-direction: column;
   color: #efe9df;
@@ -68,6 +70,11 @@
 }
 .cropper__stage:active {
   cursor: grabbing;
+}
+/* 键盘聚焦到取景的舞台：沿内侧描一圈（舞台铺满中间，外圈会被裁掉） */
+.cropper__stage:focus-visible {
+  outline: 2px solid var(--thread);
+  outline-offset: -4px;
 }
 .cropper__img {
   position: absolute;
@@ -169,6 +176,8 @@
   inset: 0;
   display: grid;
   place-items: center;
+  /* 只是一行字：不挡住下面的图与标记，重试时照样能拖 */
+  pointer-events: none;
   font-size: var(--fs-14);
   color: rgb(239 233 223 / 0.8);
 }

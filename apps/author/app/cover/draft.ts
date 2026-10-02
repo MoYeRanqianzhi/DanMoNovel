@@ -24,9 +24,7 @@ import {
   type VectorFront,
 } from '@danmo/data/books';
 import type { FaceKind } from '@danmo/design/book3d/coverArt';
-import { urlOf, type CoverEdit, type FaceBlobs } from '../local';
-
-export const FACES: FaceKind[] = ['front', 'spine', 'back'];
+import { FACES, urlOf, type CoverEdit, type FaceBlobs } from '../local';
 
 export type FaceMode = 'auto' | 'image';
 

@@ -82,8 +82,10 @@
 .readers-list > li:nth-child(even) .letter {
   rotate: 0.4deg;
 }
-.readers-list .letter:hover,
-.readers-list .letter:focus-within {
+/* 悬停、聚焦时摆正。选择器带上 > li，分量与上面两条奇偶的一样（0,3,1），靠排在后面赢；
+ * 少了它（0,3,0）永远盖不过奇偶那两条 */
+.readers-list > li .letter:hover,
+.readers-list > li .letter:focus-within {
   rotate: 0deg;
 }
 .readers-empty {
@@ -146,8 +148,12 @@
   color: var(--ink);
   background: linear-gradient(transparent 27px, var(--line) 27px, var(--line) 28px) 0 0 / 100% 28px local;
 }
+/* 回信框本身不画焦点圈（字贴着格线写，圈会压在字上）：聚焦时整张回信条描一道红线 */
 .reply-slip__text:focus-visible {
   outline: none;
+}
+.reply-slip:has(.reply-slip__text:focus-visible) {
+  box-shadow: inset 0 0 0 1.5px var(--thread);
 }
 .reply-slip__text::placeholder {
   color: color-mix(in srgb, var(--ink-2) 65%, transparent);

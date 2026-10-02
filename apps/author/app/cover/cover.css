@@ -24,6 +24,8 @@
   --bar-h: 60px;
   --stage-h: 296px;
   min-height: 100%;
+  /* 三层吸顶（z-index 7、6、5）只在工作室里比，不压到从上面淡入或正在离开的页上（裁剪器挂在 body 下，不受影响） */
+  isolation: isolate;
 }
 /* 三页长短不一：总是留出滚动条的位置，换页时两栏不左右跳 */
 [data-page='cover'] {
@@ -129,8 +131,11 @@
   }
 }
 
-/* ---------------- 两栏 ---------------- */
-@media (min-width: 900px) {
+/* ---------------- 两栏 ----------------
+ * 宽屏，以及横放的手机（宽 640 以上、高不到 540）：横放时顶栏、舞台、标签三层吸顶加起来（四百多）比屏幕还高，
+ * 一栏排下去面板永远滚不出来、什么都改不了；改成两栏，舞台在左边占满一屏，标签吸在顶栏下面。
+ * 条件与作者站首页一样；只管排法的几条用它，顶栏高度、按钮上的字这些仍按 900 分 */
+@media (min-width: 900px), (min-width: 640px) and (max-height: 540px) {
   .studio-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) clamp(360px, 32vw, 440px);
@@ -179,7 +184,7 @@
   --dye-mix: 24%;
   --dye-l: 0;
 }
-@media (min-width: 900px) {
+@media (min-width: 900px), (min-width: 640px) and (max-height: 540px) {
   .studio-stage {
     height: calc(100dvh - var(--bar-h));
     box-shadow: 1px 0 0 var(--line);
@@ -245,7 +250,7 @@
   position: relative;
   padding: 0 var(--sp-5) calc(var(--sp-12) + var(--safe-bottom));
 }
-@media (min-width: 900px) {
+@media (min-width: 900px), (min-width: 640px) and (max-height: 540px) {
   .studio-panel {
     padding: 0 var(--sp-8) var(--sp-12);
   }
@@ -262,7 +267,7 @@
   background: var(--paper);
   box-shadow: 0 1px 0 var(--line);
 }
-@media (min-width: 900px) {
+@media (min-width: 900px), (min-width: 640px) and (max-height: 540px) {
   .studio-tabs {
     top: var(--bar-h);
     margin: 0 calc(var(--sp-8) * -1);

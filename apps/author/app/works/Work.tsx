@@ -262,7 +262,7 @@ function InfoSheet({ open, work, book, onClose }: { open: boolean; work: Work; b
           <span className="sheet-form__label">
             标签<small>最多六个</small>
           </span>
-          <div className="work-tags">
+          <div className="work-tags work-tags--edit">
             {tags.map((t) => (
               <button key={t} type="button" className="work-tags__tag" onClick={() => setTags(tags.filter((x) => x !== t))} aria-label={`去掉标签「${t}」`}>
                 {t}

@@ -66,6 +66,8 @@ export function FollowStroke({ retention, volumes, chapterName, marks }: FollowS
   const n = retention.length;
   const last = n - 1;
   const [probe, setProbe] = useState<number | null>(null);
+  // 只发了一章（或还没有数据）：笔要从第一章画到最后一章，一章画不出（下面按 last 等分会除以零），不画
+  if (n < 2) return null;
 
   const xAt = (i: number) => (i / last) * W;
   /** 笔身某处（画布横坐标）的粗细：在相邻两章之间按直线插值 */

@@ -17,7 +17,8 @@
  *   草稿 ──发布──▶ 待审核（盖"送审"）──撤回──▶ 草稿
  *   定时、已发布、退回 ──修改──▶ 草稿（改完"提交修改"或"重新提交"，同样先过审核）
  *
- * 自动保存：停笔 0.7 秒后存进本机（drafts.ts），顶栏写"保存中"→"已保存"；Ctrl/⌘+S 立刻保存。
+ * 自动保存：停笔 0.7 秒后存进本机（drafts.ts），顶栏写"保存中"→"已保存"（存不进去写"没能存到本机"）；Ctrl/⌘+S 立刻保存。
+ * 离开这一章、刷新、关标签页、切到别的应用时，还没存的那一段当场存上。
  * 草稿打开时文末滚到眼前、光标停在文末（"接着写"）；触屏上不自动弹出键盘，点一下正文才开始写。
  * 顶栏的小月亮是今天写了多少（与书房砚台里的月池同一个月相），写满每日目标时说一句。
  *
@@ -152,6 +153,8 @@ function ChapterDesk({ data, isTop }: { data: WriteData; isTop: boolean }) {
   const [preview, setPreview] = useState(false);
   const [panel, setPanel] = useState<Panel>(null);
   const [saving, setSaving] = useState(false);
+  /** 上一次没能存进本机（存储满了、被禁用） */
+  const [unsaved, setUnsaved] = useState(false);
   /** 这次打开之后提交过几次：大于 0 时"送审"的印是刚盖下去的，要播落下的动画 */
   const [submitted, setSubmitted] = useState(0);
   const [activeNote, setActiveNote] = useState<number | null>(null);
@@ -179,8 +182,10 @@ function ChapterDesk({ data, isTop }: { data: WriteData; isTop: boolean }) {
   const saveNow = useCallback(() => {
     window.clearTimeout(timer.current);
     timer.current = 0;
-    saveDraft(book.id, index, latest.current);
+    const ok = saveDraft(book.id, index, latest.current);
+    setUnsaved(!ok);
     setSaving(false);
+    return ok;
   }, [book.id, index]);
   const scheduleSave = () => {
     setSaving(true);
@@ -194,6 +199,21 @@ function ChapterDesk({ data, isTop }: { data: WriteData; isTop: boolean }) {
     },
     [saveNow],
   );
+  // 刷新、关掉标签页、手机上切到别的应用：卸载副作用管不到这几种，停笔还不到 0.7 秒的那一段要在这里存上
+  useEffect(() => {
+    const flush = () => {
+      if (timer.current) saveNow();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [saveNow]);
 
   /* ---- 打开时：页面回到顶上；本机有副本就换上；草稿把文末滚到眼前 ---- */
   useLayoutEffect(() => {
@@ -247,8 +267,7 @@ function ChapterDesk({ data, isTop }: { data: WriteData; isTop: boolean }) {
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return;
       e.preventDefault();
       if (latest.current.state !== '草稿') return;
-      saveNow();
-      toast('已保存');
+      toast(saveNow() ? '已保存' : '没能存到本机，先别关这一页');
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -286,6 +305,8 @@ function ChapterDesk({ data, isTop }: { data: WriteData; isTop: boolean }) {
     setState('草稿');
     setSubmitted(0);
     saveDraft(book.id, index, { name, text, state: '草稿' });
+    // 清掉上一次的播报：再提交时文字和上次一样，不清的话 role="status" 的内容没变，读屏不会再念
+    setAnnounce('');
     toast('已撤回，改好再提交');
   };
   const revise = () => {
@@ -321,7 +342,7 @@ function ChapterDesk({ data, isTop }: { data: WriteData; isTop: boolean }) {
         <MoonMark progress={today / goal} label={`今日 ${formatNumber(today)} 字，目标 ${formatNumber(goal)} 字`} />
         <span>{formatNumber(words)} 字</span>
         <span aria-hidden="true">·</span>
-        <span>{saving ? '保存中' : '已保存'}</span>
+        <span>{saving ? '保存中' : unsaved ? '没能存到本机' : '已保存'}</span>
       </>
     ) : state === '待审核' ? (
       submitted ? (

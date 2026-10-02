@@ -49,22 +49,54 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
+/**
+ * 在一个事务里做一件事，事务结束（成功、出错、中止）时关库。
+ * 中止要单独接：提交阶段因为空间不够被中止时只发 abort、不发 error，不接的话 Promise 永远不结束，
+ * 封面工作室的"保存"会一直停在"保存中"。开事务时当场抛错（库正在关）也要关库、拒绝
+ */
 function run<T>(mode: IDBTransactionMode, body: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   return openDb().then(
     (db) =>
       new Promise<T>((resolve, reject) => {
-        const tx = db.transaction(STORE, mode);
-        const req = body(tx.objectStore(STORE));
-        tx.oncomplete = () => {
+        const fail = (error: unknown) => {
           db.close();
-          resolve(req.result);
+          reject(error);
         };
-        tx.onerror = () => {
-          db.close();
-          reject(tx.error);
-        };
+        try {
+          const tx = db.transaction(STORE, mode);
+          const req = body(tx.objectStore(STORE));
+          tx.oncomplete = () => {
+            db.close();
+            resolve(req.result);
+          };
+          tx.onerror = () => fail(tx.error);
+          tx.onabort = () => fail(tx.error ?? new DOMException('事务被中止', 'AbortError'));
+        } catch (error) {
+          fail(error);
+        }
       }),
   );
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object';
+const isStr = (v: unknown): v is string => typeof v === 'string';
+
+/**
+ * 从库里读出的一条封面记录是否完整。库是外部输入：旧版本存的、结构改过的记录可能缺字段，
+ * 缺了的话换地址、渲染时会抛错——一条坏记录不能连累别的书，跳过它（书照原来的封面显示）
+ */
+function isStoredCover(row: unknown): row is StoredCover {
+  if (!isObject(row) || !isStr(row.bookId) || !isObject(row.edit) || !isObject(row.blobs)) return false;
+  if (!Object.values(row.blobs).every((b) => b === undefined || b instanceof Blob)) return false;
+  const { palette, motif, binding, design } = row.edit;
+  if (!isObject(palette) || !['from', 'to', 'ink', 'accent'].every((k) => isStr(palette[k]))) return false;
+  if (!isStr(motif) || (binding !== 'thread' && binding !== 'modern') || !isObject(design)) return false;
+  const { front, spine, back } = design;
+  if (!isObject(front) || !isObject(spine) || !isObject(back)) return false;
+  if (front.kind === 'vector') {
+    if (!isStr(front.font) || !isStr(front.layout) || typeof front.band !== 'boolean' || !isStr(front.ornament)) return false;
+  } else if (front.kind !== 'image') return false;
+  return (spine.kind === 'auto' || spine.kind === 'image') && (back.kind === 'auto' || back.kind === 'image');
 }
 
 /** 作品信息里改的东西 */
@@ -106,7 +138,8 @@ let loaded: Promise<void> | null = null;
 /** 每次变化加一：useSyncExternalStore 靠它知道"变了" */
 let version = 0;
 
-const FACES: FaceKind[] = ['front', 'spine', 'back'];
+/** 一本书的三个面，按这个次序存、取、换地址（封面工作室的草稿也用它） */
+export const FACES: FaceKind[] = ['front', 'spine', 'back'];
 
 /** 一个 Blob 的 blob: 地址（同一个 Blob 总是同一个地址） */
 export function urlOf(blob: Blob): string {
@@ -153,13 +186,14 @@ function ensureLoaded(): Promise<void> {
   if (!loaded) {
     for (const [id, info] of readInfo()) infoCache.set(id, info);
     if (infoCache.size) notify();
-    loaded = run<StoredCover[]>('readonly', (s) => s.getAll() as IDBRequest<StoredCover[]>)
+    loaded = run<unknown[]>('readonly', (s) => s.getAll())
       .then((rows) => {
-        for (const row of rows) {
+        const good = rows.filter(isStoredCover);
+        for (const row of good) {
           cache.set(row.bookId, withUrls(row.edit, row.blobs));
           blobCache.set(row.bookId, row.blobs);
         }
-        if (rows.length) notify();
+        if (good.length) notify();
       })
       .catch(() => {
         // IndexedDB 不可用（部分隐私模式）：只在这次打开期间生效

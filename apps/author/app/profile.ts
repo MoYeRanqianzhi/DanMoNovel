@@ -13,7 +13,7 @@ import { useSyncExternalStore } from 'react';
 import type { AuthorProfile } from '@danmo/data/author';
 
 /** 能在"我"里改的几项 */
-export type ProfileEdit = Partial<Pick<AuthorProfile, 'motto' | 'seal' | 'sealStyle' | 'dailyGoal'>>;
+type ProfileEdit = Partial<Pick<AuthorProfile, 'motto' | 'seal' | 'sealStyle' | 'dailyGoal'>>;
 
 /** 每日目标的几档（字） */
 export const DAILY_GOALS = [1000, 2000, 3000, 5000, 8000] as const;

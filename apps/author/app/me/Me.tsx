@@ -15,7 +15,7 @@
  * "我"是个人页面：服务端按登录的作者渲染（原型用示例数据），缓存头为 private。
  * 签名、闲章与每日目标原型存在本机（profile.ts），挂载后换上；入驻第几天只在浏览器里算（作者所在的时区）。
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, ChevronRight, Info, LogOut, PenLine, Sparkles } from 'lucide-react';
 import {
@@ -27,7 +27,7 @@ import {
   type AuthorProfile,
   type DeskMessage,
 } from '@danmo/data/author';
-import { Sheet, useToast } from '@danmo/design/components/overlays';
+import { Sheet } from '@danmo/design/components/overlays';
 import { Stamp } from '@danmo/design/components/Stamp';
 import { IconButton, Logo, Seal, Segmented } from '@danmo/design/components/ui';
 import { formatCount, formatNumber } from '@danmo/design/lib/format';
@@ -90,6 +90,8 @@ export function MeScreen({ data }: ScreenProps<MeData>) {
   /** 保存资料后闲章重新盖一次：每保存一次加一 */
   const [stamped, setStamped] = useState(0);
   const [status, setStatus] = useState('');
+  const statusTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(statusTimer.current), []);
 
   const level = AUTHOR_LEVELS.indexOf(author.level);
   const next = AUTHOR_LEVELS[level + 1];
@@ -271,8 +273,13 @@ export function MeScreen({ data }: ScreenProps<MeData>) {
         onClose={() => setEditing(false)}
         onSaved={() => {
           setStamped((n) => n + 1);
+          // 面板收起要 260ms，这期间它还是 aria-modal，面板外的播报有的读屏不念：等它收好再播。
           // 连着保存两次时文字要有变化，读屏才会再播报一次
-          setStatus((s) => (s === '资料已保存' ? '资料已保存。' : '资料已保存'));
+          window.clearTimeout(statusTimer.current);
+          statusTimer.current = window.setTimeout(
+            () => setStatus((s) => (s === '资料已保存' ? '资料已保存。' : '资料已保存')),
+            300,
+          );
         }}
       />
 
@@ -303,15 +310,22 @@ function ProfileSheet({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const toast = useToast();
   const [motto, setMotto] = useState(author.motto);
   const [seal, setSeal] = useState(author.seal);
   const [style, setStyle] = useState(author.sealStyle);
+  /**
+   * 保存时没过校验：哪一项、为什么。提示写在面板里（面板是 aria-modal，面板外的 Toast 有的读屏不念），
+   * 出错的框描红线、焦点落过去；改那一项时提示收起
+   */
+  const [error, setError] = useState<{ field: 'motto' | 'seal'; text: string } | null>(null);
+  const mottoRef = useRef<HTMLInputElement>(null);
+  const sealRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!open) return;
     setMotto(author.motto);
     setSeal(author.seal);
     setStyle(author.sealStyle);
+    setError(null);
     // 只在打开的那一刻取保存过的内容
   }, [open]);
 
@@ -320,17 +334,21 @@ function ProfileSheet({
   const save = () => {
     const text = motto.trim();
     if (!text) {
-      toast('签名不能空着');
+      setError({ field: 'motto', text: '签名不能空着。' });
+      mottoRef.current?.focus();
       return;
     }
     if (!isSealText(sealText)) {
-      toast('闲章只刻一到四个汉字');
+      setError({ field: 'seal', text: '闲章只刻一到四个汉字。' });
+      sealRef.current?.focus();
       return;
     }
     saveProfile({ motto: text, seal: sealText, sealStyle: style });
     onClose();
     onSaved();
   };
+  const invalid = (field: 'motto' | 'seal') =>
+    error?.field === field ? { 'aria-invalid': true, 'aria-describedby': 'me-form-error' } : {};
 
   return (
     <Sheet open={open} title="修改资料" onClose={onClose}>
@@ -347,7 +365,17 @@ function ProfileSheet({
               {[...motto].length}/{MOTTO_MAX} · 写在条幅上
             </small>
           </span>
-          <input className="sheet-form__input" value={motto} maxLength={MOTTO_MAX} onChange={(e) => setMotto(e.target.value)} />
+          <input
+            ref={mottoRef}
+            className="sheet-form__input"
+            value={motto}
+            maxLength={MOTTO_MAX}
+            {...invalid('motto')}
+            onChange={(e) => {
+              setMotto(e.target.value);
+              if (error?.field === 'motto') setError(null);
+            }}
+          />
         </label>
         <div className="sheet-form__field">
           <span className="sheet-form__label" id="me-form-seal">
@@ -359,7 +387,17 @@ function ProfileSheet({
             </span>
             <div className="me-form__seal-fields">
               {/* 不设 maxLength：拼音组字时字母很容易超过四个，各浏览器在组字途中怎样执行 maxLength 并不一致；保存时再校验 */}
-              <input className="sheet-form__input" value={seal} aria-labelledby="me-form-seal" onChange={(e) => setSeal(e.target.value)} />
+              <input
+                ref={sealRef}
+                className="sheet-form__input"
+                value={seal}
+                aria-labelledby="me-form-seal"
+                {...invalid('seal')}
+                onChange={(e) => {
+                  setSeal(e.target.value);
+                  if (error?.field === 'seal') setError(null);
+                }}
+              />
               <Segmented
                 label="刻法"
                 value={style}
@@ -372,6 +410,9 @@ function ProfileSheet({
             </div>
           </div>
         </div>
+        <p className="sheet-form__error" id="me-form-error" role="alert">
+          {error?.text}
+        </p>
         <button type="button" className="btn btn--primary sheet-form__save" onClick={save}>
           保存
         </button>

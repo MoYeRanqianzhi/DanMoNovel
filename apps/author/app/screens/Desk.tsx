@@ -250,7 +250,13 @@ function MessageRow({ message: m, onOpen }: { message: DeskMessage; onOpen: () =
       <span className="desk-msg__text">
         <span className="desk-msg__title">
           {m.title}
-          {m.unread && <i className="desk-msg__dot" aria-label="未读" />}
+          {/* 红点只是画给眼睛看的；读屏念标题后面那句"未读"（aria-label 写在没有 role 的元素上，读屏多半不念） */}
+          {m.unread && (
+            <>
+              <i className="desk-msg__dot" aria-hidden="true" />
+              <span className="sr-only">（未读）</span>
+            </>
+          )}
         </span>
         <span className="desk-msg__body">{m.body}</span>
         <span className="desk-msg__meta">

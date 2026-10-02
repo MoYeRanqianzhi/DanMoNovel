@@ -63,7 +63,13 @@ export function ReadersScreen({ data }: ScreenProps<ReadersData>) {
   /** 每封信的闲章盖了几次：寄出时加一，LetterCard 据此播盖章 */
   const [stamps, setStamps] = useState<Record<string, number>>({});
   const [writing, setWriting] = useState<string | null>(null);
-  const [text, setText] = useState('');
+  /**
+   * 每封信写了一半的回信（按信存）：写着 A 的回信时点了 B 的"回信"，A 收起来、字还留着，回到 A 接着写。
+   * 只有寄出或点"算了"才清
+   */
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const text = writing ? (drafts[writing] ?? '') : '';
+  const setDraft = (id: string, value: string) => setDrafts((d) => ({ ...d, [id]: value }));
   const [announce, setAnnounce] = useState('');
 
   const letters = data.letters.map((l) => (replies[l.id] ? { ...l, reply: replies[l.id] } : l));
@@ -85,7 +91,7 @@ export function ReadersScreen({ data }: ScreenProps<ReadersData>) {
     setReplies((r) => ({ ...r, [l.id]: reply }));
     setStamps((s) => ({ ...s, [l.id]: (s[l.id] ?? 0) + 1 }));
     setWriting(null);
-    setText('');
+    setDraft(l.id, '');
     setAnnounce(`回信已寄给${l.reader}`);
   };
 
@@ -151,10 +157,7 @@ export function ReadersScreen({ data }: ScreenProps<ReadersData>) {
                       <button
                         type="button"
                         className="letter-action"
-                        onClick={() => {
-                          setWriting(l.id);
-                          setText('');
-                        }}
+                        onClick={() => setWriting(l.id)}
                       >
                         <PenLine aria-hidden="true" />
                         回信
@@ -170,14 +173,21 @@ export function ReadersScreen({ data }: ScreenProps<ReadersData>) {
                           autoFocus
                           aria-label={`回信给${l.reader}`}
                           placeholder={`回信给${l.reader}`}
-                          onChange={(e) => setText(e.target.value)}
+                          onChange={(e) => setDraft(l.id, e.target.value)}
                           onKeyDown={onKey(l)}
                         />
                         <div className="reply-slip__foot">
                           <span className="reply-slip__count">
                             {[...text].length}/{REPLY_MAX}
                           </span>
-                          <button type="button" className="btn btn--ghost reply-slip__btn" onClick={() => setWriting(null)}>
+                          <button
+                            type="button"
+                            className="btn btn--ghost reply-slip__btn"
+                            onClick={() => {
+                              setWriting(null);
+                              setDraft(l.id, '');
+                            }}
+                          >
                             算了
                           </button>
                           <button
@@ -230,9 +240,11 @@ export function ReadersScreen({ data }: ScreenProps<ReadersData>) {
             <ol className="fan-list">
               {data.fans.map((f, i) => (
                 <li key={f.name} className="fan" data-top={i < 3 || undefined}>
-                  <span className="fan__rank" aria-label={`第${i + 1}名`}>
+                  {/* 名次画成汉字"一二三"，读屏念"第 1 名"（aria-label 写在 span 上读屏多半不念，另放一句） */}
+                  <span className="fan__rank" aria-hidden="true">
                     {RANKS[i] ?? i + 1}
                   </span>
+                  <span className="sr-only">第 {i + 1} 名</span>
                   <span className="fan__who">
                     <span className="fan__name">{f.name}</span>
                     <small>陪伴 {f.days} 天</small>

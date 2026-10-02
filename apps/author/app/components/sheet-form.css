@@ -54,3 +54,17 @@
 .sheet-form__save {
   align-self: stretch;
 }
+/* 保存时没过校验：提示写在面板里、保存按钮上面，红线色的小字；出错的框描一道红线（与聚焦时同一道）。
+ * 空着时脱离版面，不占栏距，但一直留在无障碍树里（role="alert"，有了字就念） */
+.sheet-form__error {
+  margin-top: calc(var(--sp-2) - var(--sp-5));
+  font-size: var(--fs-14);
+  color: var(--thread-ink);
+}
+.sheet-form__error:empty {
+  position: absolute;
+  margin: 0;
+}
+.sheet-form__input[aria-invalid='true'] {
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}

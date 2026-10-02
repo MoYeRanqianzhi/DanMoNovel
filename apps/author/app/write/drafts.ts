@@ -6,7 +6,7 @@
  */
 import type { ChapterState } from '@danmo/data/author';
 
-export interface LocalDraft {
+interface LocalDraft {
   name: string;
   text: string;
   state: ChapterState;
@@ -32,10 +32,15 @@ export function loadDraft(bookId: string, index: number): LocalDraft | null {
   }
 }
 
-export function saveDraft(bookId: string, index: number, draft: Omit<LocalDraft, 'savedAt'>): void {
+/**
+ * 存一章的副本。返回是否存上了：本机存储满了或被禁用时这次打开期间的改动仍在页面里，只是刷新后不在了，
+ * 写作页据此把顶栏的"已保存"换成"没能存到本机"，不让作者以为存好了
+ */
+export function saveDraft(bookId: string, index: number, draft: Omit<LocalDraft, 'savedAt'>): boolean {
   try {
     localStorage.setItem(keyOf(bookId, index), JSON.stringify({ ...draft, savedAt: Date.now() }));
+    return true;
   } catch {
-    // 本机存储满了或被禁用：这次打开期间的改动仍在页面里，只是刷新后不在了
+    return false;
   }
 }

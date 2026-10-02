@@ -2,7 +2,7 @@
  * 路由：/works/:bookId/cover 封面工作室（个人页面，不进任何共享缓存）。页面组件见 cover/CoverStudio.tsx
  *
  * 书从作品页（或书房）的书位飞进来，返回时飞回去（handle.back = 'hop'）。飞回去的书是本机保存过的样子
- * （applyLocalCover），与来处书位上的书一样。找不到的作品返回 404，在页面栈里显示"找不到这一页"。
+ * （applyLocal），与来处书位上的书一样。找不到的作品返回 404，在页面栈里显示"找不到这一页"。
  */
 import { data } from 'react-router';
 import { MISSING, type ScreenHandle } from '@danmo/design/shell/stack';

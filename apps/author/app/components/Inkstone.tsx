@@ -16,6 +16,7 @@
  * 点一下砚台，池里泛起一圈涟漪。减少动效时直接画出最终的样子，也不泛涟漪。
  */
 import { useEffect, useId, useRef, useState } from 'react';
+import { cls } from '@danmo/design/lib/util';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
 import { phasePath } from './moon';
 import './inkstone.css';
@@ -74,7 +75,7 @@ export function Inkstone({ progress, label, onTap, className }: InkstoneProps) {
   return (
     <button
       type="button"
-      className={['inkstone', className].filter(Boolean).join(' ')}
+      className={cls('inkstone', className)}
       aria-label={label}
       onClick={() => {
         if (!reduced) setRipple((n) => n + 1);

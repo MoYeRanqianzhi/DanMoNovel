@@ -49,9 +49,10 @@ export function LetterCard({ letter: l, onOpen, children, focused, stamped = 0 }
           {l.reader}
           <small>{l.readerNote}</small>
         </span>
-        <span className="letter__likes" aria-label={`${l.likes} 人赞同`}>
+        <span className="letter__likes">
           <Heart aria-hidden="true" />
-          {formatNumber(l.likes)}
+          <span aria-hidden="true">{formatNumber(l.likes)}</span>
+          <span className="sr-only">{formatNumber(l.likes)} 人赞同</span>
         </span>
         <span className="letter__at">{formatAgo(l.minutesAgo)}</span>
       </span>

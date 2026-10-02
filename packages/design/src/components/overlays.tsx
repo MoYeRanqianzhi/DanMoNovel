@@ -29,9 +29,10 @@ const TABBABLE =
 
 /**
  * 焦点关在面板里：面板是 aria-modal 的对话框，Tab 走到最后一个再按，回到第一个（Shift+Tab 反过来），
- * 不会走到面板后面的页面上（那里的按钮看不见、也点不到）
+ * 不会走到面板后面的页面上（那里的按钮看不见、也点不到）。
+ * 挂在对话框根元素的 onKeyDown 上；作者站的裁剪器（整屏的对话框）也用它
  */
-function keepFocusInside(e: ReactKeyboardEvent<HTMLDivElement>) {
+export function keepFocusInside(e: ReactKeyboardEvent<HTMLDivElement>) {
   if (e.key !== 'Tab') return;
   const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>(TABBABLE)).filter((el) => el.getClientRects().length > 0);
   if (!items.length) {
