@@ -95,7 +95,7 @@ export function LabScreen({ screen }: ScreenProps<undefined>) {
 
   return (
     <div className="lab">
-      <div className="subbar">
+      <div className="subbar subbar--titled">
         <IconButton label="返回" onClick={back}>
           <ArrowLeft aria-hidden="true" />
         </IconButton>

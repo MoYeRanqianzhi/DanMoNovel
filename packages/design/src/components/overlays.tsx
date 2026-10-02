@@ -5,13 +5,50 @@
  * 保证它们总在底部导航与飞行层之上（层级表见 docs/design/design-language.md）。
  * 服务端没有 document：Portal 只在浏览器中挂载之后才渲染。
  */
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { useMounted } from '../lib/useClientValue';
 import { cls } from '../lib/util';
 import './overlays.css';
 
 /* ---------------- Sheet ---------------- */
+
+/** 面板里能用 Tab 走到的元素 */
+const TABBABLE =
+  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * 焦点关在面板里：面板是 aria-modal 的对话框，Tab 走到最后一个再按，回到第一个（Shift+Tab 反过来），
+ * 不会走到面板后面的页面上（那里的按钮看不见、也点不到）
+ */
+function keepFocusInside(e: ReactKeyboardEvent<HTMLDivElement>) {
+  if (e.key !== 'Tab') return;
+  const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>(TABBABLE)).filter((el) => el.getClientRects().length > 0);
+  if (!items.length) {
+    e.preventDefault();
+    return;
+  }
+  const first = items[0];
+  const last = items[items.length - 1];
+  const active = document.activeElement;
+  if (e.shiftKey && (active === first || active === e.currentTarget)) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && active === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
 
 interface SheetProps {
   open: boolean;
@@ -29,7 +66,7 @@ interface SheetProps {
 
 /**
  * 移动端从底部升起的一张纸，桌面端居中显示。
- * 关闭时先播放收起动画再卸载；打开时把焦点移入面板，关闭后把焦点还给触发它的按钮。
+ * 关闭时先播放收起动画再卸载；打开时把焦点移入面板，关闭后把焦点还给触发它的按钮；开着时 Tab 只在面板里转。
  * 面板里的内容已经自己拿了焦点时（例如 autoFocus 的输入框）不抢：React 在提交阶段就给它聚焦了，早于这里的副作用。
  */
 export function Sheet({ open, title, onClose, className, style, children }: SheetProps) {
@@ -60,11 +97,12 @@ export function Sheet({ open, title, onClose, className, style, children }: Shee
     if (mounted && !closing && !panelRef.current?.contains(document.activeElement)) panelRef.current?.focus();
   }, [mounted, closing]);
 
-  // Esc 关闭面板。用捕获阶段并阻止传播，避免同时触发全局的"Esc 返回上一页"
+  // Esc 关闭面板。用捕获阶段并阻止传播，避免同时触发全局的"Esc 返回上一页"。
+  // 输入法组字时的 Esc 是取消候选词（有的输入法 key 仍是 Escape），不能连面板带草稿一起关掉
   useEffect(() => {
     if (!mounted) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || e.isComposing || e.keyCode === 229) return;
       e.stopPropagation();
       onClose();
     };
@@ -76,7 +114,15 @@ export function Sheet({ open, title, onClose, className, style, children }: Shee
   return createPortal(
     <div className={cls('sheet-root', className)} style={style} data-closing={closing || undefined}>
       <div className="sheet-scrim" onClick={onClose} />
-      <div ref={panelRef} className="sheet-panel sheet" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
+      <div
+        ref={panelRef}
+        className="sheet-panel sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        onKeyDown={keepFocusInside}
+      >
         <div className="sheet-panel__grip" aria-hidden="true" />
         <h2 className="sheet-panel__title kai">{title}</h2>
         {children}

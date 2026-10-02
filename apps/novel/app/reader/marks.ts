@@ -68,6 +68,8 @@ const EMPTY: BookMarks = { bookmarks: [], notes: [] };
 /* ---------------- 校验 ---------------- */
 
 const isIndex = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0;
+/** 记录的 id 只由 newId 生成（小写字母与数字）。划线的 id 会拼进选择器（mark[data-note="…"]），被改过的存储里带引号的 id 会让选择器抛错 */
+const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-z]{1,32}$/.test(v);
 
 function parsePoint(v: unknown): TextPoint | null {
   if (!v || typeof v !== 'object') return null;
@@ -79,7 +81,7 @@ function parseBookmark(v: unknown): Bookmark | null {
   if (!v || typeof v !== 'object') return null;
   const r = v as Record<string, unknown>;
   const point = parsePoint(r.point);
-  if (typeof r.id !== 'string' || !isIndex(r.chapter) || !point || typeof r.excerpt !== 'string' || !isIndex(r.at)) return null;
+  if (!isId(r.id) || !isIndex(r.chapter) || !point || typeof r.excerpt !== 'string' || !isIndex(r.at)) return null;
   return { id: r.id, chapter: r.chapter, point, excerpt: r.excerpt, at: r.at };
 }
 
@@ -88,7 +90,7 @@ function parseNote(v: unknown): Note | null {
   const r = v as Record<string, unknown>;
   const start = parsePoint(r.start);
   const end = parsePoint(r.end);
-  if (typeof r.id !== 'string' || !isIndex(r.chapter) || !start || !end || comparePoints(start, end) >= 0) return null;
+  if (!isId(r.id) || !isIndex(r.chapter) || !start || !end || comparePoints(start, end) >= 0) return null;
   if (!LINE_STYLES.some((s) => s.id === r.style) || typeof r.quote !== 'string' || typeof r.thought !== 'string' || !isIndex(r.at)) {
     return null;
   }

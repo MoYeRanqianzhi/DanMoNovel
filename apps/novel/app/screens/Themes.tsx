@@ -44,7 +44,7 @@ export function ThemesScreen() {
 
   return (
     <div className="themes">
-      <div className="subbar">
+      <div className="subbar subbar--titled">
         <IconButton label="返回" onClick={back}>
           <ArrowLeft aria-hidden="true" />
         </IconButton>

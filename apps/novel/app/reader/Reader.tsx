@@ -43,11 +43,13 @@
 import {
   useCallback,
   useEffect,
+  useImperativeHandle,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
+  type Ref,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
@@ -109,7 +111,7 @@ import {
   type SelectionEnv,
   type TextSel,
 } from './Selection';
-import { LEADING, useReaderSettings, type PagedMode } from './settings';
+import { LEADING, useReaderSettings, type PagedMode, type ReaderSettings } from './settings';
 import { charRect, firstVisiblePoint, fracOfPoint, pointSide, textBetween, type Flowing } from './textpoints';
 import './reader.css';
 
@@ -118,6 +120,16 @@ const MAX_SECTIONS = 5;
 
 /** 对开时每页一行至少放得下这么多字，才改成左右两页（窄了宁可单页） */
 const SPREAD_MIN = 18;
+
+/**
+ * 滚轮的竖向滚动量换算成像素：Chrome、Safari 报的就是像素；Firefox 在 Windows、Linux 上按行报
+ * （deltaMode 1，一格约 3 行，不换算就到不了翻页的门槛），按整页报时 deltaMode 是 2
+ */
+const wheelPx = (e: ReactWheelEvent) =>
+  e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * window.innerHeight : e.deltaY;
+
+/** 键盘事件落在这些元素上时，空格、回车是"按下它"，不当作翻页或唤出工具栏 */
+const CONTROL = 'button, a[href], select, [role="button"], [role="radio"], [role="switch"], [role="tab"], [contenteditable="true"]';
 
 /** 读者在书里的位置：第几章、章内比例（0~1）。分页取当前页在本章的比例，滚动取视口顶端 */
 interface Place {
@@ -223,7 +235,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   const { book } = data;
   const isTop = screen.isTop;
 
-  const [settings, update] = useReaderSettings();
+  const [settings, writeSettings] = useReaderSettings();
   // 章节缓存有变化（正文到了、订阅了）就重新渲染
   useChapterCache();
 
@@ -267,6 +279,8 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   const readSince = useRef(0);
   /** 滚动模式：视口顶端在哪一章的什么位置（ScrollView 滚动时写入） */
   const scrollAnchor = useRef<Place>({ chapter: data.chapter, frac: 0 });
+  /** 滚动视图的把手（滚动模式下才有）：跳到书签、笔记时由它把那个字挪进视野 */
+  const scrollView = useRef<ScrollHandle>(null);
   /** 工具栏下栏：量出它的高度，唤出时"回到第 N 章"升到它上方 */
   const barRef = useRef<HTMLDivElement>(null);
   const bar = useElementSize(barRef);
@@ -289,6 +303,19 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   const ready = size.w > 0;
 
   const paged = settings.mode !== 'scroll';
+
+  /**
+   * 改阅读设置。滚动模式下换横排、竖排时，滚动视图要整条重排（ScrollView 的 key 随方向变）：
+   * 新的那条从视口顶端读到的地方开始。scrollStart 只在切到滚动模式、跳章时更新，不跟着滚动走，
+   * 不在这里换掉它，新视图会回到上次的起点，页眉与地址却还停在读到的那一章
+   */
+  const update = (patch: Partial<ReaderSettings>) => {
+    if (!paged && patch.vertical !== undefined && patch.vertical !== settings.vertical) {
+      const at = scrollAnchor.current;
+      setScrollStart((s) => ({ chapter: at.chapter, frac: at.frac, key: s.key + 1 }));
+    }
+    writeSettings(patch);
+  };
   const upDown = settings.mode === 'slide-y' || settings.mode === 'cover-y';
   const rtl = settings.vertical !== settings.reverse;
   const leading = LEADING[settings.leading];
@@ -411,13 +438,14 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     [book.id],
   );
 
-  // 水合之后读出本机记着的原位置
+  // 水合之后读出本机记着的原位置。只看书号：跳章会替换地址、路由重新给一份数据，book 是新对象，
+  // 依赖它的话每跳一次都从本机重读一遍，把刚记下的原位置盖掉
   useEffect(() => {
     if (!ready) return;
     const saved = loadOrigin(book);
     originRef.current = saved;
     setOrigin(saved);
-  }, [ready, book]);
+  }, [ready, book.id]);
 
   useEffect(() => {
     if (origin) lastOrigin.current = origin;
@@ -736,11 +764,11 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     const scroller = el?.querySelector<HTMLElement>('.rd-scroll');
     const root = el?.querySelector(`.rd-sec[data-chapter="${land.chapter}"] .rd-flow`);
     const r = root && charRect(root, land.point);
-    if (!scroller || !r) return;
+    if (!scroller || !r || !scrollView.current) return;
     landAt.current = null;
     const box = scroller.getBoundingClientRect();
-    if (settings.vertical) scroller.scrollLeft -= box.right - box.width * 0.12 - r.right;
-    else scroller.scrollTop += r.top - box.top - box.height * 0.18;
+    // 经过滚动视图挪：这一下是程序挪的，不能算成读者往后读了几屏（往后算还会触发自动订阅）
+    scrollView.current.nudge(settings.vertical ? box.right - box.width * 0.12 - r.right : r.top - box.top - box.height * 0.18);
   }, [paged, scrollStart.key, current?.status, settings.vertical]);
 
   // 跳到笔记之后：那几个字在眼前了就闪一下（红线色的底慢慢褪去）
@@ -1010,20 +1038,29 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   // 鼠标滚轮翻页：一次滚动手势只翻一页
   const lastWheel = useRef(0);
   const onWheel = (e: ReactWheelEvent) => {
-    if (Math.abs(e.deltaY) < 24) return;
+    // Ctrl+滚轮是缩放页面，不是翻页
+    if (e.ctrlKey) return;
+    const dy = wheelPx(e);
+    if (Math.abs(dy) < 24) return;
     const now = performance.now();
     if (now - lastWheel.current < 600) return;
     lastWheel.current = now;
-    turnBy(e.deltaY > 0 ? 1 : -1);
+    turnBy(dy > 0 ? 1 : -1);
   };
 
   useEffect(() => {
     if (!isTop || panel || thought || talk || !paged) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      // 带 Alt、Ctrl、⌘ 的是浏览器的快捷键（Alt+← 后退、Ctrl+PageDown 换标签页、Ctrl+滚轮缩放），不是翻页
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      // 焦点在按钮、链接、开关上时，空格是"按下它"：拦下来翻页，按钮就按不下去了（keyup 时不再触发 click）
+      if (e.key === ' ' && e.target instanceof Element && e.target.closest(CONTROL)) return;
       let dir: 0 | 1 | -1 = 0;
-      if (['ArrowDown', 'PageDown', ' '].includes(e.key)) dir = 1;
+      if (['ArrowDown', 'PageDown'].includes(e.key)) dir = 1;
       if (['ArrowUp', 'PageUp'].includes(e.key)) dir = -1;
+      // 空格与网页滚动的习惯一致：空格往后翻，Shift+空格往回翻
+      if (e.key === ' ') dir = e.shiftKey ? -1 : 1;
       // 左右方向键跟着"下一页在哪一边"走
       if (e.key === 'ArrowRight') dir = rtl ? -1 : 1;
       if (e.key === 'ArrowLeft') dir = rtl ? 1 : -1;
@@ -1034,6 +1071,22 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isTop, panel, thought, talk, paged, rtl, turnBy]);
+
+  // 键盘唤出工具栏：回车切换上下两栏（分页、滚动都是）。工具栏原先只能点屏幕中间唤出，
+  // 只用键盘的读者进不了目录、背景、设置；唤出后两栏不再 inert，Tab 就能走进去。
+  // 焦点在按钮、链接、开关上时回车是"按下它"，不接管
+  useEffect(() => {
+    if (!isTop || panel || thought || talk) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.target instanceof Element && e.target.closest(CONTROL)) return;
+      e.preventDefault();
+      setChrome((c) => !c);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isTop, panel, thought, talk]);
 
   /* ---------------- 渲染 ---------------- */
 
@@ -1065,9 +1118,16 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
 
   /**
    * 宽屏时阅读器的面板贴着下栏浮起（reader.css 的 .rd-sheet）：下栏唤出时停在它上方 12px，
-   * 没唤出时（写想法、段评是从正文里打开的）停在底边。面板挂在 <body> 下读不到阅读器上的变量，停靠的高度从这里带进去
+   * 没唤出时（写想法、段评是从正文里打开的）停在底边。面板挂在 <body> 下读不到阅读器上的变量，停靠的高度从这里带进去。
+   * 面板收起的那 260ms 里沿用开着时的高度：从目录选一章时下栏与面板同时收起，不冻住的话面板会先往下一沉再淡出
    */
-  const dock = { '--rd-dock': `${chrome ? bar.h + 22 : 24}px` } as CSSProperties;
+  const panelOpen = panel !== null || !!thought || !!talk;
+  const liveDock = chrome ? bar.h + 22 : 24;
+  const [openDock, setOpenDock] = useState(liveDock);
+  useEffect(() => {
+    if (panelOpen) setOpenDock(liveDock);
+  }, [panelOpen, liveDock]);
+  const dock = { '--rd-dock': `${panelOpen ? liveDock : openDock}px` } as CSSProperties;
 
   /** 某一章的正文或状态页（分页模式的一页、滚动模式的一段共用） */
   const noticeFor = (i: number, status: 'locked' | 'failed' | 'loading' | 'idle') =>
@@ -1216,11 +1276,12 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
               <LeadIn data={data} />
             ) : (
               <ScrollView
+                ref={scrollView}
                 key={`${settings.vertical}-${scrollStart.key}`}
                 book={book}
                 start={scrollStart}
                 vertical={settings.vertical}
-                relayout={`${settings.fontSize}|${settings.leading}|${settings.font}|${fontTick}|${size.w}x${size.h}`}
+                relayout={`${settings.fontSize}|${settings.leading}|${settings.font}|${settings.comments}|${fontTick}|${size.w}x${size.h}`}
                 onChapter={onScrollChapter}
                 onProgress={setScrollFrac}
                 onAnchor={onScrollAnchor}
@@ -1248,8 +1309,9 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
           <span>{book.title}</span>
           <small>{chapterTitle(book, chapter)}</small>
         </div>
+        {/* 名字固定、夹没夹上看 aria-pressed：名字跟着状态变，读屏会念成"取下这一页的书签，已按下"，两头打架 */}
         <IconButton
-          label={hereMarks.length ? '取下这一页的书签' : '在这一页夹上书签'}
+          label="书签"
           variant="plain"
           className="rd-bar__mark"
           aria-pressed={hereMarks.length > 0}
@@ -1533,6 +1595,13 @@ interface ScrollViewProps {
   onAdvance: (screens: number) => void;
   /** 渲染一章（正文或状态页）；arrived 为真时这一章刚从"加载中"变成正文，淡入一下 */
   renderSection: (chapter: number, arrived: boolean) => ReactNode;
+  ref?: Ref<ScrollHandle>;
+}
+
+/** 滚动视图给阅读器的把手 */
+interface ScrollHandle {
+  /** 沿阅读方向挪 by 像素（横排往下、竖排往左为正）。程序挪的，不算读者往后读 */
+  nudge: (by: number) => void;
 }
 
 /**
@@ -1557,6 +1626,7 @@ function ScrollView({
   onAnchor,
   onAdvance,
   renderSection,
+  ref: handle,
 }: ScrollViewProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<[number, number]>([start.chapter, start.chapter]);
@@ -1631,13 +1701,43 @@ function ScrollView({
   // 每次渲染后（章节状态变了、刚接上一章）都看看要不要继续接
   useEffect(extend);
 
+  // 阅读器把跳到的那个字（书签、笔记）滚进视野时经过这里。程序挪的滚动要顾到三件事：
+  // - 锚点按"想挪到的位置"记：挪完常常紧接着在末尾接上一章，上面那段按锚点把读者放回原处；
+  //   锚点平时要等 scroll 事件才更新，不在这里改，刚挪好的又会被放回跳转时的位置
+  // - 挪不够：那个字在一章快结尾处、后一章还没接上，可滚的范围不够，挪动被夹住。当场接上后一章，
+  //   同一次提交里按锚点放到想去的位置（等 scroll 事件或下一轮副作用再接，被夹住的位置会先被记成锚点）
+  // - 上一次的位置：随后的 scroll 事件里 moved 是 0，不会当成读者往后读了几屏（往后算还会触发自动订阅）
+  useImperativeHandle(
+    handle,
+    () => ({
+      nudge(by: number) {
+        const el = ref.current;
+        if (!el) return;
+        const want = (vertical ? -el.scrollLeft : el.scrollTop) + by;
+        if (vertical) el.scrollLeft -= by;
+        else el.scrollTop += by;
+        const { pos, secs } = measure();
+        const sec = secs.find((x) => want < x.start + x.size) ?? secs[secs.length - 1];
+        if (sec) {
+          anchor.current = { chapter: sec.chapter, frac: sec.size ? Math.min(1, Math.max(0, (want - sec.start) / sec.size)) : 0 };
+          notify.current.onAnchor(anchor.current);
+        }
+        lastPos.current = pos;
+        if (Math.abs(want - pos) > 1) extend();
+      },
+    }),
+    // measure、extend 只读 ref、book 与 vertical（换书、换方向时整个视图会重新挂载）
+    [vertical],
+  );
+
   const onScroll = () => {
     const { pos, view, secs } = measure();
     if (!secs.length) return;
     const at = (p: number) => secs.find((s) => p < s.start + s.size) ?? secs[secs.length - 1];
     const top = at(pos);
     if (settled.current) {
-      anchor.current = { chapter: top.chapter, frac: top.size ? (pos - top.start) / top.size : 0 };
+      // 夹在 0~1：滚动位置与章段的起点都有小数，停在章首时可能算出 -0.0001，记成原位置后过不了校验
+      anchor.current = { chapter: top.chapter, frac: top.size ? Math.min(1, Math.max(0, (pos - top.start) / top.size)) : 0 };
       notify.current.onAnchor(anchor.current);
       const moved = pos - lastPos.current;
       if (moved !== 0) notify.current.onAdvance(moved / Math.max(1, view));
@@ -1655,8 +1755,8 @@ function ScrollView({
 
   // 竖排时把鼠标的竖向滚轮换算成横向滚动（向下滚 = 往左读）
   const onWheel = (e: ReactWheelEvent) => {
-    if (!vertical || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-    ref.current!.scrollLeft -= e.deltaY;
+    if (!vertical || e.ctrlKey || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    ref.current!.scrollLeft -= wheelPx(e);
   };
 
   const chapters: number[] = [];

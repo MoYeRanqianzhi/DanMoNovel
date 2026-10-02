@@ -4,6 +4,9 @@
 
 .lab-body {
   display: grid;
+  /* 窄屏的一栏也要写明 minmax(0, 1fr)：不写时隐式的列按内容的最小宽度撑开，
+   * 纸张矩阵那一排横着滑的格子（十格，每格 168px）会把整页撑到一千七百多像素宽 */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--sp-8);
   padding-bottom: var(--sp-12);
 }

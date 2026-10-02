@@ -68,7 +68,7 @@ type Gesture =
       timer: number;
     }
   /** 正拖着选：从 anchor 起；长按选中的词（word）拖的时候始终留在选区里 */
-  | { kind: 'drag'; id: number; chapter: number; anchor: TextPoint; word: [TextPoint, TextPoint] | null; touch: boolean }
+  | { kind: 'drag'; id: number; chapter: number; anchor: TextPoint; word: [TextPoint, TextPoint] | null }
   /** 正拖着一端的手柄：另一端（fixed）不动；(dx, dy) 是手指到那一端的字的偏移，拖的时候按字的位置找，不按手指 */
   | { kind: 'handle'; id: number; chapter: number; fixed: TextPoint; dx: number; dy: number };
 
@@ -95,6 +95,27 @@ export function useTextSelection(env: SelectionEnv) {
     const chapter = envRef.current.chapterAt(caret.node);
     if (chapter === null) return null;
     const pt = textPointOf(caret.node, caret.offset);
+    return pt ? { chapter, pt } : null;
+  };
+
+  /**
+   * 屏幕上一点落在哪个字上（长按选词用）。pointAt 给的是插入点：手指在一个字的右半边（竖排是下半边）时，
+   * 插入点在这个字之后，拿它找词会选到后面那个词。插入点前一个字的字框包住这一点时，退回那个字
+   */
+  const charAt = (x: number, y: number) => {
+    const caret = caretAt(x, y);
+    if (!caret) return null;
+    const chapter = envRef.current.chapterAt(caret.node);
+    if (chapter === null) return null;
+    let { offset } = caret;
+    if (caret.node.nodeType === Node.TEXT_NODE && offset > 0) {
+      const range = document.createRange();
+      range.setStart(caret.node, offset - 1);
+      range.setEnd(caret.node, offset);
+      const r = range.getBoundingClientRect();
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) offset -= 1;
+    }
+    const pt = textPointOf(caret.node, offset);
     return pt ? { chapter, pt } : null;
   };
 
@@ -132,11 +153,12 @@ export function useTextSelection(env: SelectionEnv) {
     const at = pointAt(e.clientX, e.clientY);
     const g: Gesture = { kind: 'press', id: e.pointerId, x: e.clientX, y: e.clientY, touch, at, timer: 0 };
     if (touch && at) {
+      const hit = charAt(e.clientX, e.clientY) ?? at;
       g.timer = window.setTimeout(() => {
         if (gesture.current !== g) return;
-        const word = selectWord(at);
+        const word = selectWord(hit);
         if (!word) return;
-        gesture.current = { kind: 'drag', id: g.id, chapter: at.chapter, anchor: word[0], word, touch: true };
+        gesture.current = { kind: 'drag', id: g.id, chapter: hit.chapter, anchor: word[0], word };
         setDragging(true);
         navigator.vibrate?.(8);
       }, LONG_PRESS);
@@ -158,7 +180,7 @@ export function useTextSelection(env: SelectionEnv) {
         return;
       }
       if (dist <= MOUSE_SLOP || !g.at || !(e.buttons & 1)) return;
-      gesture.current = { kind: 'drag', id: g.id, chapter: g.at.chapter, anchor: g.at.pt, word: null, touch: false };
+      gesture.current = { kind: 'drag', id: g.id, chapter: g.at.chapter, anchor: g.at.pt, word: null };
       setDragging(true);
       // 拖的途中指针会经过手柄的圆头（感应区比看到的大）：把指针捉在正文区上，松手一定回到这里
       // （触屏不用：手指按下时浏览器已经把它捉在按下的那个元素上了）
@@ -263,7 +285,7 @@ export function useTextSelection(env: SelectionEnv) {
     return () => el.removeEventListener('touchmove', onTouchMove);
   }, [env.readerRef]);
 
-  return { sel, setSel, clear, dragging, down, move, up, cancel, handleDown, handleMove, handleUp };
+  return { sel, clear, dragging, down, move, up, cancel, handleDown, handleMove, handleUp };
 }
 
 export type TextSelection = ReturnType<typeof useTextSelection>;

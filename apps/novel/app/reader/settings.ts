@@ -75,7 +75,8 @@ function parse(raw: string | null): ReaderSettings {
     return {
       fontSize:
         Number.isFinite(size) && size >= FONT_SIZE_RANGE.min && size <= FONT_SIZE_RANGE.max ? size : DEFAULTS.fontSize,
-      leading: r.leading && r.leading in LEADING ? r.leading : DEFAULTS.leading,
+      // 用 hasOwn 而不是 in：in 连原型链上的 constructor、toString 也认，行距就成了一个函数
+      leading: r.leading && Object.hasOwn(LEADING, r.leading) ? r.leading : DEFAULTS.leading,
       font: isFontId(r.font) ? r.font : DEFAULTS.font,
       mode: r.mode && (TURN_MODES as readonly string[]).includes(r.mode) ? r.mode : DEFAULTS.mode,
       reverse: typeof r.reverse === 'boolean' ? r.reverse : DEFAULTS.reverse,

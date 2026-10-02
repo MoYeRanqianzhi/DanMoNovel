@@ -117,6 +117,19 @@
   font-family: var(--font-kai);
   font-size: var(--fs-21);
 }
+/* 带标题的顶栏（主题配色、组件实验室）：标题是字，内容滚上来会和它叠在一起，所以垫一条与页面同样的纸
+ * （纸色加纸纹），下沿淡进页面。只有按钮的顶栏仍是透明的，内容从圆按钮后面滑过不碍事。
+ * 纸垫在 ::before 上、z-index −1：顶栏 sticky 加 z-index 自成层叠上下文，纸在按钮与标题之下、页面内容之上 */
+.subbar--titled::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 -14px;
+  z-index: -1;
+  background-color: var(--paper);
+  background-image: var(--grain);
+  background-size: 220px 220px;
+  mask: linear-gradient(#000 calc(100% - 14px), transparent);
+}
 
 /* ---------------- 按钮 ---------------- */
 .btn {

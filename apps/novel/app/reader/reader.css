@@ -275,10 +275,6 @@
     opacity: 0;
   }
 }
-.rd-notice .seal {
-  margin-bottom: 4px;
-  transform: rotate(-4deg);
-}
 .rd-notice__title {
   font-family: var(--font-kai);
   font-weight: 400;
@@ -293,10 +289,6 @@
 .rd-notice .btn {
   margin-top: 8px;
   min-width: 9em;
-}
-.rd-notice__fine {
-  font-size: var(--fs-12);
-  color: color-mix(in srgb, var(--ink-2) 75%, transparent);
 }
 
 /* ---- 订阅页（notices.tsx 的 LockedNotice）：上面是章名与预览，往下渐隐；下面是一张订阅笺 ----

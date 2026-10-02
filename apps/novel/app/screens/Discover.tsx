@@ -210,7 +210,7 @@ function PostCard({ post: p, liked, slotId, onOpen, onLike, onReply }: PostCardP
             type="button"
             className="post__act"
             aria-pressed={liked}
-            aria-label={liked ? '取消收藏' : '收藏'}
+            aria-label={`收藏，${p.likes + (liked ? 1 : 0)} 人收藏`}
             onClick={onLike}
           >
             <Heart aria-hidden="true" />

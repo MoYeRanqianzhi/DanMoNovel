@@ -89,9 +89,6 @@ export function chapterAccess(bookId: string, index: number): ChapterAccess {
   return owned.get()[bookId]?.includes(index) ? 'owned' : 'locked';
 }
 
-/** 订阅记录有变化（订阅了新的章）时通知：目录上的锁、订阅页的报价跟着变 */
-export const subscribeOwned = owned.subscribe;
-
 /* ---------------- 字数与价格（目录接口的字段） ---------------- */
 
 /** 每千字的价格（书币）。原型示例；正式版由平台与作者设置，货币名称也未定 */
