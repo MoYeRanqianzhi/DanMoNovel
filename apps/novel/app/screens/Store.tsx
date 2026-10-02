@@ -120,10 +120,12 @@ export function StoreScreen({ data, screen }: ScreenProps<StoreData>) {
 
   const q = query.trim();
   const finding = !!q || !!tag;
+  // 不分大小写：标签里有 HE、BE 这样的字母，读者多半打小写
+  const needle = q.toLowerCase();
   const found = books
     .filter((b) => {
       const hitTag = !tag || b.tags.includes(tag) || b.era === tag;
-      const hitQuery = !q || [b.title, b.author, ...b.pair, ...b.tags].some((s) => s.includes(q));
+      const hitQuery = !q || [b.title, b.author, ...b.pair, ...b.tags].some((s) => s.toLowerCase().includes(needle));
       return hitTag && hitQuery;
     })
     .sort((a, b) => b.heat - a.heat);

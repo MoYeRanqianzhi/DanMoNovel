@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { ChevronDown } from 'lucide-react';
 import { Logo, Seal } from '@danmo/design/components/ui';
+import { VERSION } from '@danmo/design/lib/version';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
 import { Stage } from './Stage';
 import './home.css';
@@ -183,7 +184,7 @@ export function HomeScreen() {
 
       <footer className="home-foot">
         <p>耽墨是开源的原耽小说平台，以 AGPL-3.0 授权。</p>
-        <p>UI 原型 0.1.0-alpha.1：作者、作品与读者都是示例，登录直接进入示例作者的书房。</p>
+        <p>UI 原型 {VERSION}：作者、作品与读者都是示例，登录直接进入示例作者的书房。</p>
       </footer>
     </div>
   );

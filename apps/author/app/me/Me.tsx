@@ -31,6 +31,7 @@ import { Sheet, useToast } from '@danmo/design/components/overlays';
 import { Stamp } from '@danmo/design/components/Stamp';
 import { IconButton, Logo, Seal, Segmented } from '@danmo/design/components/ui';
 import { useClientValue } from '@danmo/design/lib/useClientValue';
+import { VERSION } from '@danmo/design/lib/version';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme, type MotionPref } from '@danmo/design/theme/ThemeContext';
 import { ThemeSwatches } from '@danmo/design/theme/ThemeSwatches';
@@ -247,7 +248,7 @@ export function MeScreen({ data }: ScreenProps<MeData>) {
               <button type="button" className="settings-list__item" onClick={() => setAboutOpen(true)}>
                 <Info aria-hidden="true" />
                 <span className="settings-list__label">关于耽墨作者站</span>
-                <span className="settings-list__value">0.1.0-alpha.1</span>
+                <span className="settings-list__value">{VERSION}</span>
                 <ChevronRight aria-hidden="true" className="settings-list__chevron" />
               </button>
             </li>
@@ -280,7 +281,7 @@ export function MeScreen({ data }: ScreenProps<MeData>) {
       <Sheet open={aboutOpen} title="关于耽墨作者站" onClose={() => setAboutOpen(false)}>
         <div className="about">
           <Logo size={44} seal="作者" name="耽墨作者站" />
-          <p>耽墨作者站是耽墨的写作与发布平台。你现在看到的是 UI 原型（0.1.0-alpha.1），作者、作品、读者与数据都是示例内容。</p>
+          <p>耽墨作者站是耽墨的写作与发布平台。你现在看到的是 UI 原型（{VERSION}），作者、作品、读者与数据都是示例内容。</p>
           <p>界面字体：霞鹜文楷、马善政毛笔楷书、思源宋体，均以 SIL Open Font License 1.1 授权；稿纸用的 Danmo Grid 由霞鹜文楷派生，同样以 SIL OFL 1.1 授权。</p>
         </div>
       </Sheet>

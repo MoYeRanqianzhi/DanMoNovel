@@ -18,7 +18,7 @@ import { RailLink, SideRail, TabBar, type NavItem } from '@danmo/design/shell/na
 import { notFoundHandle } from '@danmo/design/shell/not-found';
 import { PageStack, useStack } from '@danmo/design/shell/stack';
 
-export const TABS: NavItem[] = [
+const TABS: NavItem[] = [
   { to: '/desk', label: '书房', Icon: LampDesk },
   { to: '/works', label: '作品', Icon: LibraryBig },
   { to: '/readers', label: '互动', Icon: Mails },

@@ -355,9 +355,9 @@
  * 每本书脚前靠着一张店员手写的推荐卡：书名、三行简介（文楷，像手写）、上架日期。
  * 卡片一左一右微微歪着，顶上贴一截半透明的纸胶带，颜色取自这本书的封面（--tape，Store.tsx 写进按钮）。
  * 悬停时书被拿起来，卡片也摆正。
- * .fresh .fresh__row 两个类：生产构建里共享的 base.css 排在页面样式之后，单个类盖不过 .scroll-x 的 display 与 overflow */
+ * .fresh__row 改的是 base.css 里 .scroll-x 的 display 与 overflow：根路由的样式（base、layout）在开发与生产构建里都排在页面样式前面，同样分量就盖得过 */
 @media (min-width: 900px) {
-  .fresh .fresh__row {
+  .fresh__row {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     overflow: visible;

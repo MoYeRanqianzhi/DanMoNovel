@@ -16,6 +16,7 @@ import { Sheet } from '@danmo/design/components/overlays';
 import { Logo, Seal, Segmented } from '@danmo/design/components/ui';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { useClientValue } from '@danmo/design/lib/useClientValue';
+import { VERSION } from '@danmo/design/lib/version';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme, type MotionPref } from '@danmo/design/theme/ThemeContext';
 import { getTheme } from '@danmo/design/theme/themes';
@@ -45,12 +46,6 @@ const LAST_WEEK = 332;
 /** 分钟数 → 印章墨色浓度：没读是 0，读满两小时是 1 */
 function inkLevel(minutes: number): number {
   return minutes === 0 ? 0 : Math.min(1, 0.28 + (minutes / 120) * 0.72);
-}
-
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return h ? `${h} 小时 ${m} 分` : `${m} 分钟`;
 }
 
 export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
@@ -85,9 +80,10 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
       </header>
 
       <section className="week" aria-label="本周阅读">
-        <p className="week__total">{formatDuration(total)}</p>
+        {/* 时长与书架、详情页同一种写法（formatReadTime 收秒数） */}
+        <p className="week__total">{formatReadTime(total * 60)}</p>
         <p className="week__cap">
-          这周的阅读时长，{diff === 0 ? '和上周一样' : `比上周${diff > 0 ? '多' : '少'} ${formatDuration(Math.abs(diff))}`}
+          这周的阅读时长，{diff === 0 ? '和上周一样' : `比上周${diff > 0 ? '多' : '少'} ${formatReadTime(Math.abs(diff) * 60)}`}
         </p>
         <ol className="week__stamps">
           {WEEK.map((minutes, i) => (
@@ -95,7 +91,7 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
               <span
                 className="week__stamp"
                 style={{ '--ink-level': inkLevel(minutes) } as CSSProperties}
-                aria-label={`周${DAY_NAMES[i]}：${minutes ? formatDuration(minutes) : '没有阅读'}`}
+                aria-label={`周${DAY_NAMES[i]}：${minutes ? formatReadTime(minutes * 60) : '没有阅读'}`}
                 role="img"
               />
               <span className="week__day" aria-hidden="true">
@@ -170,7 +166,7 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
           <button type="button" className="settings-list__item" onClick={() => setAboutOpen(true)}>
             <Info aria-hidden="true" />
             <span className="settings-list__label">关于耽墨</span>
-            <span className="settings-list__value">0.1.0-alpha.1</span>
+            <span className="settings-list__value">{VERSION}</span>
             <ChevronRight aria-hidden="true" className="settings-list__chevron" />
           </button>
         </li>
@@ -179,7 +175,7 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
       <Sheet open={aboutOpen} title="关于耽墨" onClose={() => setAboutOpen(false)}>
         <div className="about">
           <Logo size={44} />
-          <p>耽墨是一个开源、多平台的原耽小说阅读器。你现在看到的是 UI 原型（0.1.0-alpha.1），书目、人物与正文都是示例内容。</p>
+          <p>耽墨是一个开源、多平台的原耽小说阅读器。你现在看到的是 UI 原型（{VERSION}），书目、人物与正文都是示例内容。</p>
           <p>界面字体：霞鹜文楷、马善政毛笔楷书、思源宋体，均以 SIL Open Font License 1.1 授权。</p>
         </div>
       </Sheet>

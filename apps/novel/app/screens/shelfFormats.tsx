@@ -30,14 +30,14 @@ interface FormatInfo {
 }
 
 /** 顺序即选择面板里的顺序：从最像实物的摆法，到信息最多的列表 */
-export const SHELF_FORMATS: readonly FormatInfo[] = [
+const SHELF_FORMATS: readonly FormatInfo[] = [
   { value: 'display', name: '陈列', note: '书微微侧身立成一排，看得见封面与厚薄', Icon: GalleryHorizontalEnd },
   { value: 'bookcase', name: '书柜', note: '书脊朝外排在书板上，像家里的书柜', Icon: LibraryBig },
   { value: 'grid', name: '宫格', note: '封面整整齐齐铺开，架上的书一眼看全', Icon: LayoutGrid },
   { value: 'list', name: '列表', note: '一行一本，读到哪一章写得清清楚楚', Icon: LayoutList },
 ];
 
-export const DEFAULT_SHELF_FORMAT: ShelfFormat = 'display';
+const DEFAULT_SHELF_FORMAT: ShelfFormat = 'display';
 
 const STORAGE_KEY = 'danmo:shelf-format';
 const COOKIE_NAME = 'danmo-shelf-format';

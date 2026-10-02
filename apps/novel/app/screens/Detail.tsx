@@ -211,7 +211,7 @@ export function BookScreen({ data, screen }: ScreenProps<BookData>) {
           {inShelf ? <Check aria-hidden="true" /> : <Plus aria-hidden="true" />}
           {inShelf ? '已在书架' : '加入书架'}
         </button>
-        <button type="button" className="btn btn--primary detail-actions__read" onClick={() => read()}>
+        <button type="button" className="btn btn--primary" onClick={() => read()}>
           {reading ? `继续读 ${toc[entry!.chapter].split(' ')[0]}` : '开始阅读'}
         </button>
       </footer>

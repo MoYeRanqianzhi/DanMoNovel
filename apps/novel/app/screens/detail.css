@@ -6,6 +6,9 @@
   min-height: 100%;
   display: flex;
   flex-direction: column;
+  /* 顶栏与底部操作栏的 z-index 只在这一页里比：不关住的话，它们会画在从上面淡入的阅读页上、还接得住点击
+   * （推进途中再点一次"开始阅读"会再开一页）。见 route-styles 记忆 */
+  isolation: isolate;
 }
 /* 顶栏叠在染色纸上方，不占据版面高度 */
 .detail > .subbar {

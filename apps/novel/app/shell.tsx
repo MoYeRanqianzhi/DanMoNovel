@@ -14,7 +14,7 @@ import { PageStack, useStack } from '@danmo/design/shell/stack';
 import { SplashGate } from './screens/Splash';
 
 /** 标签页（根页面）。顺序即导航上的顺序 */
-export const TABS: NavItem[] = [
+const TABS: NavItem[] = [
   { to: '/shelf', label: '书架', Icon: LibraryBig },
   { to: '/', label: '书城', Icon: Store, end: true },
   { to: '/discover', label: '发现', Icon: Compass },

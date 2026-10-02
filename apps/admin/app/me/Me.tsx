@@ -14,6 +14,7 @@ import { ROLES, getRole, type RoleId } from '@danmo/data/admin';
 import { Sheet } from '@danmo/design/components/overlays';
 import { Stamp } from '@danmo/design/components/Stamp';
 import { IconButton, Logo, Seal, Segmented } from '@danmo/design/components/ui';
+import { VERSION } from '@danmo/design/lib/version';
 import { useStack } from '@danmo/design/shell/stack';
 import { useTheme, type MotionPref } from '@danmo/design/theme/ThemeContext';
 import { ThemeSwatches } from '@danmo/design/theme/ThemeSwatches';
@@ -126,7 +127,7 @@ export function MeScreen() {
             <button type="button" className="settings-list__item" onClick={() => setAboutOpen(true)}>
               <Info aria-hidden="true" />
               <span className="settings-list__label">关于耽墨管理站</span>
-              <span className="settings-list__value">0.1.0-alpha.1</span>
+              <span className="settings-list__value">{VERSION}</span>
               <ChevronRight aria-hidden="true" className="settings-list__chevron" />
             </button>
           </li>
@@ -141,7 +142,7 @@ export function MeScreen() {
         <div className="about">
           <Logo size={44} seal="管理" name="耽墨管理站" />
           <p>
-            耽墨管理站是运营团队的内部办公系统：审核、身份、账簿、作者与站规。你现在看到的是 UI 原型（0.1.0-alpha.1），工作人员、稿件与数据都是示例内容，按钮大多还没有接到服务端。
+            耽墨管理站是运营团队的内部办公系统：审核、身份、账簿、作者与站规。你现在看到的是 UI 原型（{VERSION}），工作人员、稿件与数据都是示例内容，按钮大多还没有接到服务端。
           </p>
           <p>界面字体：霞鹜文楷、马善政毛笔楷书、思源宋体，均以 SIL Open Font License 1.1 授权。</p>
         </div>

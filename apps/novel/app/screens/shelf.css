@@ -371,6 +371,8 @@
 }
 .list-book {
   position: relative;
+  /* 整行接点击的 ::after 是 z-index 1：关在这一行里，不然它会盖在从上面淡入的详情页上、接住点击 */
+  isolation: isolate;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;

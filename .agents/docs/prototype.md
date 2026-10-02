@@ -317,7 +317,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - 卡片 `margin-top: -26px` 压住书脚的投影；一左一右歪 −1.2°、1°，悬停或键盘聚焦时摆正，书同时被拿起。
     - 卡顶一截纸胶带（`.fresh__card::before`）：颜色是封面的 `palette.to`（Store.tsx 写成按钮上的 `--tape`）兑 40% 纸色、opacity 0.82，深色封面的胶带也不压字。两头的锯齿是 mask：左右各一列 6px 高的格子，`conic-gradient(from 225deg at 3px 50%, …)` 与 `from 45deg at calc(100% - 3px) 50%` 从离边 3px 的点朝外挖一个 90° 三角。第一版把锥心放在边上（`from -45deg at left`），挖出来的不是锯齿。
     - 窄屏：`.fresh__card` 是 `display: contents`，书名与日期仍是按钮里的两行；`.fresh__note` 不显示。简介 aria-hidden，按钮的名字只有书名与日期（如"镜头之外 9月18日上架"）。
-    - 选择器写成 `.fresh .fresh__row`：生产构建里共享的 base.css 排在页面样式之后，单个类盖不过 `.scroll-x` 的 display 与 overflow（第 4 节）。
+    - `.fresh__row` 改 base.css 里 `.scroll-x` 的 display 与 overflow：根路由的样式（base、layout）排在页面样式前面，同样分量盖得过。排在页面样式后面的只有叶子路由共用的组件块（Stamp、ChoiceCards、BookLoader 等），见 route-styles 记忆第 4 条。
   - **书位名**：书环 `ring:${书号}`（`ringSlot`，storeHero 也用它，启动页的书因此降落在书环正中那本）、榜单 `board:${榜}:${书号}`、找书结果 `rank:`、新书 `fresh:`、目录 `cat:`。
 - **Discover**（公开；书友交流的社区，定位见 tab-roles 记忆）：
   - 版面：标题与"写点什么" → 正在热议 → 帖子类别（全部、长评、摘句、求文、闲聊）→ 帖子。

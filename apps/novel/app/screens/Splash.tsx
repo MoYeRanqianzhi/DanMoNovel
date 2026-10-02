@@ -20,6 +20,7 @@ import { POSES } from '@danmo/design/book3d/Book3D';
 import { Logo } from '@danmo/design/components/ui';
 import { BookSlot, useFlight } from '@danmo/design/flight/FlightContext';
 import { HOP_MS } from '@danmo/design/flight/timing';
+import { VERSION } from '@danmo/design/lib/version';
 import { useStack } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
 import './splash.css';
@@ -61,7 +62,10 @@ function Splash({ onDone }: { onDone: () => void }) {
   const { reduced } = useTheme();
   const [stage, setStage] = useState<Stage>('intro');
   const book = hero?.book ?? BRAND_BOOK;
+  /** 片头的各个时刻（离场之前） */
   const timers = useRef<number[]>([]);
+  /** 离场之后卸载启动页的那一个（与上面分开：减少动效的偏好在离场后才变过来时，重排不能把它清掉） */
+  const doneTimer = useRef(0);
   const left = useRef(false);
 
   const leave = useCallback(() => {
@@ -71,21 +75,31 @@ function Splash({ onDone }: { onDone: () => void }) {
     setStage('leaving');
     // 页面有主角就飞进它的书位；没有的话（品牌书）随纸面一起淡去
     if (hero) flight.request({ kind: 'hop', from: 'splash:book', to: hero.slotId, book });
-    timers.current = [window.setTimeout(onDone, reduced ? 320 : HOP_MS + 80)];
+    doneTimer.current = window.setTimeout(onDone, reduced ? 320 : HOP_MS + 80);
   }, [flight, hero, book, onDone, reduced]);
+  // 定时器到点时调最新的 leave：水合那一帧的 reduced 一定是 false（主题偏好与系统设置都在挂载后才读到），
+  // 闭包里留着它的话，减少动效的读者也要等满 3 秒、看书飞一趟
+  const leaveRef = useRef(leave);
+  leaveRef.current = leave;
 
+  // 编排片头。减少动效的偏好在水合之后才知道：变了就按新的时间表重排（离场之后不再动）
   useEffect(() => {
+    if (left.current) return;
     const at = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms));
     if (reduced) {
-      at(700, leave);
+      at(700, () => leaveRef.current());
     } else {
       at(650, () => setStage('loading'));
       at(2500, () => setStage('closing'));
-      at(3150, leave);
+      at(3150, () => leaveRef.current());
     }
-    return () => timers.current.forEach(clearTimeout);
-    // 片头只在挂载时编排一次，不随依赖重排
-  }, []);
+    return () => {
+      timers.current.forEach(clearTimeout);
+      timers.current = [];
+    };
+  }, [reduced]);
+
+  useEffect(() => () => window.clearTimeout(doneTimer.current), []);
 
   const lying = stage === 'loading';
 
@@ -108,7 +122,7 @@ function Splash({ onDone }: { onDone: () => void }) {
         <Logo size={58} />
         <p className="splash__caption">{lying ? `正在打开《${book.title}》` : ' '}</p>
       </div>
-      <p className="splash__ver">UI 原型 0.1.0-alpha.1，点击任意处跳过</p>
+      <p className="splash__ver">UI 原型 {VERSION}，点击任意处跳过</p>
     </div>
   );
 }

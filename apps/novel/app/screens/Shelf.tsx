@@ -45,7 +45,7 @@ import { ShelfFormatPicker, formatFromCookie, useShelfFormat, type ShelfFormat }
 import './shelf.css';
 
 /** 书架上的一本书：用户与书的关系，连同书本身 */
-export interface ShelfItem extends ShelfEntry {
+interface ShelfItem extends ShelfEntry {
   book: Book;
 }
 
@@ -393,6 +393,8 @@ function usePullToRefresh(onRefresh: () => Promise<void>) {
       if (scroller.scrollTop > 0 || busyRef.current) return;
       startY = e.touches[0].clientY;
       active = true;
+      // 每一下都从 0 算起：上一次拉满同步之后 pullRef 停在 1 以上，不清零的话，之后只点一下（没有 touchmove）也会再同步一次
+      pullRef.current = 0;
     };
     const onMove = (e: TouchEvent) => {
       if (!active) return;
