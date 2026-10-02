@@ -14,7 +14,7 @@
  * 书城是网页版的首页，也是公开页面：服务端渲染出全部书目、书环与榜单，HTML 可被 CDN 缓存，
  * 所以这里不放任何个人数据（书架、阅读进度）；书环是编辑推荐，人人相同（以后按口味推荐时在浏览器里补上）。
  */
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Award, ChevronLeft, ChevronRight, Feather, Flame, Search } from 'lucide-react';
 import {
   BOOKS,
@@ -224,10 +224,24 @@ export function StoreScreen({ data, screen }: ScreenProps<StoreData>) {
               {fresh.map((b) => {
                 const slotId = screen.slot(`fresh:${b.id}`);
                 return (
-                  <button key={b.id} type="button" className="fresh__book" onClick={() => open(b, slotId)}>
+                  <button
+                    key={b.id}
+                    type="button"
+                    className="fresh__book"
+                    onClick={() => open(b, slotId)}
+                    style={{ '--tape': b.palette.to } as CSSProperties}
+                  >
                     <BookSlot slotId={slotId} book={b} width={{ base: 100, wide: 118 }} {...POSES.hero} label={null} />
-                    <span className="fresh__title">{b.title}</span>
-                    <span className="fresh__date">{formatAdded(b.added)}</span>
+                    {/* 宽屏上书名、简介与上架日期写在一张"店员手写的推荐卡"上，卡靠在书脚前，顶上一截纸胶带
+                        （颜色取自封面，--tape）；窄屏没有卡（display: contents），书名与日期直接排在书下，也不写简介。
+                        简介对读屏软件隐藏：按钮的名字只要书名与日期，简介在详情页能听到 */}
+                    <span className="fresh__card">
+                      <span className="fresh__title">{b.title}</span>
+                      <span className="fresh__note" aria-hidden="true">
+                        {b.blurb}
+                      </span>
+                      <span className="fresh__date">{formatAdded(b.added)}</span>
+                    </span>
                   </button>
                 );
               })}

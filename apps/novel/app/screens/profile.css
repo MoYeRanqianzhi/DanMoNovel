@@ -13,6 +13,8 @@
 }
 
 .profile-head {
+  /* 那方"读"字印的边长（Profile.tsx 把它交给 Seal 的 --seal）；宽屏两栏时放大，见文件末尾 */
+  --profile-seal: 56px;
   display: flex;
   align-items: center;
   gap: var(--sp-4);
@@ -71,6 +73,31 @@
 .week__stamps li[data-today] .week__day {
   color: var(--thread-ink);
 }
+/* 每天读了几分钟：窄屏不写，宽屏的章大了，章下写得下 */
+.week__min {
+  display: none;
+}
+@media (min-width: 900px) {
+  .week__stamps {
+    gap: 14px;
+  }
+  .week__stamp {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+  }
+  .week__min {
+    display: block;
+    margin-top: -3px;
+    font-size: 11px;
+    color: color-mix(in srgb, var(--ink-2) 85%, transparent);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .week__stamps li[data-today] .week__min {
+    color: var(--thread-ink);
+  }
+}
 
 /* ---- 读完的书 ---- */
 .profile-done {
@@ -99,6 +126,63 @@
 .profile-done__book:hover .book3d,
 .profile-done__book:focus-visible .book3d {
   --lift: 1;
+}
+/* 读了多久：只在宽屏写（书放大到 96px，书名下面再写一行小字） */
+.profile-done__time {
+  display: none;
+}
+@media (min-width: 900px) {
+  .profile-done__row {
+    gap: 28px;
+  }
+  .profile-done__book {
+    font-size: var(--fs-16);
+  }
+  .profile-done__time {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: var(--fs-12);
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+}
+
+/* ============================================================
+ * 宽屏（≥1100px）：左栏是"你"，右栏是"你读的"
+ * 一栏 760px 居中时两边各空出一大片。分成两栏，比例与书架的"书桌 + 书架"相同：
+ * 左栏一方大印、名字，下面是设置；右栏是这一周的印章，下面是读完的书。
+ * 第一行名字对本周，第二行设置对读完的书：两块的上沿对齐。两块的高矮差不多（名字那块一百七十来像素，
+ * 本周两百上下），短的那块下面空出的一点不显眼。DOM 顺序不变，读屏与 Tab 的顺序同窄屏。
+ * ============================================================ */
+@media (min-width: 1100px) {
+  .profile {
+    max-width: var(--content-max);
+    display: grid;
+    grid-template-columns: clamp(300px, 30%, 360px) minmax(0, 1fr);
+    grid-template-areas:
+      'head week'
+      'settings done';
+    column-gap: clamp(48px, 6vw, 96px);
+    align-items: start;
+  }
+  /* 名帖的写法：印在上、名字在下，印放大成整页最重的一块颜色，与右栏的一排小印呼应 */
+  .profile-head {
+    --profile-seal: 80px;
+    grid-area: head;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-5);
+  }
+  .week {
+    grid-area: week;
+    margin-top: 0;
+  }
+  .profile .settings-list {
+    grid-area: settings;
+  }
+  .profile-done {
+    grid-area: done;
+  }
 }
 
 /* 设置列表与"关于"的样式与作者站共用，在 packages/design 的 layout.css 里 */

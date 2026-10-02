@@ -102,6 +102,95 @@
     font-size: var(--fs-36);
   }
 }
+/* 读了多久：前面一小段红线（与详情页的"已读"同一种写法，读者自己的阅读数据是信息）。只在宽屏写 */
+.resume__time {
+  display: none;
+}
+@media (min-width: 900px) {
+  .resume__time {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: var(--fs-14);
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .resume__time::before {
+    content: '';
+    width: 14px;
+    height: 1.5px;
+    border-radius: 1px;
+    background: var(--thread);
+  }
+}
+
+/* ============================================================
+ * 宽屏（≥1100px）：左边书桌、右边书架
+ * 一栏排下来时，"继续读"的右边、每组书的右边都空着一大片。分成两栏：左栏是书桌，摊着正在读的那本，
+ * 书在上、字在下，封面的颜色从书下面洇进桌面（详情页染色纸的做法，淡得多、只在书的周围）；
+ * 往下翻书架时书桌吸在原处。右栏是书架，一排放四本左右。
+ * ============================================================ */
+.resume {
+  --dye-mix: 64%;
+}
+/* 夜间主题下封面色调要压暗，否则像一团发光的雾（同详情页） */
+[data-theme='changye'] .resume {
+  --dye-mix: 22%;
+}
+@media (min-width: 1100px) {
+  .shelf {
+    display: grid;
+    grid-template-columns: clamp(280px, 30%, 360px) minmax(0, 1fr);
+    column-gap: clamp(48px, 6vw, 96px);
+    align-items: start;
+  }
+  .shelf > .pull,
+  .shelf-head {
+    grid-column: 1 / -1;
+  }
+  .resume {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: var(--sp-2);
+    margin: var(--sp-8) 0 var(--sp-10) -12px;
+  }
+  /* 整块往左让了 12px 是给书的按钮留焦点环的位置；书名、进度这些字补回来，与"书架"二字对齐 */
+  .resume__info {
+    padding-left: 12px;
+  }
+  /* 洇色画在书的按钮里、书的下面一层：按钮自成一个层叠上下文，z-index -1 才不会沉到页面底下去 */
+  .resume__book {
+    position: relative;
+    isolation: isolate;
+  }
+  .resume__book::before {
+    content: '';
+    position: absolute;
+    inset: -16% -48% -10% -36%;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--dye) var(--dye-mix), transparent) 18%,
+      color-mix(in oklab, var(--dye-2) calc(var(--dye-mix) * 0.45), transparent) 62%,
+      transparent
+    );
+  }
+  .shelf-shelves {
+    margin-top: var(--sp-8);
+  }
+  .shelf-shelves > .shelf-group:first-child {
+    margin-top: 0;
+  }
+}
+/* 够高时书桌吸在原处；矮屏上书桌比一屏还高，吸住了下半截就再也看不到 */
+@media (min-width: 1100px) and (min-height: 700px) {
+  .resume {
+    position: sticky;
+    top: var(--sp-8);
+  }
+}
 
 /* ---- 分组 ---- */
 .shelf-group {

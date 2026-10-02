@@ -343,6 +343,93 @@
   font-size: var(--fs-12);
   color: var(--ink-2);
 }
+/* 窄屏：没有推荐卡，书名与日期直接是按钮里的两行（.fresh__card 不生成盒子），简介不写 */
+.fresh__card {
+  display: contents;
+}
+.fresh__note {
+  display: none;
+}
+
+/* 宽屏：新书台。四本书各占一格铺满一行（窄屏一排横着滑的四本，到宽屏只占了左半边），
+ * 每本书脚前靠着一张店员手写的推荐卡：书名、三行简介（文楷，像手写）、上架日期。
+ * 卡片一左一右微微歪着，顶上贴一截半透明的纸胶带，颜色取自这本书的封面（--tape，Store.tsx 写进按钮）。
+ * 悬停时书被拿起来，卡片也摆正。
+ * .fresh .fresh__row 两个类：生产构建里共享的 base.css 排在页面样式之后，单个类盖不过 .scroll-x 的 display 与 overflow */
+@media (min-width: 900px) {
+  .fresh .fresh__row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: visible;
+    padding: 4px 0 8px;
+  }
+  .fresh__book {
+    align-items: center;
+    gap: 0;
+    min-width: 0;
+    padding: 4px 4px 10px;
+  }
+  .fresh__card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-self: stretch;
+    /* 压住书脚的投影，像是立在书前 */
+    margin-top: -26px;
+    padding: 18px 16px 14px;
+    border-radius: 3px;
+    background: var(--sheet);
+    box-shadow:
+      0 1px 0 rgb(var(--shadow-rgb) / 0.05),
+      0 12px 24px -16px rgb(var(--shadow-rgb) / 0.55);
+    rotate: -1.2deg;
+    transition: rotate var(--dur-base) var(--ease-soft);
+  }
+  .fresh__book:nth-child(even) .fresh__card {
+    rotate: 1deg;
+  }
+  .fresh__book:hover .fresh__card,
+  .fresh__book:focus-visible .fresh__card {
+    rotate: 0deg;
+  }
+  /* 纸胶带，半透明、透出底下的卡片；两头是手撕的锯齿：mask 左右各一列 6px 高的格子，
+   * 每格从离边 3px 的点朝外挖掉一个 90° 的三角（锥形渐变的透明那一段），一列三角连起来就是锯齿 */
+  .fresh__card::before {
+    content: '';
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    width: 52px;
+    height: 18px;
+    translate: -50% 0;
+    rotate: -4deg;
+    /* 封面色兑一些纸色：深色封面（雾港无灯）的胶带也是浅浅的一截，不压过卡片上的字 */
+    background: color-mix(in oklab, var(--tape) 60%, var(--sheet));
+    opacity: 0.82;
+    mask:
+      conic-gradient(from 225deg at 3px 50%, transparent 90deg, #000 0) left / 51% 6px repeat-y,
+      conic-gradient(from 45deg at calc(100% - 3px) 50%, transparent 90deg, #000 0) right / 51% 6px repeat-y;
+  }
+  .fresh__title {
+    font-size: var(--fs-18);
+  }
+  .fresh__note {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    font-family: var(--font-kai);
+    font-size: var(--fs-14);
+    line-height: 1.65;
+    color: var(--ink-2);
+  }
+  .fresh__date {
+    margin-top: 4px;
+    align-self: flex-end;
+  }
+}
 
 /* ---- 馆藏目录 ---- */
 .catalog {

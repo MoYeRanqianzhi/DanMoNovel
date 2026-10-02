@@ -2,6 +2,8 @@
  * 书架（首页）
  *
  * 版面：顶部标题与日期 → "继续读"（漂浮的主角书 + 红线进度）→ 在读 / 想读 / 读完 三组书。
+ * 宽屏（≥1100px）分成两栏：左边是"书桌"，摊着正在读的那本（书的颜色洇在桌面上，往下翻书架时它留在原处），
+ * 右边是书架上的三组书。
  * 四种显示格式（名称、示意图与读者的选择见 shelfFormats.tsx）：
  * - 陈列：书微微转身站成一排，露出封面和一点厚度；窄屏上一组书横着滑
  * - 书柜：书脊朝外立在书板上，厚薄随字数、高矮略有参差，像真的书架；悬停时书会被"抽出来"一点
@@ -38,6 +40,7 @@ import { seededRandom } from '@danmo/design/lib/util';
 import { useStack, type ScreenHero, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
 import { ensureChapter } from '../reader/chapters';
+import { formatReadTime, useReadingTime } from '../readingTime';
 import { ShelfFormatPicker, formatFromCookie, useShelfFormat, type ShelfFormat } from './shelfFormats';
 import './shelf.css';
 
@@ -87,6 +90,10 @@ export function ShelfScreen({ data, screen }: ScreenProps<ShelfData>) {
   const resume = data.items[0];
   const resumeBook = resume.book;
   const heroSlot = screen.slot('hero');
+  // 这本书读了多久（示例历史加上这台设备上记的，见 readingTime.ts）。书架本来就是个人页面，服务端渲染出示例历史，
+  // 水合之后再加上本机记的
+  const readTime = useReadingTime();
+  const resumeSeconds = readTime.book(resumeBook.id);
 
   const openDetail = (book: Book, slotId: string) => push(`/book/${book.id}`, { flightFrom: slotId, book });
   // "继续读"多半会被点开：挂载后就先取好那一章，开书推进结束时正文已经就绪（seamless-reading 记忆）
@@ -120,7 +127,13 @@ export function ShelfScreen({ data, screen }: ScreenProps<ShelfData>) {
         </div>
       </header>
 
-      <section ref={resumeRef} className="resume" aria-label="继续阅读">
+      {/* --dye、--dye-2：书的封面颜色，宽屏时从书下面洇进书桌（与详情页的染色纸同一种做法，见 shelf.css） */}
+      <section
+        ref={resumeRef}
+        className="resume"
+        aria-label="继续阅读"
+        style={{ '--dye': resumeBook.palette.from, '--dye-2': resumeBook.palette.to } as CSSProperties}
+      >
         <button
           type="button"
           className="resume__book"
@@ -142,6 +155,8 @@ export function ShelfScreen({ data, screen }: ScreenProps<ShelfData>) {
         <div className="resume__info">
           <h2 className="resume__title">{resumeBook.title}</h2>
           <p className="resume__chapter">读到{chapterTitle(resumeBook, resume.chapter)}</p>
+          {/* 读了多久只在宽屏写（窄屏的"继续读"横着排，放不下第三行小字） */}
+          {resumeSeconds > 0 && <p className="resume__time">已读 {formatReadTime(resumeSeconds)}</p>}
           <ThreadProgress
             className="resume__thread"
             value={resume.progress}
@@ -154,32 +169,35 @@ export function ShelfScreen({ data, screen }: ScreenProps<ShelfData>) {
         </div>
       </section>
 
-      {GROUPS.map((group) => {
-        const entries = data.items.filter((e) => e.group === group);
-        const Item = ITEMS[format];
-        // 陈列与书柜是一排书（窄屏上横着滑）；宫格与列表把一组书全部铺开
-        const row = format === 'display' || format === 'bookcase';
-        return (
-          <section key={group} className="shelf-group" aria-label={group}>
-            <h2 className="section-title">
-              {group}
-              <small>{entries.length} 本</small>
-            </h2>
-            {/* key 随格式变：换格式时整组重新挂载，data-switched 让新的摆法淡入 */}
-            <div
-              key={format}
-              className={row ? 'shelf-row scroll-x' : 'shelf-books'}
-              data-format={format}
-              data-switched={switched || undefined}
-            >
-              {entries.map((entry) => (
-                <Item key={entry.bookId} entry={entry} sid={screen.sid} onOpen={openDetail} />
-              ))}
-            </div>
-            {format === 'bookcase' && <div className="shelf-plank" aria-hidden="true" />}
-          </section>
-        );
-      })}
+      {/* 三组书：窄屏接在"继续读"下面，宽屏是右边那一栏 */}
+      <div className="shelf-shelves">
+        {GROUPS.map((group) => {
+          const entries = data.items.filter((e) => e.group === group);
+          const Item = ITEMS[format];
+          // 陈列与书柜是一排书（窄屏上横着滑）；宫格与列表把一组书全部铺开
+          const row = format === 'display' || format === 'bookcase';
+          return (
+            <section key={group} className="shelf-group" aria-label={group}>
+              <h2 className="section-title">
+                {group}
+                <small>{entries.length} 本</small>
+              </h2>
+              {/* key 随格式变：换格式时整组重新挂载，data-switched 让新的摆法淡入 */}
+              <div
+                key={format}
+                className={row ? 'shelf-row scroll-x' : 'shelf-books'}
+                data-format={format}
+                data-switched={switched || undefined}
+              >
+                {entries.map((entry) => (
+                  <Item key={entry.bookId} entry={entry} sid={screen.sid} onOpen={openDetail} />
+                ))}
+              </div>
+              {format === 'bookcase' && <div className="shelf-plank" aria-hidden="true" />}
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }

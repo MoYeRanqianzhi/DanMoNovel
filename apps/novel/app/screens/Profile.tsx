@@ -5,6 +5,8 @@
  * 读得越久墨色越重，今天的章外面圈一道红线。
  * 每天的分钟数是服务端记着的历史（原型是 SAMPLE_WEEK）加上这台设备上记的（readingTime.ts，只算真正在读的时间）。
  * 下方是读完的书（同样可以飞进详情）和设置入口。
+ * 宽屏（≥1100px）分成两栏，与书架的"书桌 + 书架"同一种分法：左栏是"你"——一方大印、名字、设置；
+ * 右栏是"你读的"——这一周的印章（章下写着每天读了几分钟）和读完的书（书下写着读了多久）。
  */
 import { useState, type CSSProperties } from 'react';
 import { ChevronRight, FlaskConical, Info, Palette, Sparkles } from 'lucide-react';
@@ -17,7 +19,7 @@ import { useClientValue } from '@danmo/design/lib/useClientValue';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme, type MotionPref } from '@danmo/design/theme/ThemeContext';
 import { getTheme } from '@danmo/design/theme/themes';
-import { SAMPLE_WEEK, dayKey, useReadingTime } from '../readingTime';
+import { SAMPLE_WEEK, dayKey, formatReadTime, useReadingTime } from '../readingTime';
 import './profile.css';
 
 const DAY_NAMES = ['一', '二', '三', '四', '五', '六', '日'];
@@ -74,7 +76,8 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
   return (
     <div className="page profile">
       <header className="profile-head">
-        <Seal text="读" size={56} />
+        {/* 印的大小随断点变（窄屏 56px、宽屏 80px，在 profile.css 里）：style 里的 --seal 盖过 size 写进去的那个 */}
+        <Seal text="读" style={{ '--seal': 'var(--profile-seal)' } as CSSProperties} />
         <div>
           <h1 className="page-title">夜读人</h1>
           <p className="profile-head__sub">在耽墨读了 128 天</p>
@@ -98,6 +101,10 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
               <span className="week__day" aria-hidden="true">
                 {DAY_NAMES[i]}
               </span>
+              {/* 这天读了几分钟：只在宽屏写（窄屏的章小，章下只放得下一个字）；读屏软件从章的 aria-label 里读到 */}
+              <span className="week__min" aria-hidden="true">
+                {minutes ? `${minutes} 分` : '—'}
+              </span>
             </li>
           ))}
         </ol>
@@ -110,6 +117,7 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
         <div className="profile-done__row">
           {done.map((book) => {
             const slotId = screen.slot(`done:${book.id}`);
+            const seconds = readTime.book(book.id);
             return (
               <button
                 key={book.id}
@@ -117,8 +125,10 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
                 className="profile-done__book"
                 onClick={() => push(`/book/${book.id}`, { flightFrom: slotId, book })}
               >
-                <BookSlot slotId={slotId} book={book} width={64} {...POSES.shelf} label={null} />
+                <BookSlot slotId={slotId} book={book} width={{ base: 64, wide: 96 }} {...POSES.shelf} label={null} />
                 <span>{book.title}</span>
+                {/* 读了多久只在宽屏写，窄屏的书只有 64px 宽 */}
+                {seconds > 0 && <span className="profile-done__time">读了 {formatReadTime(seconds)}</span>}
               </button>
             );
           })}
