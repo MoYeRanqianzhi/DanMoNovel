@@ -7,8 +7,19 @@
  * 两个钩子都直接写书元素上的 CSS 变量（--tilt-x/--tilt-y、--spin），
  * 不经过 React 状态，避免每帧重渲染整本书。飞行引擎读取计算样式时会把这些附加角算进去，
  * 所以书被拖到什么角度，离开页面时就从什么角度起飞。
+ *
+ * 动起来的快慢按经过的时间算，不按帧数算：系数是在每秒 60 帧的屏幕上调的，
+ * 原先每帧推进一步，在 120Hz、168Hz 的屏幕上就快了两三倍。现在跟随按时间常数衰减，
+ * 弹簧按固定的 60 分之一秒一步推进、两步之间插值，所以各种刷新率上一样快，高刷新率屏上也一样顺。
  */
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+
+/** 系数是按每秒 60 帧调的：一帧的毫秒数 */
+const FRAME = 1000 / 60;
+/** 两帧之间最多按这么久算：切回标签页时 rAF 的时间差可能有好几秒，不能一步跳过头 */
+const MAX_DT = 64;
+/** 倾斜跟随的时间常数（毫秒）：每 60 分之一秒靠近 12%，折合约 130 毫秒 */
+const TILT_TAU = -FRAME / Math.log(1 - 0.12);
 
 /**
  * 指针跟随倾斜。
@@ -34,16 +45,26 @@ export function useTilt(
     let curX = 0;
     let curY = 0;
     let raf = 0;
+    /** 上一帧的时刻；循环停着时是 0，重新起步的第一帧按一帧算 */
+    let last = 0;
 
-    // 每帧向目标角度靠近 12%，得到柔和的跟随；接近目标后停止循环，不空转
-    const loop = () => {
+    // 按经过的时间向目标角度靠近（时间常数 TILT_TAU），得到柔和的跟随；接近目标后停止循环，不空转
+    const loop = (now: number) => {
+      const dt = last ? Math.min(now - last, MAX_DT) : FRAME;
+      last = now;
       // 正在拖拽翻转时不倾斜，避免两种角度打架
       if (book.dataset.dragging !== undefined) targetX = targetY = 0;
-      curX += (targetX - curX) * 0.12;
-      curY += (targetY - curY) * 0.12;
+      const k = 1 - Math.exp(-dt / TILT_TAU);
+      curX += (targetX - curX) * k;
+      curY += (targetY - curY) * k;
       book.style.setProperty('--tilt-x', `${curX.toFixed(2)}deg`);
       book.style.setProperty('--tilt-y', `${curY.toFixed(2)}deg`);
-      raf = Math.abs(targetX - curX) + Math.abs(targetY - curY) > 0.02 ? requestAnimationFrame(loop) : 0;
+      if (Math.abs(targetX - curX) + Math.abs(targetY - curY) > 0.02) {
+        raf = requestAnimationFrame(loop);
+      } else {
+        raf = 0;
+        last = 0;
+      }
     };
     const kick = () => {
       if (!raf) raf = requestAnimationFrame(loop);
@@ -97,8 +118,9 @@ export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean
     const book = bookRef.current;
     if (!enabled || !book) return;
 
-    let angle = 0; // 当前附加角（度）
-    let velocity = 0; // 度/帧
+    let angle = 0; // 当前附加角（度）；弹簧推进时是模拟到的角度，比画在屏幕上的最多早一步
+    let shown = 0; // 画在书上的角度（弹簧两步之间插值出来的）
+    let velocity = 0; // 度/帧（按每秒 60 帧算的一帧）
     let target: number | null = null;
     /** 按下了、还没松手 */
     let pressed = false;
@@ -111,22 +133,37 @@ export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean
     let lastT = 0;
     let raf = 0;
 
-    const write = () => book.style.setProperty('--spin', `${angle.toFixed(2)}deg`);
+    const write = (a: number) => {
+      shown = a;
+      book.style.setProperty('--spin', `${a.toFixed(2)}deg`);
+    };
 
-    // 阻尼弹簧：把角度拉向目标（0°=正面，180°=背面，可以是任意 180° 的整数倍）
+    /**
+     * 阻尼弹簧：把角度拉向目标（0°=正面，180°=背面，可以是任意 180° 的整数倍）。
+     * 按固定的一帧（FRAME）一步推进，攒够一帧走一步；画出来的角度在上一步与这一步之间按攒下的时间插值
+     */
     const settle = () => {
       cancelAnimationFrame(raf);
-      const step = () => {
+      let last = 0;
+      let acc = 0;
+      let prev = angle;
+      const step = (now: number) => {
         if (target === null) return;
-        velocity = (velocity + (target - angle) * 0.1) * 0.78;
-        angle += velocity;
+        acc += last ? Math.min(now - last, MAX_DT) : FRAME;
+        last = now;
+        while (acc >= FRAME) {
+          acc -= FRAME;
+          prev = angle;
+          velocity = (velocity + (target - angle) * 0.1) * 0.78;
+          angle += velocity;
+        }
         if (Math.abs(target - angle) < 0.05 && Math.abs(velocity) < 0.05) {
           angle = target;
-          write();
+          write(angle);
           raf = 0;
           return;
         }
-        write();
+        write(prev + (angle - prev) * (acc / FRAME));
         raf = requestAnimationFrame(step);
       };
       raf = requestAnimationFrame(step);
@@ -163,6 +200,8 @@ export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean
         target = null;
         velocity = 0;
         cancelAnimationFrame(raf);
+        // 弹簧停在两步之间时，从画着的角度接着转（模拟的角度可能已经早了一步）
+        angle = shown;
         lastX = e.clientX;
         lastT = e.timeStamp;
         book.dataset.dragging = '';
@@ -171,10 +210,10 @@ export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean
       const dx = e.clientX - lastX;
       const dt = Math.max(1, e.timeStamp - lastT);
       angle += dx * 0.6;
-      velocity = ((dx * 0.6) / dt) * 16; // 换算成"每帧"的速度，供松手后的惯性使用
+      velocity = ((dx * 0.6) / dt) * FRAME; // 换算成"每帧"的速度，供松手后的惯性使用
       lastX = e.clientX;
       lastT = e.timeStamp;
-      write();
+      write(angle);
     };
     const onUp = (e: PointerEvent) => {
       if (!pressed) return;
@@ -186,7 +225,7 @@ export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean
       }
       dragging = false;
       delete book.dataset.dragging;
-      // 按惯性预测停下的位置，再吸附到最近的正面/背面
+      // 按惯性预测停下的位置（再转 10 帧，约 170 毫秒），再吸附到最近的正面/背面
       target = Math.round((angle + velocity * 10) / 180) * 180;
       setSide(sideOf(target));
       settle();
