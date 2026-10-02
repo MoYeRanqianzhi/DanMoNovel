@@ -26,6 +26,7 @@ import {
   type RefObject,
 } from 'react';
 import { Copy, Highlighter, MessageSquareQuote, PenLine, Trash2 } from 'lucide-react';
+import { onRadioGroupKeyDown } from '@danmo/design/lib/radioGroup';
 import { LINE_STYLES, comparePoints, type LineStyle, type Note, type TextPoint } from './marks';
 import { caretAt, charRect, rangeOf, textPointOf, wordAt } from './textpoints';
 
@@ -582,7 +583,7 @@ export function SelectionOverlay({ env, selection, tick, touch, actions, note, n
             </p>
           )}
           <div className="rd-tools__row">
-            <div className="rd-tools__styles" role="radiogroup" aria-label="划线样式">
+            <div className="rd-tools__styles" role="radiogroup" aria-label="划线样式" onKeyDown={onRadioGroupKeyDown}>
               {LINE_STYLES.map((s) => (
                 <button
                   key={s.id}

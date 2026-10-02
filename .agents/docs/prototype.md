@@ -52,11 +52,15 @@ packages/design/src/
                 Stamp.tsx + stamp.css（盖章：落下与印泥洇开，still 直接显示盖好的样子）、
                 ChoiceCards.tsx + choice-cards.css（选项卡片：示意图 + 名称 + 一行说明，选中一圈红线；书架显示格式、阅读器翻页方式、作者站选纸共用。
                 示意图由调用方画 <svg> 里面的内容，外壳给格子大小与笔触，可用 glyph-faint、glyph-thin、glyph-bold、glyph-top 四个类；
-                columns 定一行几张，compact 是阅读设置里的紧凑版；点了要不要收起面板由调用方决定）
+                columns 定一行几张，compact 是阅读设置里的紧凑版；点了要不要收起面板由调用方决定：传 onPick 的点击、回车、空格后收起，
+                方向键只换选项、不调用 onPick）
   manuscript/   稿纸（第 14 节）：Manuscript.tsx + manuscript.css、danmo-grid.woff2（方格补字字体）与 danmo-grid-OFL.txt
   charts/       Hills.tsx + hills.css（远山与图例 HillsLegend，第 13 节；作者站数据页、管理站总览共用）
   lib/          util.ts（cls、seededRandom、lerp）、format.ts（formatNumber、formatCount）、version.ts（VERSION）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts、
-                curve.ts（q、smooth、hash：服务端与浏览器画得一字不差的曲线工具，第 13 节）
+                curve.ts（q、smooth、hash：服务端与浏览器画得一字不差的曲线工具，第 13 节）、
+                radioGroup.ts（onRadioGroupKeyDown：挂在 radiogroup 容器上，←→↑↓ 换一个、Home/End 到头尾，焦点跟着走；
+                默认点一下移到的 radio，传 select 自己定"选中"做什么——ChoiceCards 传 onChange，字体列表传空函数只挪焦点。
+                处理完 stopPropagation，阅读器挂在 window 上的翻页不跟着翻。Tab 仍逐个走，没做 roving tabindex）
   fonts/        catalog.ts（平台字体目录、系统字体、字体 id 与字体栈）、imported.ts（导入字体：IndexedDB 与 FontFace）、
                 client.ts（模拟客户端的字体下载）、FontList.tsx + font-list.css（字体列表）、sfnt.ts（格式识别、读字体名、拆合集）
   paper/        阅读纸张（第 10 节"背景"）：papers.ts（十种纸张的 id 与名称）、PaperTexture.tsx（纹理层）、
@@ -294,7 +298,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - 书柜 `bookcase`：原"书脊"视图，`POSES.spine`，立在书板上；
     - 宫格 `grid`：`POSES.front`，`repeat(auto-fill, minmax(100px, 1fr))`，390px 三列、320px 两列，一组书全部铺开（用户原话"宫格是完整显示书架中的书"）；
     - 列表 `list`：`POSES.thumb` 小封面 + 书名、作者·字数；在读的书加"读到第 N 章"与 `ThreadProgress`；宽屏两列。
-  - **切换**：顶部是格式按钮（lucide 图标 + 当前格式名），点开是 Sheet"显示格式"，2×2 的选项卡片（共用的 ChoiceCards，第 2 节），每张一幅 64×40 的示意图、名称与一行说明；选中后立刻换上并收起面板。换格式时整组按 `key={format}` 重新挂载，`data-switched` 让新的摆法淡入，首次打开不播。
+  - **切换**：顶部是格式按钮（lucide 图标 + 当前格式名），点开是 Sheet"显示格式"，2×2 的选项卡片（共用的 ChoiceCards，第 2 节），每张一幅 64×40 的示意图、名称与一行说明；点选后立刻换上并收起面板（方向键只换格式、不收起，回车或空格才收起）。换格式时整组按 `key={format}` 重新挂载，`data-switched` 让新的摆法淡入，首次打开不播。
   - **记住选择**：按设备存 `danmo:shelf-format`（本机存储为准）；另写只挂在 `/shelf` 下的 cookie `danmo-shelf-format`，loader 用 `formatFromCookie` 校验后给出 `serverFormat`，服务端渲染与水合都用它，刷新不闪。
     - cookie 只挂在 `/shelf`：公开页面的请求不带它，不影响 CDN。页面内跳转取数据的 `/shelf.data` 也不带它（路径匹配要求下一个字符是 `/`），那时 `serverFormat` 是默认值、不作数，挂载时直接读本机存储。
     - 两者不一致时（cookie 被清掉或刚好是页面内跳转），挂载后按本机存储把 cookie 补写一遍。
@@ -832,7 +836,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 写满目标的提示只说一次，并且只给这次打开之后写满的：换上本机副本时把当时的今日字数记进 openToday，openToday 已经不少于目标就不提示。只比较服务端的 TODAY_WORDS 不够：目标改成 1,000 后（TODAY_WORDS 是 931），副本多写 69 字，一打开就会提示。
   - 打字时 `.write[data-typing]`，顶栏与左栏淡到 0.22，pointermove 或 pointerdown 恢复。
   - 目录 Outline：分卷，行用共用的 .toc-list 加状态标记；宽屏（≥1200px）是左栏（sticky，自己滚动），其余收进顶栏按钮打开的 Sheet。当前章滚到中间时只滚最近一层可滚动的祖先；目录不可见时（窄屏上隐藏的左栏）跳过，否则找到的祖先是整页。
-  - 面板 panels.tsx：发布（立即或定时：今天、明天、后天 × 08/12/18/20/22 点；作者的话最多 300 字）；提交后盖章，结果用 role="status" 播报。选纸是三张选项卡片（ChoiceCards，64×44 的示意图），选中后收起面板。
+  - 面板 panels.tsx：发布（立即或定时：今天、明天、后天 × 08/12/18/20/22 点；作者的话最多 300 字）；提交后盖章，结果用 role="status" 播报。选纸是三张选项卡片（ChoiceCards，64×44 的示意图），点选后收起面板（onPick；方向键只换纸，不收起）。
   - 预览：阅读纸色、PaperTexture(DEFAULT_PAPER)、文楷 19px、行高 1.95、两字缩进，作者的话排在章末。
   - 已知不足：定时的时间只是给人看的字，没有时区换算；浏览器后退从写作页直接回书房（换章不进历史记录）。
 - **互动 /readers**（readers/Readers.tsx，标签页）：

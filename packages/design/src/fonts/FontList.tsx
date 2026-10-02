@@ -15,6 +15,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'r
 import { ArrowDownToLine, ChevronLeft, PenLine, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '../components/overlays';
 import { IconButton } from '../components/ui';
+import { onRadioGroupKeyDown } from '../lib/radioGroup';
 import {
   DEFAULT_FONT,
   PLATFORM_FONTS,
@@ -136,7 +137,8 @@ export function FontList({ value, onChange, preview, onBack }: FontListProps) {
         阅读设置
       </button>
 
-      <div role="radiogroup" aria-label="阅读字体">
+      {/* 方向键只挪焦点、回车或空格才选：选中一款没下载的字体就开始下载，不能按着方向键一路下载过去 */}
+      <div role="radiogroup" aria-label="阅读字体" onKeyDown={(e) => onRadioGroupKeyDown(e, () => {})}>
         <section className="font-group">
           <h3 className="font-group__title">系统</h3>
           <FontRow

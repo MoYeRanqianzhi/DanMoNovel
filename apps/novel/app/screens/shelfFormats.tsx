@@ -209,10 +209,8 @@ export function ShelfFormatPicker({ value, onChange }: { value: ShelfFormat; onC
           label="显示格式"
           value={value}
           options={SHELF_FORMATS}
-          onChange={(format) => {
-            onChange(format);
-            setOpen(false);
-          }}
+          onChange={onChange}
+          onPick={() => setOpen(false)}
           glyph={(format) => <FormatGlyph format={format} />}
           glyphSize={[64, 40]}
           columns={2}

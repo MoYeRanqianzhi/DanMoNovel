@@ -33,6 +33,7 @@ import { TITLE_FONTS, TITLE_FONT_IDS, ensureTitleFont } from '@danmo/design/book
 import { BackFace, COVER_BASE, SpineFace } from '@danmo/design/book3d/faces';
 import { Motif } from '@danmo/design/book3d/motifs';
 import { Seal, Segmented } from '@danmo/design/components/ui';
+import { onRadioGroupKeyDown } from '@danmo/design/lib/radioGroup';
 import { BACK_STYLES, SPINE_STYLES, effectiveBack, effectiveSpine, usesImage, type Draft, type FaceMode } from './draft';
 import { MOTIFS, ORNAMENTS, PALETTES, SAMPLES, customPalette } from './presets';
 
@@ -102,7 +103,7 @@ function FrontMaker({ api }: { api: StudioApi }) {
         />
       </Section>
       <Section title="书名字体">
-        <div className="font-tiles" role="radiogroup" aria-label="书名字体">
+        <div className="font-tiles" role="radiogroup" aria-label="书名字体" onKeyDown={onRadioGroupKeyDown}>
           {TITLE_FONT_IDS.map((font) => (
             <FontTile
               key={font}
@@ -156,7 +157,7 @@ function FrontMaker({ api }: { api: StudioApi }) {
         </Section>
       )}
       <Section title="点缀" note={ORNAMENT_NOTES[draft.vector.ornament]}>
-        <div className="ornament-tiles" role="radiogroup" aria-label="点缀">
+        <div className="ornament-tiles" role="radiogroup" aria-label="点缀" onKeyDown={onRadioGroupKeyDown}>
           {ORNAMENTS.map((o) => (
             <button
               key={o.id}
@@ -224,7 +225,7 @@ function PaletteSection({ api }: { api: StudioApi }) {
 
   return (
     <Section title="配色" note={selected === 'custom' ? '书名与腰封的颜色按底色自动配，保证读得清' : undefined}>
-      <div className="swatches" role="radiogroup" aria-label="配色">
+      <div className="swatches" role="radiogroup" aria-label="配色" onKeyDown={onRadioGroupKeyDown}>
         {options.map((o) => (
           <Swatch key={o.id} name={o.name} palette={o.palette} checked={selected === o.id} onClick={() => setPalette(o.palette)} />
         ))}
@@ -275,7 +276,7 @@ function MotifSection({ api }: { api: StudioApi }) {
   const style = { '--c-from': draft.palette.from, '--c-to': draft.palette.to } as CSSProperties;
   return (
     <Section title="纹样">
-      <div className="motif-tiles" role="radiogroup" aria-label="纹样">
+      <div className="motif-tiles" role="radiogroup" aria-label="纹样" onKeyDown={onRadioGroupKeyDown}>
         {MOTIFS.map((m) => (
           <button
             key={m.id}
@@ -425,7 +426,7 @@ export function SpinePanel({ api }: { api: StudioApi }) {
       {mode === 'auto' ? (
         <>
           <Section title="样式" note={spineNote(style, image)}>
-            <div className="spine-shelf" role="radiogroup" aria-label="书脊样式">
+            <div className="spine-shelf" role="radiogroup" aria-label="书脊样式" onKeyDown={onRadioGroupKeyDown}>
               {SPINE_STYLES[image ? 'image' : 'vector'].map((s) => (
                 <button key={s} type="button" role="radio" aria-checked={style === s} className="spine-chip" onClick={() => setSpine({ style: s })}>
                   <FaceChip face="spine" book={chipBook(s)} k={0.5} />
@@ -435,7 +436,7 @@ export function SpinePanel({ api }: { api: StudioApi }) {
             </div>
           </Section>
           <Section title="书脊上的字">
-            <div className="font-tiles" role="radiogroup" aria-label="书脊上的字体">
+            <div className="font-tiles" role="radiogroup" aria-label="书脊上的字体" onKeyDown={onRadioGroupKeyDown}>
               <FontTile
                 font={image ? 'song' : draft.vector.font}
                 name="跟封面"
@@ -492,7 +493,7 @@ export function BackPanel({ api }: { api: StudioApi }) {
       {mode === 'auto' ? (
         <>
           <Section title="样式" note={BACK_NOTES[style]}>
-            <div className="back-tiles" role="radiogroup" aria-label="封底样式">
+            <div className="back-tiles" role="radiogroup" aria-label="封底样式" onKeyDown={onRadioGroupKeyDown}>
               {BACK_STYLES[usesImage(draft, 'front') ? 'image' : 'vector'].map((s) => (
                 <button
                   key={s}

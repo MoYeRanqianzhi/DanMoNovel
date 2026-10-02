@@ -9,6 +9,7 @@ import { ChoiceCards } from '@danmo/design/components/ChoiceCards';
 import { IconButton, Segmented } from '@danmo/design/components/ui';
 import { fontStack } from '@danmo/design/fonts/catalog';
 import { useFontName } from '@danmo/design/fonts/FontList';
+import { onRadioGroupKeyDown } from '@danmo/design/lib/radioGroup';
 import { PaperTexture } from '@danmo/design/paper/PaperTexture';
 import { PAPERS } from '@danmo/design/paper/papers';
 import { originOf, useTheme } from '@danmo/design/theme/ThemeContext';
@@ -307,7 +308,7 @@ export function BackgroundPanel({
         </div>
       </Row>
       <Row label="背景" stacked>
-        <div className="rd-papers" role="radiogroup" aria-label="背景">
+        <div className="rd-papers" role="radiogroup" aria-label="背景" onKeyDown={onRadioGroupKeyDown}>
           {PAPERS.map((p) => (
             <button
               key={p.id}

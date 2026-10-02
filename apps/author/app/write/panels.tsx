@@ -160,10 +160,8 @@ export function PaperPicker({
         label="稿纸"
         value={value}
         options={PAPER_MODES}
-        onChange={(paper) => {
-          onChange(paper);
-          onClose();
-        }}
+        onChange={onChange}
+        onPick={onClose}
         glyph={(paper) => <PaperGlyph mode={paper} />}
         glyphSize={[64, 44]}
         columns={3}

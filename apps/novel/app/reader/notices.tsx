@@ -22,6 +22,7 @@ import { chapterTitle } from '@danmo/data/chapters';
 import { BookLoader } from '@danmo/design/book3d/BookLoader';
 import { useToast } from '@danmo/design/components/overlays';
 import { Seal } from '@danmo/design/components/ui';
+import { onRadioGroupKeyDown } from '@danmo/design/lib/radioGroup';
 import {
   ensurePreview,
   previewState,
@@ -162,7 +163,7 @@ export function LockedNotice({ book, chapter, vertical }: NoticeProps & { vertic
         </header>
 
         {plans.length > 1 && (
-          <div className="rd-plans" role="radiogroup" aria-label="订阅范围">
+          <div className="rd-plans" role="radiogroup" aria-label="订阅范围" onKeyDown={onRadioGroupKeyDown}>
             {plans.map((p) => (
               <button
                 key={p.id}

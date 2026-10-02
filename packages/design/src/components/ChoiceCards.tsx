@@ -12,10 +12,12 @@
  * - glyph-bold：粗线（书柜的书板）
  * - glyph-top：填上面板的底色，盖住下面的线（"覆盖"翻页里压在上面的那张纸）
  *
- * 读屏：整组是 radiogroup，每张卡片是 radio，名字是卡片里的名称加说明。
- * 点了卡片要不要收起面板由调用方决定（书架格式、选纸选完就收起；翻页方式留着，可以接着调别的设置）。
+ * 读屏：整组是 radiogroup，每张卡片是 radio，名字是卡片里的名称加说明；方向键换选项（lib/radioGroup）。
+ * 点了卡片要不要收起面板由调用方决定：书架格式、选纸传 onPick 收起（方向键只换选项、不收起）；
+ * 翻页方式不传，留着可以接着调别的设置。
  */
 import type { CSSProperties, ReactNode } from 'react';
+import { onRadioGroupKeyDown } from '../lib/radioGroup';
 import { cls } from '../lib/util';
 import './choice-cards.css';
 
@@ -40,6 +42,11 @@ interface ChoiceCardsProps<T extends string> {
   columns: number;
   /** 紧凑的卡片：名称用无衬线小一号、留白少一些。阅读设置里用，那里一个面板要放下很多设置 */
   compact?: boolean;
+  /**
+   * 点了就定下来之后要做的事（收起面板）：点击、回车、空格时在 onChange 之后调用；
+   * 方向键只换选择（onChange），不调用它，不然按一下方向键面板就收起了
+   */
+  onPick?: (value: T) => void;
   className?: string;
 }
 
@@ -52,6 +59,7 @@ export function ChoiceCards<T extends string>({
   glyphSize: [w, h],
   columns,
   compact = false,
+  onPick,
   className,
 }: ChoiceCardsProps<T>) {
   return (
@@ -61,6 +69,7 @@ export function ChoiceCards<T extends string>({
       aria-label={label}
       data-compact={compact || undefined}
       style={{ '--choice-cols': columns } as CSSProperties}
+      onKeyDown={(e) => onRadioGroupKeyDown(e, (radio) => onChange(radio.dataset.value as T))}
     >
       {options.map((o) => (
         <button
@@ -68,8 +77,12 @@ export function ChoiceCards<T extends string>({
           type="button"
           role="radio"
           aria-checked={o.value === value}
+          data-value={o.value}
           className="choice-card"
-          onClick={() => onChange(o.value)}
+          onClick={() => {
+            onChange(o.value);
+            onPick?.(o.value);
+          }}
         >
           <svg className="choice-card__glyph" viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden="true">
             {glyph(o.value)}
