@@ -24,6 +24,7 @@ import { useClientValue, useMounted } from '@danmo/design/lib/useClientValue';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
 import { ensureChapter } from '../reader/chapters';
+import { formatReadTime, useReadingTime } from '../readingTime';
 import './detail.css';
 
 export interface BookData {
@@ -56,6 +57,9 @@ export function BookScreen({ data, screen }: ScreenProps<BookData>) {
   const { book, toc } = data;
   const entry = useShelfEntry(book.id);
   const ready = useMounted();
+  const readTime = useReadingTime();
+  /** 这本书读了多久：服务端与水合时不显示（个人数据），之后是示例历史加上这台设备上记的 */
+  const readSeconds = ready ? readTime.book(book.id) : 0;
   const reading = !!entry && entry.progress > 0 && entry.progress < 1;
   /** "开始阅读 / 继续读"会打开的那一章 */
   const startChapter = reading ? entry.chapter : 0;
@@ -165,6 +169,9 @@ export function BookScreen({ data, screen }: ScreenProps<BookData>) {
               <dd>{formatHeat(book.heat)}</dd>
             </div>
           </dl>
+
+          {/* 读者自己在这本书里读了多久（个人数据，只在浏览器里显示；只算真正在读的时间） */}
+          {readSeconds > 0 && <p className="detail-mine">已读 {formatReadTime(readSeconds)}</p>}
 
           <PairLine pair={book.pair} />
 

@@ -721,6 +721,15 @@
   box-shadow: 0 0 0 3px var(--sheet);
 }
 
+/* 进度行下面一行小字：这本书读了多久、今天读了多久 */
+.rd-bar__time {
+  margin-top: -3px;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--ink-2) 85%, transparent);
+  font-variant-numeric: tabular-nums;
+}
 .rd-bar__tools {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

@@ -94,6 +94,22 @@
   font-size: var(--fs-16);
   font-variant-numeric: tabular-nums;
 }
+/* 读者自己在这本书里读了多久：一行小字，前面一小段红线（这是读者自己的进度信息） */
+.detail-mine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.detail-mine::before {
+  content: '';
+  width: 14px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: var(--thread);
+}
 .detail-tags {
   display: flex;
   flex-wrap: wrap;

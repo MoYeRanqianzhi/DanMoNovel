@@ -3,6 +3,7 @@
  *
  * 阅读时长用一句话 + 一排"印章"表示：一周七天，每天盖一方章，
  * 读得越久墨色越重，今天的章外面圈一道红线。
+ * 每天的分钟数是服务端记着的历史（原型是 SAMPLE_WEEK）加上这台设备上记的（readingTime.ts，只算真正在读的时间）。
  * 下方是读完的书（同样可以飞进详情）和设置入口。
  */
 import { useState, type CSSProperties } from 'react';
@@ -16,6 +17,7 @@ import { useClientValue } from '@danmo/design/lib/useClientValue';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme, type MotionPref } from '@danmo/design/theme/ThemeContext';
 import { getTheme } from '@danmo/design/theme/themes';
+import { SAMPLE_WEEK, dayKey, useReadingTime } from '../readingTime';
 import './profile.css';
 
 const DAY_NAMES = ['一', '二', '三', '四', '五', '六', '日'];
@@ -31,9 +33,12 @@ export interface ProfileData {
 export function loadProfile(): ProfileData {
   return {
     done: SHELF.filter((e) => e.group === '读完').map((e) => getBook(e.bookId)),
-    week: [45, 30, 80, 0, 52, 120, 45],
+    week: [...SAMPLE_WEEK],
   };
 }
+
+/** 上周一共读了多少分钟（原型示例）：本周的总数与它比 */
+const LAST_WEEK = 332;
 
 /** 分钟数 → 印章墨色浓度：没读是 0，读满两小时是 1 */
 function inkLevel(minutes: number): number {
@@ -51,11 +56,20 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
   const { theme, motionPref, setMotionPref } = useTheme();
   const [aboutOpen, setAboutOpen] = useState(false);
 
-  const { done, week: WEEK } = data;
-  const total = WEEK.reduce((a, b) => a + b, 0);
+  const { done } = data;
   // 今天是周几只在浏览器里算（服务端与读者的时区可能不同）。JS 的 getDay()：0 是周日，
   // 换算成"周一 = 0"的下标；服务端返回 -1，即不标出今天
   const today = useClientValue(() => (new Date().getDay() + 6) % 7, -1);
+  const readTime = useReadingTime();
+  // 本周每天：历史加上这台设备上记的（只算到今天；今天之后的日子还没到）
+  const WEEK = data.week.map((minutes, i) => {
+    if (today < 0 || i > today) return minutes;
+    const d = new Date();
+    d.setDate(d.getDate() - (today - i));
+    return minutes + Math.floor(readTime.day(dayKey(d)) / 60);
+  });
+  const total = WEEK.reduce((a, b) => a + b, 0);
+  const diff = total - LAST_WEEK;
 
   return (
     <div className="page profile">
@@ -69,7 +83,9 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
 
       <section className="week" aria-label="本周阅读">
         <p className="week__total">{formatDuration(total)}</p>
-        <p className="week__cap">这周的阅读时长，比上周多 40 分钟</p>
+        <p className="week__cap">
+          这周的阅读时长，{diff === 0 ? '和上周一样' : `比上周${diff > 0 ? '多' : '少'} ${formatDuration(Math.abs(diff))}`}
+        </p>
         <ol className="week__stamps">
           {WEEK.map((minutes, i) => (
             <li key={i} data-today={i === today || undefined}>

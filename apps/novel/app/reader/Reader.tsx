@@ -30,6 +30,9 @@
  * - 选择（Selection.tsx）：鼠标拖、触屏长按后拖；选中后的工具条是复制、划线、想法、段评。点已有的划线浮出它的小浮层。
  * - 段末的小气泡是段评条数（设置里可以关），点开是这一段的段评（remarks.tsx）。
  *
+ * 阅读时间（readingTime.ts）：眼前是正文时起表，翻页、滚动、点按都算阅读动作，隔得不久的那一段记进去；
+ * 下栏进度行下面一行小字写这本书读了多久、今天读了多久。
+ *
  * 服务端渲染：阅读页也是公开页面（可被 CDN 缓存），但服务端只输出本章的试读开头
  * （标题与开头的一小段，按字数封顶，见 api.ts 的 chapterLead；订阅页的预览也是这一段），
  * 供搜索引擎收录与读屏器读取；完整正文在浏览器里另行获取并分页。
@@ -58,6 +61,7 @@ import { chapterTitle } from '@danmo/data/chapters';
 import { paragraphCommentCount } from '@danmo/data/comments';
 import { Sheet, useToast } from '@danmo/design/components/overlays';
 import { IconButton, ThreadProgress } from '@danmo/design/components/ui';
+import { useClientValue } from '@danmo/design/lib/useClientValue';
 import { useElementSize } from '@danmo/design/lib/useElementSize';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
@@ -65,6 +69,7 @@ import { DEFAULT_FONT, ensureFont, fontStack, importedIdOf, platformFont } from 
 import { FontList } from '@danmo/design/fonts/FontList';
 import { registerImported } from '@danmo/design/fonts/imported';
 import { PaperTexture } from '@danmo/design/paper/PaperTexture';
+import { SAMPLE_WEEK, dayKey, formatReadTime, useReadingClock, useReadingTime } from '../readingTime';
 import { autoSubscribeAhead, chapterState, prefetchAround, useChapterCache } from './chapters';
 import { DirectoryPanel, type DirTab } from './directory';
 import {
@@ -366,6 +371,12 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
   }, [ready, pending]);
   const leadIn = !booted && pending;
 
+  /** 阅读时间：阅读器在最上面、眼前是正文时走表；每次阅读动作调一次 readTick */
+  const readTick = useReadingClock(book.id, isTop && current?.status === 'ready');
+  const readTime = useReadingTime();
+  /** 今天是周几（周一 = 0）：只在浏览器里算，服务端与水合时是 -1，不写"今天" */
+  const weekday = useClientValue(() => (new Date().getDay() + 6) % 7, -1);
+
   /* ---------------- 跳回：原位置与"读了多少" ---------------- */
 
   /** 记下或清掉原位置（同时写进本机） */
@@ -408,6 +419,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
    */
   const readOn = useCallback(
     (n: number, reading: number) => {
+      readTick();
       advance(n);
       if (n <= 0) return;
       autoSubscribeAhead(book, reading).then(
@@ -427,7 +439,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
         () => {},
       );
     },
-    [advance, book, toast],
+    [advance, book, toast, readTick],
   );
 
   // 停在"加载中"的那一页时正文到了，或在订阅页上订阅成功：标记这一章淡入，片刻后清掉（之后新挂上的页面层不再淡入）
@@ -909,6 +921,7 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     e.target instanceof Element && !!e.target.closest('button, a, input, .rd-lock__card');
   const onPointerDown = (e: ReactPointerEvent) => {
     setTouch(e.pointerType !== 'mouse');
+    readTick();
     if (fromControl(e)) {
       down.current = null;
       return;
@@ -1217,6 +1230,11 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
             下一章
           </button>
         </div>
+        {/* 阅读时间：这本书一共读了多久、今天读了多久（只算真正在读的时间，见 readingTime.ts） */}
+        <p className="rd-bar__time">
+          本书读了 {formatReadTime(readTime.book(book.id))}
+          {weekday >= 0 && ` · 今天 ${formatReadTime(SAMPLE_WEEK[weekday] * 60 + readTime.day(dayKey()))}`}
+        </p>
         <div className="rd-bar__tools">
           <button type="button" className="rd-tool" onClick={() => setPanel('toc')}>
             <List aria-hidden="true" />
