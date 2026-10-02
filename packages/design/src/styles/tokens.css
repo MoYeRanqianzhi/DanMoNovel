@@ -79,12 +79,37 @@
   initial-value: 0px;
 }
 
+/* ---- 全角的弯双引号 ----
+ * 中文里的“”占一个字宽（左引号贴着后面的字、右引号贴着前面的字）。可界面的两种字体给的都是窄字形：
+ * system-ui 在西文系统上是 Segoe UI、SF，苹方也是窄的；文楷只有 0.35 个字宽、又没有 fwid 特性。
+ * 窄引号紧贴着汉字，与全角的逗号、句号不搭，正文两端对齐时还把一行的字距拉松。
+ * 这里两款补字字体只管“”两个码位（unicode-range），放在字体栈最前面，其余的字照旧：
+ * - Danmo Quotes：思源黑体的“”（本来就是一个字宽），配无衬线。由 scripts/gen-quotes-font.py 生成，不到 1KB；
+ * - Danmo Quotes Kai：稿纸补字字体 Danmo Grid 里文楷的“”（gen-grid-font.py 改成了一个字宽），配楷体，
+ *   与稿纸用同一个文件，浏览器只下载一次。
+ * unicode-range 不含空格，按 CSS Fonts 的规定它们不算"第一个可用字体"：行框、基线、ex 仍由原来的字体决定。
+ * 单引号‘’不管：用户写的英文撇号也是 ’，做成一个字宽，"Let’s"会散开。
+ * 阅读器的字体栈（fonts/catalog.ts）里窄引号的几款也接上了 Danmo Quotes Kai。 */
+@font-face {
+  font-family: 'Danmo Quotes';
+  src: url('./danmo-quotes.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+201C-201D;
+}
+@font-face {
+  font-family: 'Danmo Quotes Kai';
+  src: url('../manuscript/danmo-grid.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+201C-201D;
+}
+
 :root {
   /* ---- 字体 ----
    * 界面只用两种字体：文楷（性格，用于标题与正文阅读）+ 系统无衬线（控件与数字）。
    * 马善政毛笔楷书只用于 Logo 与线装书"题签"，思源宋体用于现代封面标题与阅读字体选项。 */
-  --font-kai: 'LXGW WenKai Screen', 'LXGW WenKai', 'Kaiti SC', 'STKaiti', 'KaiTi', serif;
-  --font-sans: system-ui, -apple-system, 'PingFang SC', 'HarmonyOS Sans SC', 'MiSans',
+  --font-kai: 'Danmo Quotes Kai', 'LXGW WenKai Screen', 'LXGW WenKai', 'Kaiti SC', 'STKaiti', 'KaiTi', serif;
+  --font-sans: 'Danmo Quotes', system-ui, -apple-system, 'PingFang SC', 'HarmonyOS Sans SC', 'MiSans',
     'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
   --font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
   --font-brush: 'Ma Shan Zheng', 'LXGW WenKai Screen', 'KaiTi', serif;

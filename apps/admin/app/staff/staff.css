@@ -290,6 +290,11 @@
   font-size: 13px;
   line-height: 1.7;
   color: var(--ink-2);
+  /* 一两句短话：只在标点处断（keep-all；一段放不下时才 anywhere），各行匀称（balance），
+   * 宽屏五栏居中时不会断在"站长""管理员"中间、末行剩一个字 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 /* 名帖之间的间距写成变量：收起中的名帖末了用负外边距吃掉它（staff-leave） */
 .seal-group__tags {

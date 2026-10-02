@@ -32,6 +32,9 @@
   position: absolute;
   inset: 0;
   isolation: isolate;
+  /* 超出页面的一律裁掉（clip 不是滚动容器）：测量层每章一扇书页大小的窗口往下叠、收起的下栏 translateY 到屏幕外，
+   * 都会撑出 .screen 的可滚范围——程序或拖选一滚，书页被顶上去，底下露出一大片空白。看得见的部分不受影响 */
+  overflow: clip;
   display: flex;
   flex-direction: column;
   padding-inline: var(--rd-safe-x);
@@ -211,6 +214,8 @@
 .rd-flow p {
   margin: 0;
   text-indent: 2em;
+  /* 书页一字一格、两端对齐：base.css 给段落的 pretty 会把倒数第二行挪短，对齐时字距被拉开，格子就乱了 */
+  text-wrap: wrap;
 }
 /* 横排段间留一点空；竖排不留，否则列宽不再是 --rd-pitch 的整数倍，分页会切断一列字 */
 .rd-flow[data-writing='horizontal'] p + p {

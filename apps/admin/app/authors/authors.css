@@ -657,6 +657,8 @@
   font-size: 11px;
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
+  /* 窄屏一格只有二十来宽，"今天"会被竖着折成两行：不折，略宽出格子时两边均分到格间的空隙里 */
+  white-space: nowrap;
 }
 .author-days__row li[data-today] .author-days__date {
   color: var(--ink);

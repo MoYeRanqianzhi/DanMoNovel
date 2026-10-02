@@ -157,6 +157,13 @@
 .detail-toc__list button:hover {
   color: var(--thread-ink);
 }
+/* 前几章与"读到这里"那一章不挨着：中间一行小字写跳过了几章，下边用虚线（省略），不然看着像漏了章 */
+.detail-toc__gap {
+  padding: 7px 0;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  border-bottom: 1px dashed var(--line);
+}
 /* "读到这里"前面带一小段红线 */
 .detail-toc__here {
   display: inline-flex;

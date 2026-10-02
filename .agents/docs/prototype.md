@@ -20,6 +20,7 @@
   - `pnpm check:contrast`：8 套主题的对比度校验，含阅读纸张叠到纸色上之后的正文对比度（第 10 节"背景"）。
   - `pnpm gen:paper`：重新生成阅读纸张里由程序画的图案。随机种子固定，重跑结果不变。
   - `python packages/design/scripts/gen-grid-font.py`：重新生成方格稿纸的补字字体（第 14 节；需要 Python 3、fontTools、brotli）。
+  - `python packages/design/scripts/gen-quotes-font.py`：重新生成界面无衬线的引号补字字体 Danmo Quotes（见下方 styles/ 一条；依赖同上）。
 - **许可**：AGPL-3.0-only（见 license 记忆）。新依赖必须与之兼容。
 
 ## 2. 目录与职责
@@ -42,6 +43,13 @@ packages/data/src/
 packages/design/src/
   styles/       index.ts（按顺序引入字体与 tokens → themes → base → transitions → layout）、tokens.css（@property 注册）、
                 themes.css（8 套主题）、base.css、transitions.css（墨晕与页面进出场）、layout.css（.app/.stage/.screen、版心、按钮、设置列表与"关于"）
+                - 全角弯双引号（2026-10-02 E2）：system-ui、苹方、文楷给的“”都是窄字形（文楷 0.35 个字宽），紧贴汉字、两端对齐时拉松字距。
+                  tokens.css 声明两款只管 U+201C-201D 的补字字体，放在字体栈最前：Danmo Quotes（danmo-quotes.woff2，gen-quotes-font.py
+                  从思源黑体取，本来就是一个字宽，992 字节）配 --font-sans；Danmo Quotes Kai（复用稿纸的 danmo-grid.woff2）配 --font-kai。
+                  unicode-range 不含空格，不算"第一个可用字体"，行框与基线不变。单引号‘’不管（英文撇号也是 ’）。
+                - base.css 给 p 加 text-wrap: pretty：段末不只剩一两个字（中文有效，"写明为什/么。"→"写明为/什么。"）；
+                  阅读器正文 .rd-flow p 改回 wrap（一字一格、两端对齐，pretty 会挪短倒数第二行、拉开字距）。
+                - layout.css 的 .section-title 整行 nowrap、small 恢复折行：标题文字是弹性盒的匿名项目，说明一长会把它压成一个字宽。
   theme/        themes.ts（主题元数据）、ThemeContext.tsx（偏好存储、themeBootScript、墨晕切换）、
                 ThemeSwatches.tsx + swatches.css（八张主题纸样，作者站与管理站的"我"共用）
   book3d/       Book3D.tsx + book3d.css、faces.tsx + faces.css（各面平面内容）、motifs.tsx（封面纹样）、barcode.ts（Code 128C）、
@@ -61,7 +69,9 @@ packages/design/src/
                 radioGroup.ts（onRadioGroupKeyDown：挂在 radiogroup 容器上，←→↑↓ 换一个、Home/End 到头尾，焦点跟着走；
                 默认点一下移到的 radio，传 select 自己定"选中"做什么——ChoiceCards 传 onChange，字体列表传空函数只挪焦点。
                 处理完 stopPropagation，阅读器挂在 window 上的翻页不跟着翻。Tab 仍逐个走，没做 roving tabindex）
-  fonts/        catalog.ts（平台字体目录、系统字体、字体 id 与字体栈）、imported.ts（导入字体：IndexedDB 与 FontFace）、
+  fonts/        catalog.ts（平台字体目录、系统字体、字体 id 与字体栈；narrowQuotes 标出引号窄的文楷、文楷屏幕版、马善政楷书，
+                readingStack 给它们的正文栈前面接 Danmo Quotes Kai，系统字体的栈前面接 Danmo Quotes。stack 本身的第一个名字仍是字体自己——
+                字体列表靠它判断加载好了没有）、imported.ts（导入字体：IndexedDB 与 FontFace）、
                 client.ts（模拟客户端的字体下载）、FontList.tsx + font-list.css（字体列表）、sfnt.ts（格式识别、读字体名、拆合集）
   paper/        阅读纸张（第 10 节"背景"）：papers.ts（十种纸张的 id 与名称）、PaperTexture.tsx（纹理层）、
                 papers.css（各纸的纹理与每套配色的颜色表）、masks/（遮罩图案）、motifs/（花笺每套配色一幅的角花）
@@ -69,6 +79,7 @@ packages/design/scripts/
   check-contrast.mjs   对比度校验（pnpm check:contrast）
   gen-paper-art.mjs    程序画的纸张图案（pnpm gen:paper）
   gen-grid-font.py     方格稿纸的补字字体 Danmo Grid（第 14 节）
+  gen-quotes-font.py   界面无衬线的引号补字字体 Danmo Quotes（styles/ 一条），许可 danmo-quotes-OFL.txt 随字体放在一起
 apps/novel/app/        小说站（SSR）
   root.tsx      整份 HTML、全局样式、Provider、出错页与出错页标题
   routes.ts     路由表（第 3 节）
@@ -241,6 +252,10 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - 验收：把 rAF 换成按 60、168、240Hz 回调的假 rAF，详情页点书翻面，停稳都在约 1.05 秒、过冲都约 43°；倾斜到 63% 约 120~138ms、到 95% 约 383~410ms。
     - 书城的书环不用 rAF：拖动直接写 transform，松手靠 CSS transition 吸附，本来就按时间算。其余 rAF 都是一次性或按时间写的（砚台注墨、写作页、字体下载模拟）。
 - **BookLoader**：书仰躺，封面打开，内页循环翻动。用"当前这本书"，没有就用 BRAND_BOOK。
+- **上下切口只在看得见时画**（2026-10-02 E2）：Chrome 给 3D 面排先后时会把书芯顶面排到封面前面，1 倍像素的屏上封面顶边往下 --inset 处
+  多出一串虚线（纸色透出来，长夜里是深色）；3 倍像素看不出。合着、俯仰（--rx + --tilt-x）不到 12° 时顶面整个藏在封面伸出的那一截后面
+  （12° 是最厚的书也挡得住的角度），所以 `.book3d__edge--top/--bottom` 的 opacity 按 sin(俯仰) 与 --open 算：这时为 0，翻开或俯仰更大时淡入。
+  验证办法：无头浏览器 1 倍像素连抓几十帧数封面顶边的亮像素（脚本未提交，见收尾计划 E2 结果）。
 
 ## 7. 飞行过渡引擎（flight/）
 
@@ -267,6 +282,8 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 - **导航**（nav.tsx）：
   - 移动端是底部纸条导航，列数与丝带位置由 `--tab-count`、`--tab` 计算；丝带需要 `z-index: 1`。
   - 桌面端（≥900px）是左侧栏，竖排毛笔 Logo，底部有主题入口。
+  - 矮屏档（2026-10-02 E2）：管理站六个入口加"我"竖着要 690 来高，另两站 540。≤720 高收紧间距与每一项的留白、标志 zoom 0.75；
+    ≤500 高（横放的手机）不放标志；侧栏本身 overflow-y: auto 兜底，入口不会掉到屏外。
   - `RailLink` 是 NavLink，带 `state={{ tab: true }}` 与 `prefetch="intent"`；点击时先调 `selectTab`，已处理就 preventDefault。
 - **安全区**（tokens.css 的 --safe-top、--safe-bottom、--safe-left、--safe-right，都是 env(safe-area-inset-*)；三站都开了 viewport-fit=cover）：
   - .screen 四边都让（上、左、右用 padding；根页面的下边连着底部导航一起让）；底部导航左右各让 14px 加安全区。
@@ -724,7 +741,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 新书上架：900 起四格一行，推荐卡一左一右歪、悬停与键盘聚焦时摆正，胶带两头是锯齿；900 以下（含横放手机与竖放平板）仍是 flex 横滑，卡片 `display: contents`、简介不显示；按钮的无障碍名称是"书名 + 上架日期"。
   - 我的：1100 起两栏（名帖对本周、设置对读完的书），印 80px；900 起章下写分钟数、读完的书 96px 并写"读了 46 小时 40 分""读了 19 小时 16 分"（示例历史）；900 以下印 56px、章 34px、书 64px，不写分钟与时长。读完的书飞进详情与返回，书回到原处；"关于"面板打开时焦点在面板上，Esc 关闭后焦点回到"关于耽墨"。
   - 窄屏与横放手机三页都没有横向溢出；Lab 与 404 在 1440 下正常。
-  - 类型检查与生产构建通过。生产构建（1440×900）上三页的宽屏样式都生效：`.fresh .fresh__row` 盖过 base.css 的 `.scroll-x`，书架两栏与吸顶、我的两栏都在；控制台无报错与警告。
+  - 类型检查与生产构建通过。生产构建（1440×900）上三页的宽屏样式都生效：`.fresh__row`（单个类，与 `.scroll-x` 同样分量，靠根路由样式排在页面样式前面取胜；E2 在生产构建上直接打开与页面内跳回都核过，四列网格、不裁切）盖过 base.css 的 `.scroll-x`，书架两栏与吸顶、我的两栏都在；控制台无报错与警告。
 - **未验收或未完成**：
   - Themes、Lab 迁移后没有逐项验收交互（Profile 已在上一条验收）。
   - 减少动效没有系统验收。

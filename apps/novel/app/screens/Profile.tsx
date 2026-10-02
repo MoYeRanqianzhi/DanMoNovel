@@ -28,15 +28,25 @@ const DAY_NAMES = ['一', '二', '三', '四', '五', '六', '日'];
 export interface ProfileData {
   /** 读完的书 */
   done: Book[];
-  /** 本周每天的阅读分钟数（周一到周日） */
+  /** 本周每天的阅读分钟数（周一到周日）；今天之后的日子还没到，是 0 */
   week: number[];
+  /**
+   * 今天是周几（周一 = 0），服务端按北京时间算：服务端渲染与水合都用它，今天的圈与"还没到"的日子一开始就画对；
+   * 挂载后换成读者本地的（时区不同的读者差一天时，跟着本地改过来）
+   */
+  today: number;
 }
+
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /** "我的"页面的 loader：个人数据，原型取示例；正式版按登录用户调用 Go 接口 */
 export function loadProfile(): ProfileData {
+  const today = WEEKDAYS.indexOf(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Shanghai', weekday: 'short' }).format());
   return {
     done: SHELF.filter((e) => e.group === '读完').map((e) => getBook(e.bookId)),
-    week: [...SAMPLE_WEEK],
+    // 示例写满了一整周：今天之后的日子还没到，不能有阅读时长
+    week: SAMPLE_WEEK.map((minutes, i) => (i > today ? 0 : minutes)),
+    today,
   };
 }
 
@@ -54,13 +64,13 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
   const [aboutOpen, setAboutOpen] = useState(false);
 
   const { done } = data;
-  // 今天是周几只在浏览器里算（服务端与读者的时区可能不同）。JS 的 getDay()：0 是周日，
-  // 换算成"周一 = 0"的下标；服务端返回 -1，即不标出今天
-  const today = useClientValue(() => (new Date().getDay() + 6) % 7, -1);
+  // 今天是周几：服务端渲染与水合时用 loader 按北京时间算的，挂载后按读者本地的时间重算。
+  // JS 的 getDay()：0 是周日，换算成"周一 = 0"的下标
+  const today = useClientValue(() => (new Date().getDay() + 6) % 7, data.today);
   const readTime = useReadingTime();
-  // 本周每天：历史加上这台设备上记的（只算到今天；今天之后的日子还没到）
+  // 本周每天：历史加上这台设备上记的（服务端渲染与水合时读到的是空账）；今天之后的日子还没到，是 0
   const WEEK = data.week.map((minutes, i) => {
-    if (today < 0 || i > today) return minutes;
+    if (i > today) return 0;
     const d = new Date();
     d.setDate(d.getDate() - (today - i));
     return minutes + Math.floor(readTime.day(dayKey(d)) / 60);
@@ -87,11 +97,11 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
         </p>
         <ol className="week__stamps">
           {WEEK.map((minutes, i) => (
-            <li key={i} data-today={i === today || undefined}>
+            <li key={i} data-today={i === today || undefined} data-future={i > today || undefined}>
               <span
                 className="week__stamp"
                 style={{ '--ink-level': inkLevel(minutes) } as CSSProperties}
-                aria-label={`周${DAY_NAMES[i]}：${minutes ? formatReadTime(minutes * 60) : '没有阅读'}`}
+                aria-label={`周${DAY_NAMES[i]}：${i > today ? '还没到' : minutes ? formatReadTime(minutes * 60) : '没有阅读'}`}
                 role="img"
               />
               <span className="week__day" aria-hidden="true">

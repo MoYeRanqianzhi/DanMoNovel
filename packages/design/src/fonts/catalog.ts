@@ -28,8 +28,13 @@ export interface PlatformFont {
   name: string;
   /** 一个词说清是哪一类字体，列表里印在名字旁边 */
   category: string;
-  /** CSS 字体栈：字体本身在前，后面是它没加载到时的同类回退 */
+  /** CSS 字体栈：字体本身在前，后面是它没加载到时的同类回退（第一个名字就是这款字体，字体列表靠它判断加载好了没有） */
   stack: string;
+  /**
+   * 弯双引号“”是窄的（文楷 0.35、马善政楷书 0.25 个字宽；思源宋体、思源黑体、站酷小薇本来就是一个字宽，朱雀仿宋同样不用）。
+   * 正文里窄引号紧贴汉字，两端对齐时还把一行的字距拉松：正文的字体栈前面接上全角引号的补字字体（readingStack）
+   */
+  narrowQuotes?: boolean;
   /** 客户端下载的完整字体文件大小（MB，按上游 TTF 计，见 font-platform-facts 记忆） */
   mb: number;
   /** 已随界面字体一起发布：网页里不用再加载 CSS，客户端里不用下载 */
@@ -46,6 +51,7 @@ export const PLATFORM_FONTS: PlatformFont[] = [
     name: '霞鹜文楷 屏幕阅读版',
     category: '楷体',
     stack: "'LXGW WenKai Screen', 'LXGW WenKai', 'Kaiti SC', 'STKaiti', 'KaiTi', serif",
+    narrowQuotes: true,
     mb: 24.4,
     bundled: true,
     load: alreadyLoaded,
@@ -55,6 +61,7 @@ export const PLATFORM_FONTS: PlatformFont[] = [
     name: '霞鹜文楷',
     category: '楷体',
     stack: "'LXGW WenKai', 'LXGW WenKai Screen', 'Kaiti SC', 'STKaiti', 'KaiTi', serif",
+    narrowQuotes: true,
     mb: 24.3,
     bundled: false,
     load: () => import('lxgw-wenkai-webfont/lxgwwenkai-regular.css'),
@@ -100,14 +107,18 @@ export const PLATFORM_FONTS: PlatformFont[] = [
     name: '马善政楷书',
     category: '毛笔楷',
     stack: "'Ma Shan Zheng', 'LXGW WenKai Screen', 'KaiTi', serif",
+    narrowQuotes: true,
     mb: 5.5,
     bundled: true,
     load: alreadyLoaded,
   },
 ];
 
-/** 系统字体：正文跟随设备当前使用的字体（读者在系统设置里换了字体，这里也跟着变） */
-export const SYSTEM_FONT = { id: 'system', name: '系统字体', category: '跟随设备', stack: 'system-ui, sans-serif' } as const;
+/**
+ * 系统字体：正文跟随设备当前使用的字体（读者在系统设置里换了字体，这里也跟着变）。
+ * 只有“”换成 Danmo Quotes（tokens.css）：system-ui 在西文系统与苹果设备上给的都是窄引号
+ */
+export const SYSTEM_FONT = { id: 'system', name: '系统字体', category: '跟随设备', stack: "'Danmo Quotes', system-ui, sans-serif" } as const;
 
 /** 阅读正文的默认字体 */
 export const DEFAULT_FONT: PlatformFontId = 'wenkai-screen';
@@ -133,12 +144,20 @@ export function isFontId(s: unknown): s is string {
   return typeof s === 'string' && (s === SYSTEM_FONT.id || !!platformFont(s) || /^user:[a-z0-9]{4,24}$/.test(s));
 }
 
+/**
+ * 正文用的字体栈：引号窄的字体，前面接上 Danmo Quotes Kai（tokens.css：只管“”两个码位，文楷字形、一个字宽）。
+ * 导入的字体不接：读者自己选的字体，引号长什么样由它自己定
+ */
+export function readingStack(font: PlatformFont): string {
+  return font.narrowQuotes ? `'Danmo Quotes Kai', ${font.stack}` : font.stack;
+}
+
 /** 字体 id → CSS 字体栈。导入字体没注册成功时，回退部分让正文仍然可读 */
 export function fontStack(fontId: string): string {
   const imported = importedIdOf(fontId);
   if (imported) return `'${importedFamily(imported)}', system-ui, sans-serif`;
   if (fontId === SYSTEM_FONT.id) return SYSTEM_FONT.stack;
-  return (platformFont(fontId) ?? platformFont(DEFAULT_FONT)!).stack;
+  return readingStack(platformFont(fontId) ?? platformFont(DEFAULT_FONT)!);
 }
 
 const loading = new Map<PlatformFontId, Promise<unknown>>();

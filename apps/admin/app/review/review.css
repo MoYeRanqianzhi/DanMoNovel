@@ -23,6 +23,11 @@
     grid-template-columns: minmax(270px, 300px) minmax(0, 1fr);
     align-items: start;
   }
+  /* 案卷一栏吸顶、正好一屏高：页面栈给 .screen 的底部留白（--sp-12）会让整页多出一截可滚，
+   * 一滚下去案卷一栏被顶上去、标题被切，底下露出一条空带。这一页的底部留白交给稿子一栏（.review-detail 自带） */
+  .screen:has(> .review) {
+    padding-bottom: 0;
+  }
 }
 
 /* ---------------- 案卷 ---------------- */

@@ -11,7 +11,7 @@
  * HTML 可被 CDN 缓存。读者个人的状态（是否在书架上、读到第几章）不写进 HTML，
  * 在浏览器里补上；操作栏等它就绪后再淡入，避免按钮文字先显示默认值再跳变。
  */
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { ArrowLeft, Check, Plus } from 'lucide-react';
 import { BOOKS, SHELF, formatHeat, formatWords, isBookNo, type Book, type ShelfEntry } from '@danmo/data/books';
 import { chapterTitle } from '@danmo/data/chapters';
@@ -98,7 +98,7 @@ export function BookScreen({ data, screen }: ScreenProps<BookData>) {
     }
   };
 
-  // 目录预览：前 4 章，若读到更后面，再补上当前章
+  // 目录预览：前 4 章，若读到更后面，再补上当前章（与第 4 章不挨着时，中间写一行"中间还有几章"）
   const preview = [0, 1, 2, 3].filter((i) => i < book.chapters);
   if (entry && entry.chapter >= preview.length) preview.push(entry.chapter);
 
@@ -193,13 +193,16 @@ export function BookScreen({ data, screen }: ScreenProps<BookData>) {
               </button>
             </div>
             <ol className="detail-toc__list">
-              {preview.map((i) => (
-                <li key={i}>
-                  <button type="button" onClick={() => read(i)}>
-                    <span>{toc[i]}</span>
-                    {entry?.chapter === i && reading && <span className="detail-toc__here">读到这里</span>}
-                  </button>
-                </li>
+              {preview.map((i, k) => (
+                <Fragment key={i}>
+                  {k > 0 && i - preview[k - 1] > 1 && <li className="detail-toc__gap">中间还有 {i - preview[k - 1] - 1} 章</li>}
+                  <li>
+                    <button type="button" onClick={() => read(i)}>
+                      <span>{toc[i]}</span>
+                      {entry?.chapter === i && reading && <span className="detail-toc__here">读到这里</span>}
+                    </button>
+                  </li>
+                </Fragment>
               ))}
             </ol>
           </section>

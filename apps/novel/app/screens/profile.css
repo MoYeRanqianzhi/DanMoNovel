@@ -66,6 +66,14 @@
   outline: 1.5px solid var(--thread);
   outline-offset: 3px;
 }
+/* 今天之后的日子还没到：章框改成虚线、整格淡一些，与"那天没读"（实线的空框）分得开 */
+.week__stamps li[data-future] {
+  opacity: 0.55;
+}
+.week__stamps li[data-future] .week__stamp {
+  box-shadow: none;
+  border: 1px dashed color-mix(in srgb, var(--thread) 40%, transparent);
+}
 .week__day {
   font-size: var(--fs-12);
   color: var(--ink-2);

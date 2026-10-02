@@ -211,14 +211,20 @@
   height: var(--page-d);
   background-image: repeating-linear-gradient(0deg, transparent 0 1.4px, rgb(0 0 0 / 0.06) 1.4px 2px);
 }
+/* 上下切口只在看得见时画：合着、俯仰（--rx 加手势的 --tilt-x）不到 12° 时，整面藏在封面伸出的那一截后面
+ * （封面比书芯高 --inset；12° 是最厚的书也挡得住的角度，薄书要 20° 以上才露）。
+ * 不画的原因：Chrome 给 3D 面排先后时，会把书芯顶面排到封面前面，1 倍像素的屏上封面顶边往下 --inset 处
+ * 就多出一串虚线（纸色从封面里透出来，长夜里是深色的）。翻开（--open > 0）或俯仰更大时照常淡入。 */
 .book3d__edge--top {
   transform: translateY(calc(var(--h) / -2 + var(--inset))) rotateX(90deg);
+  opacity: clamp(0, (sin(-1 * (var(--rx) + var(--tilt-x))) - 0.21) * 30 + var(--open) * 60, 1);
 }
 .book3d__edge--top::after {
   opacity: 0.04;
 }
 .book3d__edge--bottom {
   transform: translateY(calc(var(--h) / 2 - var(--inset))) rotateX(-90deg);
+  opacity: clamp(0, (sin(var(--rx) + var(--tilt-x)) - 0.21) * 30 + var(--open) * 60, 1);
 }
 .book3d__edge--bottom::after {
   opacity: 0.22;

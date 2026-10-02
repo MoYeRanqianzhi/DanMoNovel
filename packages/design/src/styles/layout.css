@@ -85,7 +85,9 @@
   }
 }
 
-/* 区块标题：文楷 + 右侧一个无衬线的小计数 */
+/* 区块标题：文楷 + 右侧一个无衬线的小计数
+ * 标题本身不折行：标题的字是弹性盒里的匿名项目，没法单独设 flex-shrink，右边的说明一长，
+ * 会把它压到一个字宽（窄屏上"未签/约""印谱之/外"）。整行 nowrap，标题最窄也是整句；说明恢复折行，由它让出地方 */
 .section-title {
   display: flex;
   align-items: baseline;
@@ -93,12 +95,14 @@
   font-family: var(--font-kai);
   font-size: var(--fs-21);
   font-weight: 400;
+  white-space: nowrap;
 }
 .section-title small {
   font-family: var(--font-sans);
   font-size: var(--fs-14);
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
+  white-space: normal;
 }
 
 /* 二级页面顶栏：透明底，只放圆形按钮 */

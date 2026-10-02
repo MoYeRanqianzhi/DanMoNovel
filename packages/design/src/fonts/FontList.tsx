@@ -25,6 +25,7 @@ import {
   importedFamily,
   importedIdOf,
   platformFont,
+  readingStack,
   userFontId,
   type PlatformFont,
 } from './catalog';
@@ -183,7 +184,7 @@ export function FontList({ value, onChange, preview, onBack }: FontListProps) {
               <FontRow
                 key={f.id}
                 label={f.name}
-                stack={f.stack}
+                stack={readingStack(f)}
                 meta={meta}
                 preview={preview}
                 selected={value === f.id}

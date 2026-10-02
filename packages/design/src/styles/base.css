@@ -49,6 +49,12 @@ figure {
   margin: 0;
 }
 
+/* 说明文字的最后一行不只剩一两个字：pretty 只重排段末几行的断点，把孤字连同前一个字挪下去
+ * （"写明为什/么。"变成"写明为/什么。"），中文也有效。阅读器的书页按格对齐，在 reader.css 里改回 wrap */
+p {
+  text-wrap: pretty;
+}
+
 ul,
 ol {
   padding: 0;

@@ -94,6 +94,10 @@
     align-items: center;
     gap: 36px;
     padding: 30px 0 22px var(--safe-left);
+    /* 再矮的屏（见文末的矮屏档）也收不下时，侧栏自己滚，入口不会掉到屏幕外够不着 */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
     box-shadow: 1px 0 0 var(--line);
     transition:
       opacity var(--dur-base) ease,
@@ -164,5 +168,36 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+}
+
+/* 矮屏（横放的手机、矮的笔记本）：标志加全部入口竖着放不下——管理站六个入口加"我"要 690 来高，
+ * 小说站、作者站也要 540。收紧间距与每一项的留白、标志缩小；再矮（横放的手机）就不放标志 */
+@media (min-width: 900px) and (max-height: 720px) {
+  .rail {
+    gap: 14px;
+    padding-top: 16px;
+    padding-bottom: 10px;
+  }
+  .rail .logo {
+    zoom: 0.75;
+  }
+  .rail__items,
+  .rail__footer {
+    gap: 2px;
+  }
+  .rail__item {
+    padding: 6px 0 5px;
+    gap: 3px;
+    font-size: 11px;
+  }
+  .rail__item svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+@media (min-width: 900px) and (max-height: 500px) {
+  .rail .logo {
+    display: none;
   }
 }

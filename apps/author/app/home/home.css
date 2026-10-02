@@ -66,12 +66,20 @@
 /*
  * 一栏时舞台的高度：半屏，最少 330px（再矮装不下书与稿纸）；可屏幕本身很矮时（分屏、横放的小手机）330px 会吃掉整屏，
  * 所以最多占到 62%，下面总留着几行字。舞台、开头一段与五步的高度都从它算。
+ * 高的手机上半屏又多了：开头一段连同上下留白约 390 高，加顶栏 64，第一屏要给它们留 450，不然最后一行"往下读"
+ * 正好压在屏幕下沿（812、844、852 高时被切掉一截）。所以 780 高以上半屏与"整屏减 450"取小的，仍不少于 330；
+ * 780 以下怎么也放不下，仍取半屏，"往下读"整行落在第一屏下面，不会只露出半截。
  * 写在滚动容器上（页面栈把 handle.name 写在 .screen 的 data-page 上，见 routes/home.tsx）：scroll-padding-top 让
  * "往下读"的 scrollIntoView 与键盘焦点的滚动都落在舞台下面那一截里，不把要看的字停在舞台底下
  */
 .screen[data-page='home'] {
-  --home-stage-h: max(50svh, min(330px, 62svh));
+  --home-stage-h: max(min(330px, 62svh), min(50svh, 100svh - 450px));
   scroll-padding-top: var(--home-stage-h);
+}
+@media (max-height: 779.98px) {
+  .screen[data-page='home'] {
+    --home-stage-h: max(50svh, min(330px, 62svh));
+  }
 }
 
 /*
