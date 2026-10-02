@@ -447,67 +447,6 @@
   }
 }
 
-/* ---- 显示格式的选择面板：两列卡片，每张一幅示意图 + 名称 + 一行说明（与阅读器"翻页方式"同一种卡片） ---- */
-.shelf-formats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-.shelf-format {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 14px 10px 13px;
-  border-radius: var(--radius-m);
-  color: var(--ink-2);
-  background: color-mix(in srgb, var(--ink) 3%, transparent);
-  box-shadow: 0 0 0 1px var(--line);
-  transition:
-    color var(--dur-quick) ease,
-    box-shadow var(--dur-quick) ease,
-    background-color var(--dur-quick) ease;
-}
-.shelf-format:hover {
-  color: var(--ink);
-}
-.shelf-format[aria-checked='true'] {
-  color: var(--thread-ink);
-  background: color-mix(in srgb, var(--thread) 7%, transparent);
-  box-shadow: 0 0 0 1.5px var(--thread);
-}
-.shelf-format__glyph {
-  width: 64px;
-  height: 40px;
-  margin-bottom: 6px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.shelf-format__glyph .glyph-faint {
-  stroke-opacity: 0.45;
-}
-.shelf-format__glyph .glyph-plank {
-  stroke-width: 2.2;
-}
-.shelf-format__name {
-  font-family: var(--font-kai);
-  font-size: var(--fs-16);
-  color: inherit;
-}
-.shelf-format[aria-checked='true'] .shelf-format__name {
-  color: var(--ink);
-}
-.shelf-format__note {
-  font-size: 11px;
-  line-height: 1.45;
-  text-align: center;
-  text-wrap: balance;
-  color: color-mix(in srgb, var(--ink-2) 80%, transparent);
-}
-
 /* ---- 下拉同步 ---- */
 .pull {
   display: flex;

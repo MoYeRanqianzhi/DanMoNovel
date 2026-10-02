@@ -49,7 +49,10 @@ packages/design/src/
   flight/       FlightContext.tsx（飞行引擎与 BookSlot）、timing.ts、flight.css
   shell/        stack.tsx（页面栈，第 4 节）、keepStyles.ts（留住栈里页面的样式表）、nav.tsx + nav.css（TabBar、SideRail、RailLink）、not-found.tsx（notFoundHandle）
   components/   ui.tsx（IconButton/ThreadProgress/TagMark/Seal/PairLine/Segmented/Logo）、overlays.tsx（Sheet、Toast；Sheet 打开时把焦点移进面板，内容已自己拿了焦点（autoFocus）时不抢；Sheet 是 aria-modal，面板开着时要播报的话放在面板里面，面板外的 role="status" 与 Toast 有的读屏不念）、ErrorPage.tsx、
-                Stamp.tsx + stamp.css（盖章：落下与印泥洇开，still 直接显示盖好的样子）
+                Stamp.tsx + stamp.css（盖章：落下与印泥洇开，still 直接显示盖好的样子）、
+                ChoiceCards.tsx + choice-cards.css（选项卡片：示意图 + 名称 + 一行说明，选中一圈红线；书架显示格式、阅读器翻页方式、作者站选纸共用。
+                示意图由调用方画 <svg> 里面的内容，外壳给格子大小与笔触，可用 glyph-faint、glyph-thin、glyph-bold、glyph-top 四个类；
+                columns 定一行几张，compact 是阅读设置里的紧凑版；点了要不要收起面板由调用方决定）
   manuscript/   稿纸（第 14 节）：Manuscript.tsx + manuscript.css、danmo-grid.woff2（方格补字字体）与 danmo-grid-OFL.txt
   charts/       Hills.tsx + hills.css（远山与图例 HillsLegend，第 13 节；作者站数据页、管理站总览共用）
   lib/          util.ts（cls、seededRandom、clamp、lerp）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts、
@@ -285,7 +288,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - 书柜 `bookcase`：原"书脊"视图，`POSES.spine`，立在书板上；
     - 宫格 `grid`：`POSES.front`，`repeat(auto-fill, minmax(100px, 1fr))`，390px 三列、320px 两列，一组书全部铺开（用户原话"宫格是完整显示书架中的书"）；
     - 列表 `list`：`POSES.thumb` 小封面 + 书名、作者·字数；在读的书加"读到第 N 章"与 `ThreadProgress`；宽屏两列。
-  - **切换**：顶部是格式按钮（lucide 图标 + 当前格式名），点开是 Sheet"显示格式"，2×2 卡片，每张一幅 64×40 的示意图、名称与一行说明，与阅读器"翻页方式"同一种卡片；选中后立刻换上并收起面板。换格式时整组按 `key={format}` 重新挂载，`data-switched` 让新的摆法淡入，首次打开不播。
+  - **切换**：顶部是格式按钮（lucide 图标 + 当前格式名），点开是 Sheet"显示格式"，2×2 的选项卡片（共用的 ChoiceCards，第 2 节），每张一幅 64×40 的示意图、名称与一行说明；选中后立刻换上并收起面板。换格式时整组按 `key={format}` 重新挂载，`data-switched` 让新的摆法淡入，首次打开不播。
   - **记住选择**：按设备存 `danmo:shelf-format`（本机存储为准）；另写只挂在 `/shelf` 下的 cookie `danmo-shelf-format`，loader 用 `formatFromCookie` 校验后给出 `serverFormat`，服务端渲染与水合都用它，刷新不闪。
     - cookie 只挂在 `/shelf`：公开页面的请求不带它，不影响 CDN。页面内跳转取数据的 `/shelf.data` 也不带它（路径匹配要求下一个字符是 `/`），那时 `serverFormat` 是默认值、不作数，挂载时直接读本机存储。
     - 两者不一致时（cookie 被清掉或刚好是页面内跳转），挂载后按本机存储把 cookie 补写一遍。
@@ -388,7 +391,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   上下两种模式另外接受上下滑动（上滑是下一页）；↑/↓、PageUp/PageDown、空格与 rtl 无关。
 - `PagedView` 同时渲染两层页面，层以 `章:页` 为 key，翻完后下层原地变成当前页。onTurnEnd 用 flushSync 提交新位置并移除动画层。
 - 滚轮一次手势只翻一页（600ms 节流）。
-- 设置面板：翻页方式是 3×2 卡片（带示意图），下面一行是反向翻页开关（滚动模式下禁用）。本地存储里的旧值不兼容，非法时回落到翻书。
+- 设置面板：翻页方式是 3×2 的选项卡片（ChoiceCards 的紧凑版，40×28 的示意图），下面一行是反向翻页开关（滚动模式下禁用）。本地存储里的旧值不兼容，非法时回落到翻书。
 
 ### 阅读字体（packages/design/src/fonts/，规则见 reading-fonts 记忆）
 - **字体 id**（存在阅读设置的 `font` 里，`isFontId` 校验，非法时回落到 `DEFAULT_FONT` = `wenkai-screen`）：
@@ -823,7 +826,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 写满目标的提示只说一次，并且只给这次打开之后写满的：换上本机副本时把当时的今日字数记进 openToday，openToday 已经不少于目标就不提示。只比较服务端的 TODAY_WORDS 不够：目标改成 1,000 后（TODAY_WORDS 是 931），副本多写 69 字，一打开就会提示。
   - 打字时 `.write[data-typing]`，顶栏与左栏淡到 0.22，pointermove 或 pointerdown 恢复。
   - 目录 Outline：分卷，行用共用的 .toc-list 加状态标记；宽屏（≥1200px）是左栏（sticky，自己滚动），其余收进顶栏按钮打开的 Sheet。当前章滚到中间时只滚最近一层可滚动的祖先；目录不可见时（窄屏上隐藏的左栏）跳过，否则找到的祖先是整页。
-  - 面板 panels.tsx：发布（立即或定时：今天、明天、后天 × 08/12/18/20/22 点；作者的话最多 300 字）；提交后盖章，结果用 role="status" 播报。选纸是三张卡片加示意图。
+  - 面板 panels.tsx：发布（立即或定时：今天、明天、后天 × 08/12/18/20/22 点；作者的话最多 300 字）；提交后盖章，结果用 role="status" 播报。选纸是三张选项卡片（ChoiceCards，64×44 的示意图），选中后收起面板。
   - 预览：阅读纸色、PaperTexture(DEFAULT_PAPER)、文楷 19px、行高 1.95、两字缩进，作者的话排在章末。
   - 已知不足：定时的时间只是给人看的字，没有时区换算；浏览器后退从写作页直接回书房（换章不进历史记录）。
 - **互动 /readers**（readers/Readers.tsx，标签页）：

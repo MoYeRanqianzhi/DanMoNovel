@@ -54,13 +54,13 @@ import './manuscript.css';
 
 export type PaperMode = 'grid' | 'lined' | 'plain';
 
-export const PAPER_MODES: readonly { id: PaperMode; name: string; note: string }[] = [
-  { id: 'grid', name: '方格', note: '一格一个字，二十行一页' },
-  { id: 'lined', name: '横线', note: '一行一道细线，字排得密一些' },
-  { id: 'plain', name: '素纸', note: '什么也不画，只留下字' },
+export const PAPER_MODES: readonly { value: PaperMode; name: string; note: string }[] = [
+  { value: 'grid', name: '方格', note: '一格一个字，二十行一页' },
+  { value: 'lined', name: '横线', note: '一行一道细线，字排得密一些' },
+  { value: 'plain', name: '素纸', note: '什么也不画，只留下字' },
 ];
 
-export const isPaperMode = (v: unknown): v is PaperMode => PAPER_MODES.some((m) => m.id === v);
+export const isPaperMode = (v: unknown): v is PaperMode => PAPER_MODES.some((m) => m.value === v);
 
 /** 首行缩进：两个全角空格（与小说站正文的缩进一致） */
 export const INDENT = '　　';

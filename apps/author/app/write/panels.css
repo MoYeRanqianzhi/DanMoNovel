@@ -1,5 +1,5 @@
 /* ============================================================
- * 写作页的底部面板（panels.tsx）：发布、选纸
+ * 写作页的底部面板（panels.tsx）：发布。选纸的三张卡片是共用的 ChoiceCards，样式在 packages/design 的 choice-cards.css
  * ============================================================ */
 
 /* ---------------- 发布 ---------------- */
@@ -85,63 +85,4 @@
 .publish__submit {
   align-self: stretch;
   margin-top: var(--sp-1);
-}
-
-/* ---------------- 选纸：三张卡片（与小说站"书架格式"同一种卡片） ---------------- */
-.paper-choices {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-.paper-choice {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 14px 8px 13px;
-  border-radius: var(--radius-m);
-  color: var(--ink-2);
-  background: color-mix(in srgb, var(--ink) 3%, transparent);
-  box-shadow: 0 0 0 1px var(--line);
-  transition:
-    color var(--dur-quick) ease,
-    box-shadow var(--dur-quick) ease,
-    background-color var(--dur-quick) ease;
-}
-.paper-choice:hover {
-  color: var(--ink);
-}
-.paper-choice[aria-checked='true'] {
-  color: var(--thread-ink);
-  background: color-mix(in srgb, var(--thread) 7%, transparent);
-  box-shadow: 0 0 0 1.5px var(--thread);
-}
-.paper-choice__glyph {
-  width: 64px;
-  height: 44px;
-  margin-bottom: 6px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.paper-choice__glyph .glyph-faint {
-  stroke-opacity: 0.4;
-  stroke-width: 1;
-}
-.paper-choice__name {
-  font-family: var(--font-kai);
-  font-size: var(--fs-16);
-  color: inherit;
-}
-.paper-choice[aria-checked='true'] .paper-choice__name {
-  color: var(--ink);
-}
-.paper-choice__note {
-  font-size: 11px;
-  line-height: 1.45;
-  text-align: center;
-  text-wrap: balance;
-  color: color-mix(in srgb, var(--ink-2) 80%, transparent);
 }

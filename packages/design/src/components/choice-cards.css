@@ -1,0 +1,90 @@
+/* ============================================================
+ * 选项卡片（ChoiceCards.tsx）：一幅示意图 + 名称 + 一行说明，选中的一张一圈红线
+ * 一行几张由组件写进 --choice-cols；data-compact 是阅读设置里用的紧凑版。
+ * ============================================================ */
+.choice-cards {
+  display: grid;
+  grid-template-columns: repeat(var(--choice-cols, 2), minmax(0, 1fr));
+  gap: 10px;
+}
+.choice-cards[data-compact] {
+  gap: 8px;
+}
+
+.choice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 14px 8px 13px;
+  border-radius: var(--radius-m);
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  box-shadow: 0 0 0 1px var(--line);
+  transition:
+    color var(--dur-quick) ease,
+    box-shadow var(--dur-quick) ease,
+    background-color var(--dur-quick) ease;
+}
+.choice-cards[data-compact] .choice-card {
+  gap: 2px;
+  padding: 10px 4px 9px;
+}
+.choice-card:hover {
+  color: var(--ink);
+}
+.choice-card[aria-checked='true'] {
+  color: var(--thread-ink);
+  background: color-mix(in srgb, var(--thread) 7%, transparent);
+  box-shadow: 0 0 0 1.5px var(--thread);
+}
+
+/* 示意图：线条用 currentColor，选中时跟着卡片变成红线色；宽高由组件按格子大小写在 <svg> 上 */
+.choice-card__glyph {
+  margin-bottom: 6px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.choice-cards[data-compact] .choice-card__glyph {
+  margin-bottom: 4px;
+}
+.choice-card__glyph .glyph-faint {
+  stroke-opacity: 0.45;
+}
+.choice-card__glyph .glyph-thin {
+  stroke-opacity: 0.4;
+  stroke-width: 1;
+}
+.choice-card__glyph .glyph-bold {
+  stroke-width: 2.2;
+}
+/* 压在上面的那张纸：填上面板的底色，才看得出"盖住" */
+.choice-card__glyph .glyph-top {
+  fill: var(--sheet);
+}
+
+.choice-card__name {
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  color: inherit;
+}
+.choice-cards[data-compact] .choice-card__name {
+  font-family: inherit;
+  font-size: var(--fs-14);
+}
+.choice-card[aria-checked='true'] .choice-card__name {
+  color: var(--ink);
+}
+.choice-card__note {
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+  text-wrap: balance;
+  color: color-mix(in srgb, var(--ink-2) 80%, transparent);
+}
+.choice-cards[data-compact] .choice-card__note {
+  line-height: 1.4;
+}

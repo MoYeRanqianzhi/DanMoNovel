@@ -963,62 +963,6 @@
     0 0 0 3.5px var(--ring);
 }
 
-/* ---- 翻页方式：3×2 的卡片，每张一幅示意图 + 名称 + 一行说明 ---- */
-.rd-modes {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-.rd-mode {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 10px 4px 9px;
-  border-radius: var(--radius-m);
-  color: var(--ink-2);
-  background: color-mix(in srgb, var(--ink) 3%, transparent);
-  box-shadow: 0 0 0 1px var(--line);
-  transition:
-    color var(--dur-quick) ease,
-    box-shadow var(--dur-quick) ease,
-    background-color var(--dur-quick) ease;
-}
-.rd-mode:hover {
-  color: var(--ink);
-}
-.rd-mode[aria-checked='true'] {
-  color: var(--thread-ink);
-  background: color-mix(in srgb, var(--thread) 7%, transparent);
-  box-shadow: 0 0 0 1.5px var(--thread);
-}
-.rd-mode__glyph {
-  width: 40px;
-  height: 28px;
-  margin-bottom: 4px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-/* 覆盖示意图里压在上面的那张纸：填上面板底色，才看得出"盖住" */
-.rd-mode__glyph .glyph-top {
-  fill: var(--sheet);
-}
-.rd-mode__name {
-  font-size: var(--fs-14);
-  color: inherit;
-}
-.rd-mode[aria-checked='true'] .rd-mode__name {
-  color: var(--ink);
-}
-.rd-mode__note {
-  font-size: 11px;
-  line-height: 1.4;
-  color: color-mix(in srgb, var(--ink-2) 80%, transparent);
-}
-
 /* 设置名下面的一行小字（例如"下一页在右边"） */
 .rd-setting__hint {
   display: block;

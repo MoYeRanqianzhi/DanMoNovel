@@ -7,10 +7,11 @@
  * 定时只给最常用的几档（今天、明天、后天 × 几个整点）；正式版再接完整的日期与时间选择，
  * 并按作者所在的时区换算（原型的"明天"只是给人看的字）。
  *
- * 选纸：方格、横线、素纸三张卡片，每张一幅小小的示意图（与小说站"书架格式""翻页方式"同一种卡片），
+ * 选纸：方格、横线、素纸三张卡片，每张一幅小小的示意图（共用的 ChoiceCards，与小说站"书架格式""翻页方式"同一种卡片），
  * 选中后立刻换上并收起面板。
  */
 import { useState } from 'react';
+import { ChoiceCards } from '@danmo/design/components/ChoiceCards';
 import { Sheet } from '@danmo/design/components/overlays';
 import { Segmented } from '@danmo/design/components/ui';
 import { PAPER_MODES, type PaperMode } from '@danmo/design/manuscript/Manuscript';
@@ -108,35 +109,37 @@ export function PublishSheet({ open, onClose, title, chapter, words, action, not
 
 /* ---------------- 选纸 ---------------- */
 
-/** 每种纸的示意图，画在 64×44 的格子里：一张小稿纸，上面几行字（线条用 currentColor，选中时变成红线色） */
+/**
+ * 每种纸的示意图，画在 64×44 的格子里：一张小稿纸，上面几行字
+ * （外面的 <svg>、线条的颜色与粗细由 ChoiceCards 给，选中时变成红线色；纸边、格子与横线用细淡的 glyph-thin）
+ */
 function PaperGlyph({ mode }: { mode: PaperMode }) {
-  const sheet = <rect x={8} y={3} width={48} height={38} rx={1.5} className="glyph-faint" />;
+  const sheet = <rect x={8} y={3} width={48} height={38} rx={1.5} className="glyph-thin" />;
   if (mode === 'grid') {
     // 三行六格；第一行空两格缩进，格子里的"字"是一个个小十字
     const cells = [9, 19, 29].flatMap((y, r) =>
       [14, 20, 26, 32, 38, 44].map((x, c) => ({ x, y, filled: r === 0 ? c >= 2 : r === 1 || c < 3 })),
     );
     return (
-      <svg className="paper-choice__glyph" viewBox="0 0 64 44" aria-hidden="true">
+      <>
         {sheet}
         {cells.map(({ x, y }) => (
-          <rect key={`${x}-${y}`} x={x} y={y} width={6} height={6} className="glyph-faint" />
+          <rect key={`${x}-${y}`} x={x} y={y} width={6} height={6} className="glyph-thin" />
         ))}
         {cells
           .filter((c) => c.filled)
           .map(({ x, y }) => (
             <path key={`${x}-${y}`} d={`M${x + 1.6} ${y + 3}h2.8M${x + 3} ${y + 1.6}v2.8`} />
           ))}
-      </svg>
+      </>
     );
   }
-  const text = <path d="M19 12.5h29M14 21.5h34M14 30.5h22" />;
   return (
-    <svg className="paper-choice__glyph" viewBox="0 0 64 44" aria-hidden="true">
+    <>
       {sheet}
-      {mode === 'lined' && <path d="M14 15.5h36M14 24.5h36M14 33.5h36" className="glyph-faint" />}
-      {text}
-    </svg>
+      {mode === 'lined' && <path d="M14 15.5h36M14 24.5h36M14 33.5h36" className="glyph-thin" />}
+      <path d="M19 12.5h29M14 21.5h34M14 30.5h22" />
+    </>
   );
 }
 
@@ -153,25 +156,18 @@ export function PaperPicker({
 }) {
   return (
     <Sheet open={open} title="稿纸" onClose={onClose}>
-      <div className="paper-choices" role="radiogroup" aria-label="稿纸">
-        {PAPER_MODES.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            role="radio"
-            aria-checked={m.id === value}
-            className="paper-choice"
-            onClick={() => {
-              onChange(m.id);
-              onClose();
-            }}
-          >
-            <PaperGlyph mode={m.id} />
-            <span className="paper-choice__name">{m.name}</span>
-            <span className="paper-choice__note">{m.note}</span>
-          </button>
-        ))}
-      </div>
+      <ChoiceCards
+        label="稿纸"
+        value={value}
+        options={PAPER_MODES}
+        onChange={(paper) => {
+          onChange(paper);
+          onClose();
+        }}
+        glyph={(paper) => <PaperGlyph mode={paper} />}
+        glyphSize={[64, 44]}
+        columns={3}
+      />
     </Sheet>
   );
 }

@@ -5,6 +5,7 @@ import { AArrowDown, AArrowUp, ChevronRight, Sun, SunDim } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { AUTO_AHEAD, FREE_CHAPTERS, setAutoSubscribe } from '@danmo/data/api';
 import type { Book } from '@danmo/data/books';
+import { ChoiceCards } from '@danmo/design/components/ChoiceCards';
 import { IconButton, Segmented } from '@danmo/design/components/ui';
 import { fontStack } from '@danmo/design/fonts/catalog';
 import { useFontName } from '@danmo/design/fonts/FontList';
@@ -35,8 +36,8 @@ const MODES: { value: TurnMode; name: string; note: string }[] = [
 ];
 
 /**
- * 翻页方式的示意图：两张纸与一个表示动向的箭头，画在 40×28 的格子里。
- * 线条用 currentColor，选中时跟着卡片一起变成红线色。
+ * 翻页方式的示意图：两张纸与一个表示动向的箭头，画在 40×28 的格子里
+ * （外面的 <svg>、线条的颜色与粗细由 ChoiceCards 给，选中时跟着卡片一起变成红线色）。
  */
 function ModeGlyph({ mode }: { mode: TurnMode }) {
   const page = (x: number, y: number, w = 14, h = 20) => <rect x={x} y={y} width={w} height={h} rx={1.5} />;
@@ -96,11 +97,7 @@ function ModeGlyph({ mode }: { mode: TurnMode }) {
       );
       break;
   }
-  return (
-    <svg className="rd-mode__glyph" viewBox="0 0 40 28" aria-hidden="true">
-      {art}
-    </svg>
-  );
+  return art;
 }
 
 /**
@@ -179,22 +176,16 @@ export function SettingsPanel({
         />
       </Row>
       <Row label="翻页" stacked>
-        <div className="rd-modes" role="radiogroup" aria-label="翻页方式">
-          {MODES.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              role="radio"
-              aria-checked={settings.mode === m.value}
-              className="rd-mode"
-              onClick={() => update({ mode: m.value })}
-            >
-              <ModeGlyph mode={m.value} />
-              <span className="rd-mode__name">{m.name}</span>
-              <span className="rd-mode__note">{m.note}</span>
-            </button>
-          ))}
-        </div>
+        <ChoiceCards
+          label="翻页方式"
+          value={settings.mode}
+          options={MODES}
+          onChange={(mode) => update({ mode })}
+          glyph={(mode) => <ModeGlyph mode={mode} />}
+          glyphSize={[40, 28]}
+          columns={3}
+          compact
+        />
       </Row>
       <div className="rd-setting">
         <span className="rd-setting__label">

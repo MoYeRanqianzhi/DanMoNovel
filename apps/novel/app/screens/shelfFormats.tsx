@@ -15,12 +15,13 @@
  */
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { GalleryHorizontalEnd, LayoutGrid, LayoutList, LibraryBig, type LucideIcon } from 'lucide-react';
+import { ChoiceCards } from '@danmo/design/components/ChoiceCards';
 import { Sheet } from '@danmo/design/components/overlays';
 
 export type ShelfFormat = 'display' | 'bookcase' | 'grid' | 'list';
 
 interface FormatInfo {
-  id: ShelfFormat;
+  value: ShelfFormat;
   name: string;
   /** 选择面板里的一行说明：选了之后书会怎么摆 */
   note: string;
@@ -30,10 +31,10 @@ interface FormatInfo {
 
 /** 顺序即选择面板里的顺序：从最像实物的摆法，到信息最多的列表 */
 export const SHELF_FORMATS: readonly FormatInfo[] = [
-  { id: 'display', name: '陈列', note: '书微微侧身立成一排，看得见封面与厚薄', Icon: GalleryHorizontalEnd },
-  { id: 'bookcase', name: '书柜', note: '书脊朝外排在书板上，像家里的书柜', Icon: LibraryBig },
-  { id: 'grid', name: '宫格', note: '封面整整齐齐铺开，架上的书一眼看全', Icon: LayoutGrid },
-  { id: 'list', name: '列表', note: '一行一本，读到哪一章写得清清楚楚', Icon: LayoutList },
+  { value: 'display', name: '陈列', note: '书微微侧身立成一排，看得见封面与厚薄', Icon: GalleryHorizontalEnd },
+  { value: 'bookcase', name: '书柜', note: '书脊朝外排在书板上，像家里的书柜', Icon: LibraryBig },
+  { value: 'grid', name: '宫格', note: '封面整整齐齐铺开，架上的书一眼看全', Icon: LayoutGrid },
+  { value: 'list', name: '列表', note: '一行一本，读到哪一章写得清清楚楚', Icon: LayoutList },
 ];
 
 export const DEFAULT_SHELF_FORMAT: ShelfFormat = 'display';
@@ -42,8 +43,8 @@ const STORAGE_KEY = 'danmo:shelf-format';
 const COOKIE_NAME = 'danmo-shelf-format';
 const COOKIE_RE = new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([a-z]+)`);
 
-const isShelfFormat = (v: unknown): v is ShelfFormat => SHELF_FORMATS.some((f) => f.id === v);
-const infoOf = (format: ShelfFormat) => SHELF_FORMATS.find((f) => f.id === format) ?? SHELF_FORMATS[0];
+const isShelfFormat = (v: unknown): v is ShelfFormat => SHELF_FORMATS.some((f) => f.value === v);
+const infoOf = (format: ShelfFormat) => SHELF_FORMATS.find((f) => f.value === format) ?? SHELF_FORMATS[0];
 
 /** 服务端：从请求的 Cookie 头里取格式。这是外部输入，不认识的值一律当作默认格式 */
 export function formatFromCookie(header: string | null): ShelfFormat {
@@ -114,8 +115,8 @@ export function useShelfFormat(server: ShelfFormat): [ShelfFormat, (format: Shel
 /* ---------------- 示意图 ---------------- */
 
 /**
- * 每种格式的示意图，画在 64×40 的格子里。线条用 currentColor，选中时跟着卡片变成红线色
- * （与阅读器"翻页方式"的示意图同一种画法）。
+ * 每种格式的示意图，画在 64×40 的格子里（外面的 <svg>、线条的颜色与粗细由 ChoiceCards 给，
+ * 与阅读器"翻页方式"、作者站选纸的示意图同一种画法）。
  */
 function FormatGlyph({ format }: { format: ShelfFormat }) {
   let art: ReactNode;
@@ -157,7 +158,7 @@ function FormatGlyph({ format }: { format: ShelfFormat }) {
             .map(([x, w, h]) => (
               <path key={x} d={`M${x + 1} ${36 - h} H${x + w - 1}`} />
             ))}
-          <path d="M4 33.5 H60" className="glyph-plank" />
+          <path d="M4 33.5 H60" className="glyph-bold" />
         </>
       );
       break;
@@ -178,11 +179,7 @@ function FormatGlyph({ format }: { format: ShelfFormat }) {
       ));
       break;
   }
-  return (
-    <svg className="shelf-format__glyph" viewBox="0 0 64 40" aria-hidden="true">
-      {art}
-    </svg>
-  );
+  return art;
 }
 
 /* ---------------- 书架顶部的格式按钮与选择面板 ---------------- */
@@ -208,25 +205,18 @@ export function ShelfFormatPicker({ value, onChange }: { value: ShelfFormat; onC
         <span>{current.name}</span>
       </button>
       <Sheet open={open} title="显示格式" onClose={() => setOpen(false)}>
-        <div className="shelf-formats" role="radiogroup" aria-label="显示格式">
-          {SHELF_FORMATS.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              role="radio"
-              aria-checked={f.id === value}
-              className="shelf-format"
-              onClick={() => {
-                onChange(f.id);
-                setOpen(false);
-              }}
-            >
-              <FormatGlyph format={f.id} />
-              <span className="shelf-format__name">{f.name}</span>
-              <span className="shelf-format__note">{f.note}</span>
-            </button>
-          ))}
-        </div>
+        <ChoiceCards
+          label="显示格式"
+          value={value}
+          options={SHELF_FORMATS}
+          onChange={(format) => {
+            onChange(format);
+            setOpen(false);
+          }}
+          glyph={(format) => <FormatGlyph format={format} />}
+          glyphSize={[64, 40]}
+          columns={2}
+        />
       </Sheet>
     </>
   );
