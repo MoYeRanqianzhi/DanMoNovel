@@ -106,15 +106,21 @@ export function FlightProvider({ children }: { children: ReactNode }) {
   const seq = useRef(0);
   const [flight, setFlight] = useState<ActiveFlight | null>(null);
 
-  /** 结束一次飞行：先显示两端的书，再同步移除覆盖层，中间不留任何一帧空档 */
-  const finish = useCallback((f: ActiveFlight) => {
+  /**
+   * 结束一次飞行：先显示两端的书，再同步移除覆盖层，中间不留任何一帧空档。
+   * interrupted：被新的飞行打断（tryLaunch 里）。这时可能正处在页面栈或书位的布局副作用中，
+   * React 不许在那里 flushSync（会报错且不生效）；也不需要同步——紧接着的 setFlight(新飞行) 与它一起提交，覆盖层直接换成新的
+   */
+  const finish = useCallback((f: ActiveFlight, interrupted = false) => {
     for (const end of [f.from, f.to]) if (end) end.el.style.visibility = '';
     // 终点的书若在漂浮，把漂浮动画拨回起点（位移为 0），否则落地瞬间会"跳"一下
     f.to?.el.getAnimations({ subtree: true }).forEach((a) => {
       if (a instanceof CSSAnimation) a.currentTime = 0;
     });
     if (active.current?.seq === f.seq) active.current = null;
-    flushSync(() => setFlight((cur) => (cur?.seq === f.seq ? null : cur)));
+    const clear = () => setFlight((cur) => (cur?.seq === f.seq ? null : cur));
+    if (interrupted) clear();
+    else flushSync(clear);
   }, []);
 
   const measure = useCallback((id: string): Endpoint | null => {
@@ -141,7 +147,7 @@ export function FlightProvider({ children }: { children: ReactNode }) {
     // 减少动效：不飞，页面自身的淡入淡出就是全部过渡
     if (reduced) return;
     // 上一次飞行还没结束就来了新的：立即收尾，避免两本书同时在空中
-    if (active.current) finish(active.current);
+    if (active.current) finish(active.current, true);
 
     const from = measure(req.from);
     const to = measure(req.to);

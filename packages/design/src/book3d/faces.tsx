@@ -58,7 +58,8 @@ function ImageArt({ src, face, sheen }: { src: string; face: 'cover' | 'spine' |
 /** 用到的书名字体在浏览器里按需加载（界面字体什么也不做）；服务端先用字体栈里的回退字体 */
 function useTitleFont(font: TitleFont | undefined) {
   useEffect(() => {
-    if (font) void ensureTitleFont(font);
+    // 加载失败时书名先用回退字体（字体栈里排在后面的那几款），下次渲染再试，不必报错
+    if (font) ensureTitleFont(font).catch(() => {});
   }, [font]);
 }
 
@@ -135,7 +136,8 @@ export function CoverFace({ book }: { book: Book }) {
  */
 function CoverOrnament({ ornament, author }: { ornament: Ornament; author: string }) {
   if (ornament === 'none') return null;
-  if (ornament === 'seal') return <span className="cover__seal">{author.slice(0, 1)}</span>;
+  // 按字取而不是按 UTF-16 单元：笔名以扩展区的生僻字或表情开头时，slice(0, 1) 只取到半个字
+  if (ornament === 'seal') return <span className="cover__seal">{[...author][0]}</span>;
   let art;
   switch (ornament) {
     case 'moon':

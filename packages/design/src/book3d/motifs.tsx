@@ -37,15 +37,15 @@ function flower(key: string, cx: number, cy: number, size: number, petal: string
         return (
           <circle
             key={deg}
-            cx={cx + Math.cos(rad) * size}
-            cy={cy + Math.sin(rad) * size}
-            r={size * 0.95}
+            cx={q(cx + Math.cos(rad) * size)}
+            cy={q(cy + Math.sin(rad) * size)}
+            r={q(size * 0.95)}
             fill={petal}
             opacity={0.92}
           />
         );
       })}
-      <circle cx={cx} cy={cy} r={size * 0.45} fill={heart} opacity={0.8} />
+      <circle cx={q(cx)} cy={q(cy)} r={q(size * 0.45)} fill={heart} opacity={0.8} />
     </g>
   );
 }

@@ -78,9 +78,6 @@ function dayCount(joined: string): number {
   return Math.round((today.getTime() - new Date(y, m - 1, d).getTime()) / 86_400_000) + 1;
 }
 
-/** 作者站的默认主题（root.tsx 里 ThemeProvider 的 defaultTheme） */
-const DEFAULT_THEME = 'xiangye';
-
 export function MeScreen({ data }: ScreenProps<MeData>) {
   const { back, push } = useStack();
   const navigate = useNavigate();
@@ -226,7 +223,7 @@ export function MeScreen({ data }: ScreenProps<MeData>) {
             <h2 className="section-title" id="me-themes">
               主题<small>作者站默认缃叶</small>
             </h2>
-            <ThemeSwatches defaultTheme={DEFAULT_THEME} site="作者站" className="me-swatches" />
+            <ThemeSwatches site="作者站" className="me-swatches" />
           </section>
 
           <ul className="settings-list me-settings">

@@ -12,15 +12,24 @@
  * │ 每次进栈都在历史记录的 state 里写一个页面 id（sid）。地址变化时：    │
  * │ - 新地址的 sid 已在栈里 → 出栈到那一页（后退）；                    │
  * │ - state 里带 tab 标记 → 切换标签页，清空页面栈；                    │
+ * │ - 浏览器后退、前进到一条已经不在栈里的记录：是标签页、或比栈顶更早 → │
+ * │   当作切换标签页，清空页面栈；比栈顶晚（前进）→ 进栈；              │
  * │ - 替换式跳转 → 替换栈顶；                                          │
- * │ - 其他情况 → 进栈（包括浏览器"前进"到一个已经不在栈里的页面）。        │
+ * │ - 其他情况 → 进栈。                                                │
  * │ 首次打开、以及没有 sid 的历史记录，用 React Router 的 location.key 生成。│
  * └──────────────────────────────────────────────────────────────┘
+ *
+ * 栈里每一页还记着它在浏览器历史里的位置（React Router 写在 history.state.idx 里的序号）。
+ * 上面几条规则保证栈里从下到上的位置一直递增，"返回"与"点栈底的标签"按位置差往回退，
+ * 退到的一定是栈里的那一页，不会退到栈外（例如退出本站）。
  *
  * 页面组件不经过 <Outlet/> 渲染：每个路由模块在 handle.Screen 里交出自己的页面组件，
  * 页面栈从 useMatches() 取到它与 loader 数据，冻结在进栈的那一刻。所以页面组件必须
  * 从 props 读数据与参数，不能用 useLoaderData / useParams / useLocation
- * （被盖住的页面读到的会是栈顶页面的地址）；需要"自己这一页"的信息时用 useScreen()。
+ * （被盖住的页面读到的会是栈顶页面的地址）；"自己这一页"的信息（页面 id、书位名）在 props.screen 里。
+ *
+ * 换页时焦点跟着走：进栈的新页把焦点收到自己的容器上（键盘用户接着按 Tab 就在新页里），
+ * 出栈后露出来的那一页把焦点还给当初离开它时的那个元素（见 Screen）。
  *
  * 找不到内容（书不存在、章节超出范围、地址写错）时，loader 返回 MISSING 标记与 404 状态码，
  * 页面栈改用 <PageStack missing> 指定的页面渲染，同样进栈、返回，见 MISSING 的说明。
@@ -142,7 +151,13 @@ interface Entry {
   params: Params<string>;
   phase: Phase;
   enter: 'fade' | 'dive';
+  /** 这一页在浏览器历史里的位置（history.state.idx）；服务端渲染时没有 */
+  idx?: number;
 }
+
+/** 当前历史记录的位置：React Router 每次进栈、替换都把序号写在 history.state.idx 里 */
+const historyIdx = () =>
+  typeof window === 'undefined' ? undefined : ((window.history.state as { idx?: unknown } | null)?.idx as number | undefined);
 
 /* ------------------------------------------------------------------ */
 /* 页面栈导航 API                                                       */
@@ -183,18 +198,10 @@ export interface StackApi {
 }
 
 const StackContext = createContext<StackApi | null>(null);
-const ScreenContext = createContext<ScreenInfo | null>(null);
 
 export function useStack(): StackApi {
   const ctx = useContext(StackContext);
   if (!ctx) throw new Error('useStack 必须在 <PageStack> 内使用');
-  return ctx;
-}
-
-/** 页面组件里取"自己这一页"的信息（被盖住的页面也能拿到正确的值） */
-export function useScreen(): ScreenInfo {
-  const ctx = useContext(ScreenContext);
-  if (!ctx) throw new Error('useScreen 必须在页面栈渲染的页面内使用');
   return ctx;
 }
 
@@ -204,6 +211,12 @@ const newSid = () => `p${Date.now().toString(36)}${(++sidSeq).toString(36)}`;
 
 /** 从渲染列表中去掉离场中的页面，得到逻辑栈 */
 const liveOf = (entries: Entry[]) => entries.filter((e) => e.phase !== 'exit');
+
+/** 从栈里较高的一页退到较低的一页要走几步历史（负数）；任一页没有位置、或顺序不对时为 undefined */
+function stepsBetween(from: Entry, to: Entry): number | undefined {
+  if (from.idx === undefined || to.idx === undefined || to.idx >= from.idx) return undefined;
+  return to.idx - from.idx;
+}
 
 /** 两组路由参数是否相同（逐项比较；不依赖对象引用，避免每次渲染都当作"变了"） */
 function sameParams(a: Params<string>, b: Params<string>): boolean {
@@ -251,6 +264,8 @@ export function PageStack({ missing, children }: PageStackProps) {
       params: leaf.params,
       phase,
       enter: state.enter === 'dive' && !reduced ? 'dive' : 'fade',
+      // 进栈、出栈都在地址变化之后排栈，这时 history.state 已经是这一页的记录（水合那一次也已由 React Router 写好）
+      idx: historyIdx(),
     }),
     // 只在地址或数据变化时重建；state、sid 与 leafHandle 都由 location 与 leaf 决定
     [sid, leaf, reduced],
@@ -264,23 +279,36 @@ export function PageStack({ missing, children }: PageStackProps) {
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
 
-  const setPhase = useCallback((key: string, phase: Phase) => {
-    setEntries((es) => es.map((e) => (e.sid === key ? { ...e, phase } : e)));
+  // 两个定时器只动还处在对应阶段的页：淡入没走完就被返回的页已经在离场，不能被"淡入结束"改回静止（会闪回来、
+  // 把下面那页判成被盖住）；离场没走完又被"前进"回来的同一页已经换成新的一项，不能被"离场结束"删掉
+  const settle = useCallback((key: string) => {
+    setEntries((es) => es.map((e) => (e.sid === key && e.phase === 'enter' ? { ...e, phase: 'idle' } : e)));
   }, []);
 
   const removeLater = useCallback((keys: string[]) => {
-    window.setTimeout(() => setEntries((es) => es.filter((e) => !keys.includes(e.sid))), SCREEN_EXIT_MS + 40);
+    window.setTimeout(
+      () => setEntries((es) => es.filter((e) => !(e.phase === 'exit' && keys.includes(e.sid)))),
+      SCREEN_EXIT_MS + 40,
+    );
   }, []);
 
-  /** 出栈时让书飞回它来的地方（详情页的大书 hop 回去，阅读页 surface 回去） */
+  /**
+   * 出栈时让书飞回它来的地方（详情页的大书 hop 回去，阅读页 surface 回去）。
+   * 一次退好几页（宽屏阅读页里点侧栏的标签、长按后退）时，书与飞法取最上面那页，
+   * 终点取最下面那个离场页的来源书位：它在留下来的页上，中间的页随之离场，书不能飞向它。
+   * 两页说的不是同一本书就不飞。
+   */
   const returnFlight = useCallback(
-    (top: Entry) => {
+    (leaving: Entry[]) => {
+      const top = leaving[leaving.length - 1];
+      const bottom = leaving[0];
       const { back, book } = top.handle;
-      const fromSlot = top.state.fromSlot;
+      const to = bottom.state.fromSlot;
       const b = book?.(top.data);
-      if (!back || !fromSlot || !b) return;
-      if (back === 'hop') flight.request({ kind: 'hop', from: `${top.sid}:hero`, to: fromSlot, book: b });
-      else flight.request({ kind: 'surface', from: VIEWPORT, to: fromSlot, book: b });
+      if (!back || !to || !b) return;
+      if (bottom !== top && bottom.handle.book?.(bottom.data)?.id !== b.id) return;
+      if (back === 'hop') flight.request({ kind: 'hop', from: `${top.sid}:hero`, to, book: b });
+      else flight.request({ kind: 'surface', from: VIEWPORT, to, book: b });
     },
     [flight],
   );
@@ -306,18 +334,30 @@ export function PageStack({ missing, children }: PageStackProps) {
     if (index >= 0) {
       // 后退到栈里已有的一页：它上面的页面全部出栈（通常只有一页），书飞回去
       const leaving = live.slice(index + 1);
-      returnFlight(leaving[leaving.length - 1]);
+      returnFlight(leaving);
       setEntries((es) => es.map((e) => (leaving.includes(e) ? { ...e, phase: 'exit' } : e)));
       removeLater(leaving.map((e) => e.sid));
       return;
     }
 
     const next = makeEntry('enter');
+    // 浏览器后退、前进到一条已经不在栈里的记录（中间切过标签页，栈被清空过）：
+    // 是标签页、或比栈顶更早，按切换标签页清空栈，否则这一页压在栈顶上，栈序与历史顺序就反了
+    // （例如打开书架 → 点"发现" → 后退：书架压在发现上面，再点"发现"会往历史外面退）
+    const rebuild =
+      navType === 'POP' &&
+      (!!leafHandle.tab || (next.idx !== undefined && top.idx !== undefined && next.idx < top.idx));
     // 切换标签页：清空页面栈；替换式跳转：替换栈顶；其他：进栈
-    const leaving = state.tab ? live : navType === 'REPLACE' ? [top] : [];
-    setEntries((es) => [...es.map((e) => (leaving.includes(e) ? { ...e, phase: 'exit' as const } : e)), next]);
+    const leaving = state.tab || rebuild ? live : navType === 'REPLACE' ? [top] : [];
+    setEntries((es) => [
+      // "前进"回到一页时，它上一次的那一项可能还在离场：直接去掉，同一个 sid 不能有两项
+      ...es
+        .filter((e) => !(e.phase === 'exit' && e.sid === next.sid))
+        .map((e) => (leaving.includes(e) ? { ...e, phase: 'exit' as const } : e)),
+      next,
+    ]);
     if (leaving.length) removeLater(leaving.map((e) => e.sid));
-    window.setTimeout(() => setPhase(next.sid, 'idle'), next.enter === 'dive' ? DIVE.total : SCREEN_ENTER_MS);
+    window.setTimeout(() => settle(next.sid), next.enter === 'dive' ? DIVE.total : SCREEN_ENTER_MS);
     // 只随地址与数据变化；其余依赖都是稳定的回调
   }, [sid, leaf.loaderData, leaf.params]);
 
@@ -341,8 +381,9 @@ export function PageStack({ missing, children }: PageStackProps) {
   const back = useCallback(() => {
     const live = liveOf(entriesRef.current);
     if (live.length > 1) {
-      // 栈里的每一页都对应一条历史记录：走浏览器后退，由地址变化出栈
-      navigate(-1);
+      // 栈里的每一页都对应一条历史记录：走浏览器后退，由地址变化出栈。
+      // 按两页的历史位置差退（通常是 −1；长按"前进"一次跳过几条记录时不止一步）
+      navigate(stepsBetween(live[live.length - 1], live[live.length - 2]) ?? -1);
       return;
     }
     const top = live[0];
@@ -363,7 +404,12 @@ export function PageStack({ missing, children }: PageStackProps) {
     (to: string) => {
       const live = liveOf(entriesRef.current);
       if (live[0].pathname !== to) return false;
-      if (live.length > 1) navigate(-(live.length - 1));
+      if (live.length > 1) {
+        // 退回栈底：按历史位置差退。差不出来（不该发生）就交给导航链接，带着 tab 标记跳转、清空栈
+        const steps = stepsBetween(live[live.length - 1], live[0]);
+        if (steps === undefined) return false;
+        navigate(steps);
+      }
       return true;
     },
     [navigate],
@@ -409,10 +455,40 @@ export function PageStack({ missing, children }: PageStackProps) {
  * 一页：<section class="screen">。被完全盖住时设 visibility: hidden 并 inert：
  * 用 visibility 而不是 display:none，是为了保留布局——返回时滚动位置还在，
  * 书飞回原书位时原书位仍然可以被测量；inert 让键盘焦点不会跑进被盖住的页面。
+ *
+ * 焦点：进栈的新页一挂上就把焦点收到自己（section 带 tabIndex=-1，不进 Tab 顺序，也不画焦点圈），
+ * 不然焦点留在下面那页，320ms 后那页变 inert，焦点被浏览器丢到 body，读屏也不知道换了页。
+ * 被盖住前记下焦点在这一页的哪个元素上，出栈后重新成为栈顶时还给它；还不回去（元素没了，
+ * 或正在等飞回来的书、暂时 visibility: hidden）就落在这一页的容器上。
+ * 首次打开的那一页不抢焦点（浏览器载入页面时焦点本来就在文档上）。
  */
 function Screen({ entry, isTop, covered }: { entry: Entry; isTop: boolean; covered: boolean }) {
   const { Screen: Page, tab, bare, name } = entry.handle;
   const inactive = covered || entry.phase === 'exit';
+  const ref = useRef<HTMLElement>(null);
+  /** 被别的页盖住时，焦点停在这一页的哪个元素上 */
+  const lastFocus = useRef<HTMLElement | null>(null);
+  /** 挂载时是不是进栈的新页（首次打开的那一页挂载时已经是静止阶段） */
+  const pushed = useRef(entry.phase === 'enter');
+
+  // 同一次提交里，下面那页（兄弟节点在前）的副作用先跑、新页的后跑：记焦点时焦点还在下面那页
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (!isTop) {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && el.contains(active)) lastFocus.current = active;
+      return;
+    }
+    const target = lastFocus.current;
+    lastFocus.current = null;
+    if (target?.isConnected) {
+      target.focus({ preventScroll: true });
+      if (document.activeElement === target) return;
+    }
+    if (target || pushed.current) el.focus({ preventScroll: true });
+    pushed.current = false;
+  }, [isTop]);
 
   const info = useMemo<ScreenInfo>(
     () => ({ sid: entry.sid, isTop, fromSlot: entry.state.fromSlot, slot: (name) => `${entry.sid}:${name}` }),
@@ -425,6 +501,8 @@ function Screen({ entry, isTop, covered }: { entry: Entry; isTop: boolean; cover
 
   return (
     <section
+      ref={ref}
+      tabIndex={-1}
       className="screen paper"
       data-page={name}
       data-root={tab || undefined}
@@ -434,9 +512,7 @@ function Screen({ entry, isTop, covered }: { entry: Entry; isTop: boolean; cover
       inert={inactive}
       style={{ visibility: covered ? 'hidden' : undefined, '--dive-reveal': `${reveal}ms` } as CSSProperties}
     >
-      <ScreenContext.Provider value={info}>
-        <Page data={entry.data} params={entry.params} screen={info} />
-      </ScreenContext.Provider>
+      <Page data={entry.data} params={entry.params} screen={info} />
     </section>
   );
 }

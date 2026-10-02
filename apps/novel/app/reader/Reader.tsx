@@ -357,7 +357,8 @@ export function ReaderScreen({ data, screen }: ScreenProps<ReaderData>) {
     const own = importedIdOf(settings.font);
     if (!own) {
       const font = platformFont(settings.font);
-      if (font) ensureFont(font.id);
+      // 加载失败时正文先用字体栈里的回退字体，ensureFont 下次会再试
+      if (font) ensureFont(font.id).catch(() => {});
       return;
     }
     const fallback = () => {

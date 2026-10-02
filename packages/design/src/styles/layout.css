@@ -35,6 +35,10 @@
   padding-left: var(--safe-left);
   padding-right: var(--safe-right);
 }
+/* 换页时焦点放在新页的容器上（tabindex=-1，见 stack.tsx 的 Screen）：容器本身不画焦点圈，Tab 往下走才落到控件上 */
+.screen:focus {
+  outline: none;
+}
 /* 根页面（标签页）底部给浮起的导航条留出空间 */
 .screen[data-root] {
   padding-bottom: calc(var(--tabbar-h) + 44px + var(--safe-bottom));
@@ -119,11 +123,13 @@
 }
 /* 带标题的顶栏（主题配色、组件实验室）：标题是字，内容滚上来会和它叠在一起，所以垫一条与页面同样的纸
  * （纸色加纸纹），下沿淡进页面。只有按钮的顶栏仍是透明的，内容从圆按钮后面滑过不碍事。
- * 纸垫在 ::before 上、z-index −1：顶栏 sticky 加 z-index 自成层叠上下文，纸在按钮与标题之下、页面内容之上 */
+ * 纸垫在 ::before 上、z-index −1：顶栏 sticky 加 z-index 自成层叠上下文，纸在按钮与标题之下、页面内容之上。
+ * 吸顶的位置不用另让刘海：sticky 按滚动容器的内容边算，.screen 的 padding-top 已经让过了（Chrome、Safari 都是）；
+ * 纸垫向上多铺一个安全区的高度，把刘海、状态栏底下那一截也盖上，滚上去的字不会从状态栏后面透出来 */
 .subbar--titled::before {
   content: '';
   position: absolute;
-  inset: 0 0 -14px;
+  inset: calc(-1 * var(--safe-top)) 0 -14px;
   z-index: -1;
   background-color: var(--paper);
   background-image: var(--grain);

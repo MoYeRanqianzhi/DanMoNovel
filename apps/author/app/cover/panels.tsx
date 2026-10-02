@@ -166,7 +166,7 @@ function FrontMaker({ api }: { api: StudioApi }) {
               className="ornament-tile"
               onClick={() => setVector({ ornament: o.id })}
             >
-              <OrnamentGlyph id={o.id} seal={api.book.author.slice(0, 1)} />
+              <OrnamentGlyph id={o.id} seal={[...api.book.author][0]} />
               <span className="tile-name">{o.name}</span>
             </button>
           ))}

@@ -63,7 +63,7 @@ export function WorkScreen({ data, screen }: ScreenProps<WorkData>) {
   const bookRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   useTilt(bookRef, stageRef, !reduced);
-  const { side, flip } = useSpin(bookRef, true);
+  const { side, flip } = useSpin(bookRef, true, reduced);
 
   const openCover = () => push(`/works/${book.id}/cover`, { flightFrom: heroSlot, book });
   const write = (index = draft ? draft.index : chapters.length) =>

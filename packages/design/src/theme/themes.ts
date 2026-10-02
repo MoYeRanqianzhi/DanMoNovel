@@ -21,7 +21,7 @@ export interface ThemeMeta {
 }
 
 export const THEMES: ThemeMeta[] = [
-  { id: 'xuetao', name: '薛涛笺', kind: '默认', note: '淡粉色的笺纸，默认主题' },
+  { id: 'xuetao', name: '薛涛笺', kind: '默认', note: '淡粉色的笺纸，薛涛写诗用的那种' },
   { id: 'changye', name: '长夜', kind: '夜间', note: '深紫夜色，关灯后读不刺眼' },
   { id: 'douqing', name: '豆青', kind: '护眼', note: '低饱和的豆绿，久读不累眼' },
   { id: 'xiangye', name: '缃叶', kind: '护眼', note: '旧书页的暖黄，最像纸质书' },
@@ -30,8 +30,6 @@ export const THEMES: ThemeMeta[] = [
   { id: 'yanqishui', name: '盐汽水', kind: '彩色', note: '薄荷绿，夏天的教室' },
   { id: 'mobai', name: '墨白', kind: '彩色', note: '宣纸与墨，只留一点印章红' },
 ];
-
-export const DEFAULT_THEME: ThemeId = 'xuetao';
 
 export function getTheme(id: ThemeId): ThemeMeta {
   return THEMES.find((t) => t.id === id) ?? THEMES[0];

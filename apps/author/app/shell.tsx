@@ -26,7 +26,7 @@ const TABS: NavItem[] = [
 ];
 
 /** 找不到内容时（loader 返回 MISSING）页面栈渲染的页面 */
-const NOT_FOUND = notFoundHandle('回到书房');
+const NOT_FOUND = notFoundHandle('回到书房', '/desk');
 
 export default function AuthorShell() {
   return <PageStack missing={NOT_FOUND}>{(stage) => <Chrome stage={stage} />}</PageStack>;

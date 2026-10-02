@@ -4,6 +4,8 @@
  * ============================================================ */
 
 .jacket {
+  /* 折痕的 z-index 只在展开图里比：不关住的话，管理站审核页切走时它会画在淡入的新页上面 */
+  isolation: isolate;
   display: flex;
   width: calc(var(--jw) * 2 + var(--js));
   height: var(--jh);

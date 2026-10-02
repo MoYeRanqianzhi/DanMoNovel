@@ -79,7 +79,7 @@ export function BookScreen({ data, screen }: ScreenProps<BookData>) {
   const bookRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   useTilt(bookRef, stageRef, !reduced);
-  const { side, flip } = useSpin(bookRef, true);
+  const { side, flip } = useSpin(bookRef, true, reduced);
 
   // 在读才从上次的章节继续（按钮写"继续读"）；没读过或已读完都从第一章开始（按钮写"开始阅读"）
   const read = (chapter = startChapter) =>
@@ -147,7 +147,7 @@ export function BookScreen({ data, screen }: ScreenProps<BookData>) {
         <section className="detail-info">
           <h1 className="detail-title">{book.title}</h1>
           <p className="detail-author">
-            <Seal text={book.author.slice(0, 1)} size={24} />
+            <Seal text={[...book.author][0]} size={24} />
             <span>{book.author}</span>
           </p>
 

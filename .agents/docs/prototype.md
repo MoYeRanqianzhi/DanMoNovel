@@ -104,7 +104,7 @@ apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false�
 - `headers`：`PUBLIC_CACHE`（`public, max-age=60, s-maxage=600`）或 `PRIVATE_CACHE`（`private, no-store`）。国内 CDN 不保证支持 stale-while-revalidate，所以不依赖它。
 - `meta`：标题、description、canonical、JSON-LD（`'script:ld+json'`）、noindex。不要在页面组件里写 `<title>`，因为页面栈同时挂着多页，会出现多个标题。
 - `export default () => null`：路由本身不渲染。页面由页面栈从 handle.Screen 渲染。
-- 页面组件从 props 拿 `data`、`params`、`screen`，不能用 useLoaderData、useParams、useLocation，否则被盖住的页面读到的会是栈顶页面的地址。要"自己这一页"的信息，用 `useScreen()`。
+- 页面组件从 props 拿 `data`、`params`、`screen`，不能用 useLoaderData、useParams、useLocation，否则被盖住的页面读到的会是栈顶页面的地址。"自己这一页"的信息（sid、书位名、是否栈顶）在 props 的 `screen` 里（原先另有一个 useScreen()，没有调用方，2026-10-02 删掉）。
 
 **小说站路由**（全部挂在 `layout('shell.tsx')` 下）：
 
@@ -143,21 +143,26 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 
 - **认页**：每次进栈在历史记录的 state 里写页面 id（`sid`）。没有 sid 的记录用 `k:${location.key}`。地址变化时，在布局副作用里判断：
   - sid 与栈顶相同：同一页的数据更新。handle 也一起更新，重新验证可能发现内容已不存在。
-  - sid 已在栈里：出栈到那一页，并对最上面离开的那页发返回飞行。
+  - sid 已在栈里：出栈到那一页，并发返回飞行（一次退几页时，书与飞法取最上面那页，终点取最下面那个离场页的 fromSlot，两页不是同一本书就不飞）。
   - state 带 `tab`：切换标签页，清空整个栈。
+  - POP 到一条不在栈里的记录：目标是标签页、或历史位置比栈顶早，也清空整个栈；比栈顶晚（前进）才进栈。
+    2026-10-02 前一律进栈，栈序会与历史顺序反过来：打开书架 → 点"发现" → 浏览器后退，书架压在发现上面，
+    再点"发现"走 `navigate(-1)`，退到历史外面（什么也不发生，或离开本站）。
   - REPLACE：替换栈顶。
-  - 其他：进栈。浏览器"前进"到一个已不在栈里的页面，也按进栈处理。
-- **Entry**：`{ sid, pathname, state, handle, data, params, phase: enter|idle|exit, enter: fade|dive }`。
-  - 进栈后，在 `SCREEN_ENTER_MS` 或 `DIVE.total` 之后标记为 idle。
-  - 出栈时标记 exit，`SCREEN_EXIT_MS + 40` 之后移除。
+  - 其他：进栈。
+- **Entry**：`{ sid, pathname, state, handle, data, params, phase: enter|idle|exit, enter: fade|dive, idx }`。
+  - `idx`：这一页在浏览器历史里的位置，取 React Router 写在 `history.state.idx` 的序号（服务端没有）。上面的规则保证栈里从下到上递增；`back` 与 `selectTab` 按位置差退。
+  - 进栈后，在 `SCREEN_ENTER_MS` 或 `DIVE.total` 之后把还在 enter 的那一项标记为 idle（已经在离场的不动，否则会闪回来）。
+  - 出栈时标记 exit，`SCREEN_EXIT_MS + 40` 之后移除还在 exit 的那几项。离场途中"前进"回同一页时，旧的那一项当场去掉，同一个 sid 不会有两项。
+  - 焦点（Screen）：进栈的新页挂上就把焦点收到自己的 section（tabIndex=-1，`.screen:focus` 不画圈）；被盖住前记下焦点所在的元素，重新成为栈顶时还给它，还不回去就落在 section 上。首次打开的那一页不抢焦点。
   - 上面只要有一页是 idle，这一页就设 `visibility: hidden` 加 `inert`。用 visibility 而不是 display:none，是为了保留布局：返回时原书位还能被测量。
   - 页面（`.screen`）静止时不是层叠上下文：页里 z-index 为正的定位元素在 `.app` 里比层次，会画在后进栈的页面上面。上一页淡入的那一会儿、返回时顶层淡出的那一会儿，两页同时可见，它就压在上面。2026-10-02 在日志页逐帧看到账簿纸（z-index 1）盖住正在淡入的"我"。页里要用正的 z-index 时，在外面一层加 `isolation: isolate`，把比较关在这一块里（audit.css 的 .audit-body）。
 - **API**（`useStack()`）：
   - `push(to, { flightFrom, book, dive, replace })`：新建 sid，并发起飞行。hop 飞往 `${新sid}:hero`，dive 飞往 VIEWPORT。
-  - `back()`：栈里有上一页就 `navigate(-1)`；否则用 `replace` 跳到 `handle.parent(params)`，并带 tab 标记。
+  - `back()`：栈里有上一页就按两页的历史位置差 `navigate`（通常是 −1）；否则用 `replace` 跳到 `handle.parent(params)`，并带 tab 标记。
   - `retarget(to)`：替换地址、沿用 sid，页面不换（例如阅读器换章）。
     只更新栈顶的 handle、data 与 params；进栈时记下的 state（fromSlot）与 entry.pathname 不变。所以主角换成另一本书时不能用它：返回时会把新书飞回旧书的书位。审核页手机上的"下一份"因此改用 `push(..., {replace: true})`（第 16 节）。
-  - `selectTab(to)`：栈底就是这个标签页时退回栈底，书会飞回去。
+  - `selectTab(to)`：栈底就是这个标签页时按历史位置差退回栈底，书会飞回去；差不出来时返回 false，交给导航链接带 tab 标记跳转。
   - 其余：`topHandle`、`depth`、`hero`。Esc 键等同于返回。
 - **ScreenHandle**：
   - `Screen`、`name`（写在 `<section data-page>` 上）、`tab`（显示底部导航）。
@@ -166,6 +171,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - `parent(params)`：深链接进入时，返回去哪里。
   - `hero(data) → { book, slot, progress? }`：这一页的主角，启动页据此决定片头的书与降落的书位。公开页面的主角只能取公开数据。
 - **MISSING**：loader 找不到内容时返回 `data(MISSING, { status: 404 })`，页面栈改用 `<PageStack missing={notFoundHandle('回到书城')}>` 渲染"找不到这一页"，照样进栈、返回，服务端给出 404。
+  - `notFoundHandle(按钮文字, 首页 = '/')`：按钮带 tab 标记替换到首页、清空栈；深链接时的 parent 也是它。作者站传 `/desk`（作者站的 `/` 是访客落地页，会收起导航）。
   - 不能 throw：抛出的 404 会交给错误边界，整个骨架连同已叠放的页面都被换掉。
   - 客户端跳转时数据经过序列化，所以用 `isMissing` 按字段判断，不比较引用。
   - 管理站是 SPA，在 `clientLoader` 里返回 MISSING。

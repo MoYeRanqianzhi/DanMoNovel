@@ -105,7 +105,7 @@ export function MeScreen() {
           <h2 className="section-title" id="me-themes">
             主题<small>管理站默认墨白</small>
           </h2>
-          <ThemeSwatches defaultTheme="mobai" site="管理站" className="me-swatches" />
+          <ThemeSwatches site="管理站" className="me-swatches" />
         </section>
 
         <ul className="settings-list me-settings">

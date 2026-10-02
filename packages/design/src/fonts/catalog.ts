@@ -143,11 +143,15 @@ export function fontStack(fontId: string): string {
 
 const loading = new Map<PlatformFontId, Promise<unknown>>();
 
-/** 确保平台字体的分片 CSS 已插进页面（同一款只加载一次）。只在浏览器里调用 */
+/**
+ * 确保平台字体的分片 CSS 已插进页面（同一款只加载一次）。只在浏览器里调用。
+ * 加载失败（离线、分片请求失败）时从表里拿掉，下次用到这款字体时再试；不拿掉的话，这次会话里永远不再加载
+ */
 export function ensureFont(id: PlatformFontId): Promise<unknown> {
   let p = loading.get(id);
   if (!p) {
     p = platformFont(id)!.load();
+    p.catch(() => loading.delete(id));
     loading.set(id, p);
   }
   return p;

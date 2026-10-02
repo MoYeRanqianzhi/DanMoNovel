@@ -109,10 +109,16 @@ const TAP_MS = 500;
  * 怎么区分"点一下"和"拖"：按下后横向移动不到 DRAG_SLOP 时书不动（手指的轻微抖动不会让书晃）；
  * 超过了才开始跟手转。松手时如果从没开始拖、总位移也不到 DRAG_SLOP、按住不到 TAP_MS，就是点一下，翻到另一面。
  * 竖向滑动时浏览器接管为页面滚动，发来的是 pointercancel，不会被当成点击。
+ *
+ * reduced（减少动效）：翻面与松手后的吸附直接到位，不走弹簧（约一秒、带回弹的半圈）；拖动仍然跟手，
+ * 那是读者自己在转。弹簧是 rAF 驱动的，base.css 里"减少动效时动画缩成一瞬"的规则管不到它，只能在这里判断。
  */
-export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean) {
+export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean, reduced = false) {
   const [side, setSide] = useState<BookSide>('front');
   const flipRef = useRef<(to: BookSide) => void>(() => {});
+  // 用 ref 读最新的偏好：偏好变了不必重装监听（重装会把书的角度清回正面）
+  const reducedRef = useRef(reduced);
+  reducedRef.current = reduced;
 
   useEffect(() => {
     const book = bookRef.current;
@@ -144,6 +150,13 @@ export function useSpin(bookRef: RefObject<HTMLElement | null>, enabled: boolean
      */
     const settle = () => {
       cancelAnimationFrame(raf);
+      if (reducedRef.current && target !== null) {
+        angle = target;
+        velocity = 0;
+        raf = 0;
+        write(angle);
+        return;
+      }
       let last = 0;
       let acc = 0;
       let prev = angle;

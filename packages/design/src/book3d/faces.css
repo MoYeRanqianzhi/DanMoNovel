@@ -401,6 +401,9 @@
 }
 .back__extend {
   position: absolute;
+  /* 垫在最底下：它与压暗的渐变（::before）都是定位元素，不写的话按树序后来的图片盖住渐变，渐变形同虚设。
+   * .back 本身是 .face-art（有 transform，自成层叠上下文），−1 不会掉到封底的底色下面 */
+  z-index: -1;
   inset: -14%;
   width: 128%;
   height: 128%;

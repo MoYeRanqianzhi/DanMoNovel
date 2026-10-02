@@ -141,6 +141,8 @@ export interface Origin {
 
 export interface ThemeApi {
   theme: ThemeId;
+  /** 这个站的默认主题（ThemeProvider 的 defaultTheme）：主题纸样据此标出"某某站默认" */
+  defaultTheme: ThemeId;
   motionPref: MotionPref;
   /** 生效的"减少动效"：为 true 时所有过渡都应退化为淡入淡出或直接切换 */
   reduced: boolean;
@@ -176,6 +178,8 @@ export function ThemeProvider({ defaultTheme, children }: { defaultTheme: ThemeI
 
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
+  /** 墨晕转场的序号：只让最后一次转场摘掉 ink-switching */
+  const inkSeq = useRef(0);
 
   const setTheme = useCallback(
     (id: ThemeId, origin?: Origin) => {
@@ -196,8 +200,15 @@ export function ThemeProvider({ defaultTheme, children }: { defaultTheme: ThemeI
       root.style.setProperty('--ink-max', `${Math.ceil(radius + 90)}px`);
       root.classList.add('ink-switching');
 
+      // 连着点两张纸样时，后一次转场会跳过前一次，前一次的 finished 立刻兑现：
+      // 只有最后一次转场结束才摘掉类名，否则后一次的墨晕退成浏览器默认的交叉淡入
+      const seq = ++inkSeq.current;
       const transition = document.startViewTransition(() => flushSync(apply));
-      transition.finished.finally(() => root.classList.remove('ink-switching'));
+      // 被跳过的那次 ready 会以 AbortError 拒绝，接住它（不是错误）
+      transition.ready.catch(() => {});
+      transition.finished.finally(() => {
+        if (inkSeq.current === seq) root.classList.remove('ink-switching');
+      });
     },
     [reduced, store],
   );
@@ -208,8 +219,8 @@ export function ThemeProvider({ defaultTheme, children }: { defaultTheme: ThemeI
   );
 
   const api = useMemo<ThemeApi>(
-    () => ({ theme: prefs.theme, motionPref: prefs.motion, reduced, setTheme, setMotionPref }),
-    [prefs.theme, prefs.motion, reduced, setTheme, setMotionPref],
+    () => ({ theme: prefs.theme, defaultTheme, motionPref: prefs.motion, reduced, setTheme, setMotionPref }),
+    [prefs.theme, defaultTheme, prefs.motion, reduced, setTheme, setMotionPref],
   );
 
   return <ThemeContext.Provider value={api}>{children}</ThemeContext.Provider>;
