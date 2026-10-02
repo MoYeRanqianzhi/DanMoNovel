@@ -199,6 +199,11 @@
   font-family: var(--font-kai);
   font-size: 15px;
   line-height: 1.3;
+  /* 腰封上一句话，一行放不下时在标点处分成匀称的两行（"第七封信，/终于写了收件人"），
+   * 不让末行只剩一个字（"……收件/人"）；一段放不下才在字间断 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 .cover__imprint {
   font-size: 9px;

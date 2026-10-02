@@ -22,7 +22,10 @@ const TABS: NavItem[] = [
 ];
 
 /** 找不到内容时（loader 返回 MISSING）页面栈渲染的页面 */
-const NOT_FOUND = notFoundHandle('回到书城');
+const NOT_FOUND = notFoundHandle('回到书城', '/', {
+  title: '这一页不在书架上',
+  text: '地址可能写错了，也可能这本书已经下架。',
+});
 
 export default function NovelShell() {
   return <PageStack missing={NOT_FOUND}>{(stage) => <Chrome stage={stage} />}</PageStack>;

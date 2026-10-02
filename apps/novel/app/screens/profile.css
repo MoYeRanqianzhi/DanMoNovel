@@ -5,6 +5,12 @@
 .profile {
   padding-top: var(--sp-6);
 }
+/* 平板竖放：满宽时一排小印只占左边三百来宽、设置列表却拉满，一边挤一边空；收成 640 居中（.page 的 margin: auto） */
+@media (min-width: 600px) and (max-width: 899.98px) {
+  .profile {
+    max-width: 640px;
+  }
+}
 @media (min-width: 900px) {
   .profile {
     max-width: 760px;
@@ -81,12 +87,14 @@
 .week__stamps li[data-today] .week__day {
   color: var(--thread-ink);
 }
-/* 每天读了几分钟：窄屏不写，宽屏的章大了，章下写得下 */
+/* 每天读了几分钟：窄屏不写，平板与宽屏的章大了，章下写得下 */
 .week__min {
   display: none;
 }
-@media (min-width: 900px) {
+@media (min-width: 600px) {
+  /* 一排七方章撑满这一栏（章与章之间均分），不缩在左边 */
   .week__stamps {
+    justify-content: space-between;
     gap: 14px;
   }
   .week__stamp {
@@ -163,8 +171,9 @@
  * 本周两百上下），短的那块下面空出的一点不显眼。DOM 顺序不变，读屏与 Tab 的顺序同窄屏。
  * ============================================================ */
 @media (min-width: 1100px) {
+  /* 版心不用整站的 1180：右栏只有一排七方章与读完的几本书，拉到 1180 宽右边空出一大块，整页偏在左上 */
   .profile {
-    max-width: var(--content-max);
+    max-width: 1000px;
     display: grid;
     grid-template-columns: clamp(300px, 30%, 360px) minmax(0, 1fr);
     grid-template-areas:

@@ -4,10 +4,20 @@
  * 用在两处：各站根组件的 ErrorBoundary（loader 抛出错误时，在 Provider 之外渲染，
  * 所以这里不用任何上下文，只用静态的纸面样式；三站共用 RouteErrorPage）；以及页面栈里的 404 页（inline 为 true）。
  * 印文"缺"表示找不到、"误"表示出了差错。
+ * 找不到时的说法各站不同（copy）：小说站说书架、作者站说书房、管理站说案卷；不传时用不分站点的说法。
  */
 import type { ReactNode } from 'react';
 import { isRouteErrorResponse } from 'react-router';
 import './error-page.css';
+
+/** 找不到时的标题与说明 */
+export interface NotFoundCopy {
+  title: string;
+  text: string;
+}
+
+/** 不分站点的说法：根组件 ErrorBoundary 接到被抛出的 404 时用（平常的 404 在页面栈里，各站传自己的说法） */
+const NEUTRAL: NotFoundCopy = { title: '找不到这一页', text: '地址可能写错了，也可能要找的内容已经不在了。' };
 
 interface ErrorPageProps {
   kind: 'not-found' | 'error';
@@ -17,9 +27,11 @@ interface ErrorPageProps {
   inline?: boolean;
   /** 开发时显示的错误堆栈 */
   detail?: string;
+  /** 找不到时的标题与说明，缺省用不分站点的说法 */
+  copy?: NotFoundCopy;
 }
 
-export function ErrorPage({ kind, action, inline, detail }: ErrorPageProps) {
+export function ErrorPage({ kind, action, inline, detail, copy = NEUTRAL }: ErrorPageProps) {
   const notFound = kind === 'not-found';
   // 页面栈的舞台本身就是 <main>，放在栈里时不能再嵌一个
   const Root = inline ? 'div' : 'main';
@@ -28,10 +40,8 @@ export function ErrorPage({ kind, action, inline, detail }: ErrorPageProps) {
       <p className="error-page__seal" aria-hidden="true">
         {notFound ? '缺' : '误'}
       </p>
-      <h1 className="error-page__title">{notFound ? '这一页不在书架上' : '出了点差错'}</h1>
-      <p className="error-page__text">
-        {notFound ? '地址可能写错了，也可能这本书已经下架。' : '页面没能打开，请稍后再试。'}
-      </p>
+      <h1 className="error-page__title">{notFound ? copy.title : '出了点差错'}</h1>
+      <p className="error-page__text">{notFound ? copy.text : '页面没能打开，请稍后再试。'}</p>
       {action}
       {detail && <pre className="error-page__stack">{detail}</pre>}
     </Root>

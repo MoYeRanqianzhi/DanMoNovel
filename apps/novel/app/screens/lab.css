@@ -42,6 +42,10 @@
   flex-direction: column;
   gap: var(--sp-3);
 }
+/* 分段控件按选项宽度收拢：竖排弹性盒默认把它拉满一整行，三个选项挤在左头、右边一大截空槽 */
+.lab-block > .segmented {
+  align-self: flex-start;
+}
 .lab-chips {
   display: flex;
   flex-wrap: wrap;
@@ -135,10 +139,14 @@
   margin: 6px calc(var(--sp-5) * -1) 0;
   padding: 2px var(--sp-5) 6px;
 }
+/* 宽屏上横滑区停在版心右边沿：第七张纸只露出几像素，像一道没画完的边。
+ * 右边沿 48px 淡出，提示后面还有；末尾留出同样宽的空，滑到底时最后一张完整地落在淡出区外 */
 @media (min-width: 900px) {
   .lab-papers__cells {
     margin: 6px 0 0;
-    padding: 2px 0 6px;
+    padding: 2px 48px 6px 0;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
   }
 }
 .lab-paper {
@@ -161,10 +169,14 @@
   text-indent: 2em;
   text-align: justify;
 }
+/* 纸名垫一小块同色的纸：花笺的远山、洒金的金箔都画在纸的下沿，不垫的话字压在纹样上 */
 .lab-paper figcaption {
   position: absolute;
-  left: 14px;
-  bottom: 8px;
+  left: 8px;
+  bottom: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
   font-size: var(--fs-12);
   color: var(--ink-2);
+  background: color-mix(in srgb, var(--reader-paper) 88%, transparent);
 }

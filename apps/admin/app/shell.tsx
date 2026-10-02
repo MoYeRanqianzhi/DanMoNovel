@@ -27,7 +27,10 @@ const TABS: (NavItem & { need?: Permission })[] = [
 ];
 
 /** 找不到内容时（loader 返回 MISSING）页面栈渲染的页面 */
-const NOT_FOUND = notFoundHandle('回到总览');
+const NOT_FOUND = notFoundHandle('回到总览', '/', {
+  title: '这一页不在案卷里',
+  text: '地址可能写错了，也可能要找的案卷、作者已经不在了。',
+});
 
 export default function AdminShell() {
   return <PageStack missing={NOT_FOUND}>{(stage) => <Chrome stage={stage} />}</PageStack>;

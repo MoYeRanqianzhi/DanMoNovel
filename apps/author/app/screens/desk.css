@@ -68,6 +68,22 @@
     order: 0;
   }
 }
+/* 平板竖放（720–899）：一栏排下来，今日与在写都只占左边一半、右边空着；
+ * 这两块并排成书桌上的两件东西（砚台、在写的书），其余区块仍各占一整行 */
+@media (min-width: 720px) and (max-width: 899.98px) {
+  .desk-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: var(--sp-8);
+  }
+  .desk-messages,
+  .desk-letters,
+  .desk-scheduled,
+  .desk-calendar {
+    grid-column: 1 / -1;
+  }
+}
 
 /* ---- 今日：砚台与字数 ---- */
 .desk-today {

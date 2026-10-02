@@ -317,10 +317,18 @@ function FontTile({
     void ensureTitleFont(font);
   }, [font]);
   const info = TITLE_FONTS[font];
+  // 样字是整个书名（只截前四个字，"盐汽水与蝉"会停在"与"上，像被切掉了）：字号按卡片宽度与字数缩到放得下；
+  // 八个字以上的书名取前七个字加省略号，再缩字就看不清了
+  const chars = [...text];
+  const sample = chars.length > 8 ? `${chars.slice(0, 7).join('')}…` : text;
   return (
     <button type="button" role="radio" aria-checked={checked} className="font-tile" onClick={onClick}>
-      <span className="font-tile__sample" style={{ fontFamily: info.stack, fontWeight: info.weight }} aria-hidden="true">
-        {[...text].slice(0, 4).join('')}
+      <span
+        className="font-tile__sample"
+        style={{ fontFamily: info.stack, fontWeight: info.weight, '--len': [...sample].length } as CSSProperties}
+        aria-hidden="true"
+      >
+        {sample}
       </span>
       <span className="tile-name">{name ?? info.name}</span>
     </button>

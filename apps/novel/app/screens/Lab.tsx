@@ -149,7 +149,12 @@ export function LabScreen({ screen }: ScreenProps<undefined>) {
                   ['front', '正面'],
                 ] as const
               ).map(([k, label]) => (
-                <TagMark key={k} onClick={() => setPose(POSES[k])}>
+                // 四个角度都与预设一致时这一项亮着；拖动任一滑块就不再是预设姿态，几项都不亮
+                <TagMark
+                  key={k}
+                  active={pose.rx === POSES[k].rx && pose.ry === POSES[k].ry && pose.rz === POSES[k].rz && pose.open === POSES[k].open}
+                  onClick={() => setPose(POSES[k])}
+                >
                   {label}
                 </TagMark>
               ))}

@@ -151,6 +151,13 @@
     0 0 0 1px var(--line),
     0 16px 34px -26px rgb(var(--shadow-rgb) / 0.55);
 }
+/* 平板竖放（600–899）：380 宽两张放不下，第二张被切掉一截像失误；改成一屏约 2.3 张，第三张露出一角，
+ * 与手机上露出下一张的一角是同一个"还能往右滑"的提示。宽屏改成网格，见下 */
+@media (min-width: 600px) and (max-width: 899.98px) {
+  .board {
+    width: calc((100% - 2 * 14px) / 2.3);
+  }
+}
 @media (min-width: 900px) {
   .boards {
     display: grid;
@@ -465,10 +472,11 @@
 .catalog__item {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  /* 书与书名在格子里居中：格子比书宽，靠左时每一列右边都空出一截，整块网格偏在左边 */
+  align-items: center;
   gap: 3px;
   padding: 6px;
-  text-align: left;
+  text-align: center;
   border-radius: var(--radius-m);
 }
 .catalog__item .book3d {
@@ -485,6 +493,7 @@
 .catalog__meta {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0 8px;
   font-size: var(--fs-12);
   color: var(--ink-2);

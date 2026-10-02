@@ -250,8 +250,12 @@
   font-size: var(--fs-16);
   line-height: 1.35;
   color: var(--ink);
+  /* 书名比封面宽、折成两行时分得匀一些（"他的第/七封信"），不留"他的第七封/信"那样的孤字 */
+  text-wrap: balance;
 }
+/* 进度那一行贴底：一排的书等高（弹性盒默认拉伸），有书名折成两行时，各本的"读到 54%"仍在同一条线上 */
 .shelf-book__meta {
+  margin-top: auto;
   font-size: var(--fs-12);
   color: var(--ink-2);
 }

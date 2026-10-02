@@ -83,7 +83,8 @@
   /* 信笺从信封口露出来时不被上一行挡住，也不被页面切掉 */
   padding-top: 8px;
 }
-@media (max-width: 899.98px) {
+/* 手机上固定两列、左右匀开；600 宽起（平板竖放能排三四只）照宽屏一样按 156 一只往右排满 */
+@media (max-width: 599.98px) {
   .envelopes {
     grid-template-columns: repeat(2, minmax(0, 156px));
     justify-content: space-evenly;
@@ -320,11 +321,16 @@
 .author-letter {
   max-width: 420px;
 }
-/* 两栏：中等宽度信笺收窄，右边的十四格才排得开 */
-@media (min-width: 900px) {
+/* 两栏：中等宽度信笺收窄，右边的十四格才排得开。
+ * 平板竖放（720 起）也分两栏：一栏时信笺只占左半边、右边空着；720 宽右栏还有近四百，和 900 宽带侧栏时差不多 */
+@media (min-width: 720px) {
   .author-grid {
     grid-template-columns: 300px minmax(0, 1fr);
     align-items: start;
+  }
+}
+@media (min-width: 900px) {
+  .author-grid {
     gap: var(--sp-10);
   }
 }

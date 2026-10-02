@@ -594,6 +594,8 @@
 }
 .font-tile {
   padding: 14px 6px 11px;
+  /* 样字按卡片的内宽缩字号（.font-tile__sample 的 cqi） */
+  container-type: inline-size;
 }
 .font-tile:hover,
 .ornament-tile:hover {
@@ -613,7 +615,8 @@
 .font-tile__sample {
   max-width: 100%;
   overflow: hidden;
-  font-size: 21px;
+  /* 整个书名放得下：每个字最多 21px，字多了按卡片内宽均分（--len 是字数，letter-spacing 0.04em 也算进去） */
+  font-size: min(21px, 100cqi / (var(--len) * 1.04 + 0.2));
   line-height: 1.3;
   letter-spacing: 0.04em;
   color: var(--ink);

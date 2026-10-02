@@ -2,6 +2,9 @@
  * 主题配色页
  * ============================================================ */
 
+/* 八张色样：手机两列四行，720 宽起四列两行（平板竖放一屏看全，好比较）。
+ * 色样里的书固定 58 宽，纸随栏宽变大时书就显得小；纸高与书高之比保持在六七成上下：
+ * 600–719 两列的纸已有手机上的近两倍，书放大到 88；桌面 1200 宽起纸有 160 多高，书放大到 72 */
 .themes-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -9,11 +12,25 @@
   padding-top: var(--sp-3);
   padding-bottom: var(--sp-12);
 }
-@media (min-width: 900px) {
+@media (min-width: 600px) and (max-width: 719.98px) {
+  .swatch__paper .book3d {
+    --wn: 88;
+  }
+}
+@media (min-width: 720px) {
   .themes-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 900px) {
+  .themes-grid {
     gap: var(--sp-6);
     padding-top: var(--sp-6);
+  }
+}
+@media (min-width: 1200px) {
+  .swatch__paper .book3d {
+    --wn: 72;
   }
 }
 

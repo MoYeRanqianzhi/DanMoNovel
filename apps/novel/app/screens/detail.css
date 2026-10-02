@@ -202,12 +202,20 @@
 .detail-actions .btn--primary {
   flex: 1.6;
 }
-.detail-actions .btn:disabled {
-  opacity: 0.72;
+/* 已在书架：不能再点，但不能做成半透明——操作栏下面滚过去的目录会从按钮里透出来。
+ * 纸面照旧不透明、悬停也不变深，只把字压成次一级的墨色，前面的对勾染成红线色（"已经加过了"是信息） */
+.detail-actions .btn--ghost:disabled {
+  background: var(--sheet);
+  color: var(--ink-2);
   cursor: default;
 }
+.detail-actions .btn--ghost:disabled svg {
+  color: var(--thread);
+}
 
-@media (min-width: 900px) {
+/* 宽屏两栏：左边一块染色纸吸顶，书立在上面；右边信息与目录随页滚动。
+ * 横放的手机（宽于 640、矮于 540）也用两栏：一栏时一屏只放得下一本书，书名、简介、按钮全在下面 */
+@media (min-width: 900px), (min-width: 640px) and (max-height: 540px) {
   .detail-body {
     display: grid;
     grid-template-columns: minmax(360px, 1fr) minmax(0, 1.15fr);
@@ -221,16 +229,47 @@
     margin: 0;
     padding: 64px 0 24px;
     border-radius: var(--radius-l);
+    /* 宽屏上它是离顶一截的一块纸，染色最浓的地方正好是上沿，一刀切成直线（另三边都淡出去了）：
+     * 上沿 56px 淡入。书从 64px 往下才开始，遮罩碰不到 */
+    mask-image: linear-gradient(transparent, #000 56px);
   }
   .detail-info {
     padding-top: var(--sp-12);
   }
   .detail-actions {
     justify-content: flex-end;
-    padding-right: var(--sp-12);
   }
   .detail-actions .btn {
     flex: none;
     min-width: 160px;
+  }
+}
+/* 按钮的右沿对齐右栏（信息与目录）的右沿。操作栏铺满整页，版心（.page）最宽 1180 居中、900 宽起左右各留 48：
+ * 页比版心宽时右边多出的那半截也算进右内边距，不然 1440 宽下按钮比目录多伸出去八十多像素。
+ * 横放的手机不到 900 宽，版心两边只留 20，沿用操作栏原本的 20 */
+@media (min-width: 900px) {
+  .detail-actions {
+    padding-right: max(var(--sp-12), calc((100% - var(--content-max)) / 2 + var(--sp-12)));
+  }
+}
+/* 矮屏（横放的手机、矮窗口）：吸顶的书比屏幕还高时下半截永远看不到（932×430 下封面最下面一截被底部操作栏盖住）。
+ * 书小一号（132 宽，高 187），上下留白收紧，整本书连同投影落在底部操作栏上面；
+ * 书从 58px 往下才开始，顶边的淡入跟着收到 32px */
+@media (min-width: 640px) and (max-height: 540px) {
+  .detail-body {
+    grid-template-columns: minmax(240px, 1fr) minmax(0, 1.15fr);
+    gap: var(--sp-8);
+    padding-top: 0;
+  }
+  .detail-hero {
+    top: 0;
+    padding: 36px 0 8px;
+    mask-image: linear-gradient(transparent, #000 32px);
+  }
+  .detail-hero .book3d {
+    --wn: 132;
+  }
+  .detail-info {
+    padding-top: var(--sp-10);
   }
 }
