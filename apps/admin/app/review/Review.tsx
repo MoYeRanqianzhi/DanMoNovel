@@ -19,7 +19,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { QUEUE, QUEUE_KINDS, type QueueItem, type QueueKind } from '@danmo/data/admin';
 import { chapterTitle } from '@danmo/data/chapters';
 import { POSES } from '@danmo/design/book3d/Book3D';
-import { Seal, TagMark } from '@danmo/design/components/ui';
+import { HangOpen, Seal, TagMark } from '@danmo/design/components/ui';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { useIsWide } from '@danmo/design/lib/useMedia';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
@@ -227,7 +227,7 @@ function Case({ item, slotId, decision, limit, current, onOpen }: CaseProps) {
           <span className="case__time">{late ? `超时 ${span(item.minutesAgo - limit)}` : ago(item.minutesAgo)}</span>
         </p>
         <button type="button" className="case__title" aria-current={current ? 'true' : undefined} onClick={onOpen}>
-          《{item.book.title}》
+          <HangOpen text={`《${item.book.title}》`} />
         </button>
         <p className="case__what">
           {whatOf(item)} · {item.book.author}

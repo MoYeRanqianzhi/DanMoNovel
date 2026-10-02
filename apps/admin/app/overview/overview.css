@@ -376,6 +376,11 @@
   color: var(--paper);
   background: color-mix(in oklab, var(--ink) 78%, transparent);
 }
+/* 长夜的墨近白，墨底的小签会成一块块亮白：换成主色调的底与字（与日志页"今天"的小签一样） */
+[data-theme='changye'] .report__kind {
+  color: var(--blush-ink);
+  background: var(--blush);
+}
 .report__reason {
   font-size: 13px;
   color: var(--ink);

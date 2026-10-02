@@ -17,7 +17,7 @@ import { Download, ShieldCheck } from 'lucide-react';
 import { ALERT_ACTS, CHAIN_SEED, LEDGER, STAFF, chainNext, getStaff, type LedgerAct } from '@danmo/data/admin';
 import { toChineseNumber } from '@danmo/data/chapters';
 import { useToast } from '@danmo/design/components/overlays';
-import { Seal, TagMark } from '@danmo/design/components/ui';
+import { HangOpen, Seal, TagMark } from '@danmo/design/components/ui';
 import { seasonOf } from '@danmo/design/lib/season';
 import { useTheme } from '@danmo/design/theme/ThemeContext';
 import { clock, countKai } from '../format';
@@ -275,7 +275,7 @@ export function AuditScreen() {
               </Fragment>
             ))}
           </div>
-          <p className="ledger-end">更早的账已经归档（原型只摆了最近几天）</p>
+          <p className="ledger-end">再往前的账已装订成册，归档备查</p>
         </div>
         <nav className="ledger-index" aria-label="翻到某一天">
           {pages.map((page) => (
@@ -395,7 +395,9 @@ function LedgerLine({ line, wet, onDry }: { line: Line; wet: boolean; onDry: (id
           {line.act}
         </span>
       </span>
-      <span className="ledger-line__target">{line.target}</span>
+      <span className="ledger-line__target">
+        <HangOpen text={line.target} />
+      </span>
       <span className="ledger-line__note">{line.note}</span>
     </li>
   );

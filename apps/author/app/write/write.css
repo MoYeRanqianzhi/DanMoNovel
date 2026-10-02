@@ -24,7 +24,8 @@
   align-items: center;
   gap: 4px;
   height: var(--write-bar-h);
-  padding: 0 10px 0 4px;
+  /* 左边 4：返回是 44 宽的圆钮，箭头的笔画本身离屏幕边约 16；右边的"发布"是实心的一块，也留 16，两头看着一样宽 */
+  padding: 0 16px 0 4px;
   background: color-mix(in srgb, var(--paper) 86%, transparent);
   -webkit-backdrop-filter: blur(12px) saturate(1.15);
   backdrop-filter: blur(12px) saturate(1.15);

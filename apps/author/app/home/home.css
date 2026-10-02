@@ -443,14 +443,14 @@
   align-self: flex-end;
 }
 
-/* ---- 远山：两重山从舞台底下升起来，两头淡进纸里 ---- */
+/* ---- 远山：两重山从舞台底下升起来，两头淡进纸里；与数据页的远山同一种墨（--chart-ink） ---- */
 .home-hills {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   height: 44%;
-  color: var(--ink);
+  color: var(--chart-ink);
   mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
   opacity: 0;
   translate: 0 28px;

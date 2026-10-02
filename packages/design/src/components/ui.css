@@ -277,3 +277,8 @@ button.tag:hover {
   opacity: 0.4;
   cursor: default;
 }
+
+/* 行首挂出的前括号（HangOpen）：字形在字格右半边，往左挪半个字，墨迹与上下的字对齐 */
+.hang-open {
+  margin-left: -0.5em;
+}

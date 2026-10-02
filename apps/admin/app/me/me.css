@@ -85,9 +85,12 @@
   color: var(--ink-2);
 }
 /* 手机上五方印正好一行（每格至少 60px） */
+/* 每列最宽 104（印面的宽），多出来的分到列与列之间：第一方印的左沿、最后一方的右沿与上面的字对齐，
+   不在各列里居中（那样两头各缩进十几像素，像没对齐） */
 .me-seals__grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 104px));
+  justify-content: space-between;
   gap: var(--sp-3);
   margin-top: var(--sp-5);
 }

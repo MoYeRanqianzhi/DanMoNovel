@@ -51,16 +51,21 @@
 .theme-swatch:hover .theme-swatch__paper {
   transform: translateY(-2px);
 }
-/* 主题名：12px 的字加 4px 字距，一个字正好一格（16px） */
+/*
+ * 主题名：从右上第二格起竖着往下写，一个字正好一格（16px）。
+ * 不用 vertical-rl：竖排时字的步进由字体的竖排度量定，霞鹜文楷量出来约 1.3em、取整到整像素（12px 的字一步 16px），
+ * 原先再加 4px 字距就成了一步 20px，第二个字起压到格线上；换一款字体步进又不一样。
+ * 这里是一格宽的横排框，12px 的字两个就放不下，于是一个字一行，行高 16px 就是步进，与字体无关。
+ */
 .theme-swatch__name {
   position: absolute;
-  top: 18px;
+  top: 16px;
   right: 16px;
-  writing-mode: vertical-rl;
+  width: 16px;
   font-family: var(--font-kai);
   font-size: 12px;
   line-height: 16px;
-  letter-spacing: 4px;
+  text-align: center;
   color: var(--ink);
 }
 .theme-swatch__seal {

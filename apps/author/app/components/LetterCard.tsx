@@ -10,7 +10,7 @@ import type { ReactNode } from 'react';
 import { AUTHOR, WORKS, type ReaderLetter } from '@danmo/data/author';
 import { chapterTitle } from '@danmo/data/chapters';
 import { Stamp } from '@danmo/design/components/Stamp';
-import { Seal, TagMark } from '@danmo/design/components/ui';
+import { HangOpen, Seal, TagMark } from '@danmo/design/components/ui';
 import { formatNumber } from '@danmo/design/lib/format';
 import { formatAgo } from '../format';
 import { sealVariant, useProfileEdit } from '../profile';
@@ -40,7 +40,9 @@ export function LetterCard({ letter: l, onOpen, children, focused, stamped = 0 }
     <>
       <span className="letter__head">
         <TagMark>{l.kind}</TagMark>
-        <span className="letter__where">{where}</span>
+        <span className="letter__where">
+          <HangOpen text={where} />
+        </span>
       </span>
       {l.quote && <span className="letter__quote">{l.quote}</span>}
       <span className="letter__body">{l.body}</span>

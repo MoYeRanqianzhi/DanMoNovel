@@ -141,6 +141,26 @@ export function PairLine({ pair }: { pair: [string, string] }) {
   );
 }
 
+/* ---------------- 行首挂出的前括号 ---------------- */
+
+/**
+ * 以书名号、前括号开头的一行字（"《晚风信号》第三章需要修改"）：开头那个标点往左挂出半个字。
+ * 这几个标点的字形在字格的右半边（量过：霞鹜文楷与系统黑体的"《"都从字格的一半处起笔），放在行首，
+ * 左边空出的半格看着像缩进，与上下左对齐的字错开。text-spacing-trim: trim-start 本来就做这件事，
+ * 但要字体带 halt 特性，这几款字体都没有，设了也不起作用。
+ * 只用在一行字的开头（标题、列表里的一行、表格的一格），不用在正文段落里（中文正文行首的括号照旧占满一格）。
+ * 不以这几个标点开头的字原样返回，所以数据里的标题可以直接交给它。
+ */
+export function HangOpen({ text }: { text: string }) {
+  if (!/^[《「『（]/.test(text)) return <>{text}</>;
+  return (
+    <>
+      <span className="hang-open">{text[0]}</span>
+      {text.slice(1)}
+    </>
+  );
+}
+
 /* ---------------- 分段控件 ---------------- */
 
 interface SegmentedProps<T extends string> {

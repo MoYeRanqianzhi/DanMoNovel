@@ -66,7 +66,6 @@ export function WorksScreen({ data, screen }: ScreenProps<WorksData>) {
         </div>
         <button type="button" className="btn btn--ghost works-head__new" onClick={() => setCreating(true)} aria-label="新建作品">
           <Plus aria-hidden="true" />
-          <span>新建作品</span>
         </button>
       </header>
 

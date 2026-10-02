@@ -25,7 +25,7 @@ import {
   type Work,
 } from '@danmo/data/author';
 import { POSES } from '@danmo/design/book3d/Book3D';
-import { Seal } from '@danmo/design/components/ui';
+import { HangOpen, Seal } from '@danmo/design/components/ui';
 import { useToast } from '@danmo/design/components/overlays';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { formatNumber } from '@danmo/design/lib/format';
@@ -219,7 +219,7 @@ export function DeskScreen({ data, screen }: ScreenProps<DeskData>) {
                       <span>
                         <b>{chapter.title}</b>
                         <small>
-                          《{work.book.title}》 · {chapter.scheduledLabel} 发布
+                          <HangOpen text={`《${work.book.title}》`} /> · {chapter.scheduledLabel} 发布
                         </small>
                       </span>
                     </button>
@@ -249,7 +249,10 @@ function MessageRow({ message: m, onOpen }: { message: DeskMessage; onOpen: () =
       <Seal text={SOURCE_SEAL[m.from]} size={30} variant="outline" />
       <span className="desk-msg__text">
         <span className="desk-msg__title">
-          {m.title}
+          {/* 包一层：标题行是弹性盒，挂出的书名号若单独成项，会和后面的字隔开一道间距 */}
+          <span>
+            <HangOpen text={m.title} />
+          </span>
           {/* 红点只是画给眼睛看的；读屏念标题后面那句"未读"（aria-label 写在没有 role 的元素上，读屏多半不念） */}
           {m.unread && (
             <>

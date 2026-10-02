@@ -21,7 +21,7 @@ import { manuscriptOf, wordCount } from '@danmo/data/manuscripts';
 import { Book3D, POSES } from '@danmo/design/book3d/Book3D';
 import { Jacket } from '@danmo/design/book3d/Jacket';
 import { Stamp } from '@danmo/design/components/Stamp';
-import { IconButton, PairLine, Seal } from '@danmo/design/components/ui';
+import { HangOpen, IconButton, PairLine, Seal } from '@danmo/design/components/ui';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { formatNumber } from '@danmo/design/lib/format';
 import { Manuscript, ManuscriptText, ReviewSummary, numberNotes } from '@danmo/design/manuscript/Manuscript';
@@ -190,7 +190,8 @@ export function Detail({ item, screen, next, onNext, focusTitle }: DetailProps) 
         <div className="review-case__text">
           <p className="review-case__kind">{kindName}</p>
           <h1 ref={titleRef} tabIndex={-1} className="review-case__title" id="review-detail-title">
-            《{item.book.title}》<span>{what}</span>
+            <HangOpen text={`《${item.book.title}》`} />
+            <span className="review-case__what">{what}</span>
           </h1>
           <p className="review-case__meta">
             <span>{item.book.author}</span>

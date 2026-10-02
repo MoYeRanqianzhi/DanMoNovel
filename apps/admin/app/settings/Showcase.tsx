@@ -15,6 +15,7 @@ import { BOOKS, TASTE_TAGS, formatWords, getBook, type Book, type Showcase } fro
 import { toChineseNumber } from '@danmo/data/chapters';
 import { Book3D, POSES } from '@danmo/design/book3d/Book3D';
 import { Sheet } from '@danmo/design/components/overlays';
+import { HangOpen } from '@danmo/design/components/ui';
 import { countKai, dayKai, isoKai } from '../format';
 import { useIdentity } from '../identity';
 import {
@@ -161,7 +162,9 @@ export function ShowcaseSection() {
 function ChangeText({ c }: { c: ShowcaseChange }) {
   return (
     <>
-      <span className="margin__where">{slotName(c.shelf, c.index)}</span>《{getBook(c.was).title}》换成《{getBook(c.now).title}》
+      {/* 位置单占一行，书名号落在第二行的行首 */}
+      <span className="margin__where">{slotName(c.shelf, c.index)}</span>
+      <HangOpen text={`《${getBook(c.was).title}》`} />换成《{getBook(c.now).title}》
     </>
   );
 }
@@ -369,7 +372,9 @@ function SlotForm({ shelf, index, printed, draft, closing, onClose }: SlotFormPr
       <div className="slot-form__now">
         <Book3D book={now} width={64} {...POSES.thumb} shadow={false} label={null} />
         <div>
-          <p className="slot-form__title">《{now.title}》</p>
+          <p className="slot-form__title">
+            <HangOpen text={`《${now.title}》`} />
+          </p>
           <p className="slot-form__meta">
             {now.author} · {now.status} · {formatWords(now.words)}
           </p>

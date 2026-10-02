@@ -161,7 +161,7 @@
 }
 /* 更新了的那天：格子里一点墨 */
 .envelope__days i[data-on] {
-  background: radial-gradient(circle, var(--ink) 0 1.9px, transparent 2.3px);
+  background: radial-gradient(circle, var(--chart-ink) 0 1.9px, transparent 2.3px);
 }
 
 /* 正中的框（双线）：竖写笔名，后面一个"启"；从邮戳底下起，到落款上面止，四个字的笔名也写得下 */
@@ -381,7 +381,8 @@
     0 0 0 4.75px var(--env-rule-soft);
   pointer-events: none;
 }
-/* 地脚左下角印着笺名，像旧时笺纸上印的斋号（整张纸对读屏隐藏，读屏读后面的原文） */
+/* 地脚左下角印着笺名，像旧时笺纸上印的斋号（整张纸对读屏隐藏，读屏读后面的原文）。
+ * 字与浅色主题的格线一样浓（主色调加墨的 62%），不直接用 --env-rule：长夜的格线淡到 42%，十像素的字跟着淡就认不出了 */
 .letter-paper::after {
   content: '耽墨编辑部制笺';
   position: absolute;
@@ -391,7 +392,7 @@
   font-size: 10px;
   line-height: 1;
   letter-spacing: 0.2em;
-  color: var(--env-rule);
+  color: color-mix(in oklab, var(--env-ink) 62%, transparent);
 }
 /* 一列：宽是两道格线之间的宽，字在两道线正中 */
 .letter-paper__col {
@@ -655,7 +656,7 @@
 .author-days__dot[data-on] {
   background: radial-gradient(
     circle closest-side,
-    color-mix(in oklab, var(--ink) 86%, transparent) 0 calc(var(--r) * 60%),
+    color-mix(in oklab, var(--chart-ink) 86%, transparent) 0 calc(var(--r) * 60%),
     transparent calc(var(--r) * 60% + 1px)
   );
 }

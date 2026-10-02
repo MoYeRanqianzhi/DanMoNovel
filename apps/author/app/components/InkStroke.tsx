@@ -5,6 +5,7 @@
  * 粗细随每一章变，所以是另一份路径；改笔形时两处对照着看。
  * 一笔分三段画：起笔（笔尖从左上切进来、按下去的笔头）与收笔（墨快干了，散成几缕）大小固定，
  * 只有中间的笔身随长短拉伸。整笔一起拉伸的话，短的一笔会被压成小三角，长的一笔会被拉成一根针。
+ * 长短与数值成正比（外面那一格的宽 × weight）；比起笔加收笔还短时整笔等比缩小（变细、笔头变小），见 ink-stroke.css。
  * 笔身后段挖出两道越来越宽的缝（飞白），在收笔处接着变成几缕之间的空隙。
  * 三段各是一个小 SVG，笔身左右各压住相邻一段 1px，免得接缝处透出一道细缝；
  * 浓淡加在最外层（一个合成组），压住的地方不会更深。
@@ -17,7 +18,7 @@ import { cls, lerp } from '@danmo/design/lib/util';
 import './ink-stroke.css';
 
 interface InkStrokeProps {
-  /** 0~1：这一笔占满多长，越大越浓；为 0 时只剩起笔与收笔 */
+  /** 0~1：这一笔占外面那一格的多少，越大越浓；为 0 时只剩一点墨（6px） */
   weight: number;
   seed?: number;
   className?: string;
@@ -90,21 +91,24 @@ export function InkStroke({ weight, seed = 0, className }: InkStrokeProps) {
   // 两个 0~1 之间的小偏移：每一笔的笔头、腰身、几缕的长短不一样
   const a = ((seed * 37) % 7) / 7;
   const b = ((seed * 53) % 5) / 5;
+  // 外面一格是量长短的标尺（整格宽），里面才是这一笔
   return (
     <span
       className={cls('ink-stroke', className)}
       style={{ '--ink-w': w, '--ink-a': 0.34 + w * 0.42 } as CSSProperties}
       aria-hidden="true"
     >
-      <svg className="ink-stroke__head" viewBox="0 0 16 16">
-        <path d={headPath(a, b)} />
-      </svg>
-      <svg className="ink-stroke__body" viewBox="0 0 100 16" preserveAspectRatio="none">
-        <path fillRule="evenodd" d={bodyPath(a, b)} />
-      </svg>
-      <svg className="ink-stroke__tail" viewBox="0 0 30 16">
-        <path d={tailPath(a, b)} />
-      </svg>
+      <span className="ink-stroke__line">
+        <svg className="ink-stroke__head" viewBox="0 0 16 16">
+          <path d={headPath(a, b)} />
+        </svg>
+        <svg className="ink-stroke__body" viewBox="0 0 100 16" preserveAspectRatio="none">
+          <path fillRule="evenodd" d={bodyPath(a, b)} />
+        </svg>
+        <svg className="ink-stroke__tail" viewBox="0 0 30 16">
+          <path d={tailPath(a, b)} />
+        </svg>
+      </span>
     </span>
   );
 }

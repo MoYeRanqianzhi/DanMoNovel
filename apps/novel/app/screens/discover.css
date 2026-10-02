@@ -54,13 +54,15 @@
   margin-top: var(--sp-6);
 }
 .discover-hot__list {
-  gap: 16px;
+  gap: 12px;
   margin: var(--sp-3) calc(var(--sp-5) * -1) 0;
   padding: 4px var(--sp-5) 8px;
 }
+/* 宽 92：六个字的书名（"他的第七封信"，14px 楷体 84 宽）放得下，热议第一的书不被截成"他的第七…"；
+ * 间距随之从 16 收到 12，书与书之间的距离与原先差不多。更长的书名仍以省略号收尾 */
 .hot {
   flex: none;
-  width: 84px;
+  width: 92px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;

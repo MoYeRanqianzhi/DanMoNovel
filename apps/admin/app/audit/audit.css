@@ -158,6 +158,11 @@
   color: var(--paper);
   background: var(--ink);
 }
+/* 长夜的墨近白，墨底的小签会成一块亮白：换成主色调的底与字（与主按钮同一对颜色） */
+[data-theme='changye'] .ledger-page__today {
+  color: var(--blush-ink);
+  background: var(--blush);
+}
 .ledger-page__no {
   margin-left: auto;
   font-size: var(--fs-12);

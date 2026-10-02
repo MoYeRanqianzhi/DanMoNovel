@@ -140,7 +140,8 @@ function Clause({ a, i, value, was, n, editable, onChange }: ClauseProps) {
         {clauseNo(i)}
       </span>
       <span className="clause__name">{a.name}</span>
-      <p className="clause__text">
+      {/* 后文以全角标点开头（"，并告诉读者是哪几个字"）时标上，选项那一空的右边不再留白，见 settings.css */}
+      <p className="clause__text" data-punct={/^[，。、；：！？]/.test(a.after) || undefined}>
         {a.before}
         {a.control.kind === 'count' ? (
           <Count a={a} label={label} value={value} was={was} editable={editable} onChange={onChange} />

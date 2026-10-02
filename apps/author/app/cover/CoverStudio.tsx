@@ -33,7 +33,7 @@ import { Jacket } from '@danmo/design/book3d/Jacket';
 import type { FaceKind, RenderedFace } from '@danmo/design/book3d/coverArt';
 import { useTilt } from '@danmo/design/book3d/gestures';
 import { Sheet, useToast } from '@danmo/design/components/overlays';
-import { IconButton, Segmented } from '@danmo/design/components/ui';
+import { HangOpen, IconButton, Segmented } from '@danmo/design/components/ui';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { useElementSize } from '@danmo/design/lib/useElementSize';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
@@ -250,7 +250,9 @@ export function CoverScreen({ data, screen }: ScreenProps<CoverData>) {
         </IconButton>
         <div className="studio-bar__title">
           <h1>封面</h1>
-          <p>《{original.title}》</p>
+          <p>
+            <HangOpen text={`《${original.title}》`} />
+          </p>
         </div>
         <div className="studio-bar__actions">
           <button

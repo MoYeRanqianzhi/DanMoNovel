@@ -24,6 +24,9 @@
  *   --scrim       面板遮罩
  *   color-scheme  告诉浏览器原生控件与滚动条使用亮/暗配色
  *
+ * 派生变量（主题块里可以不写：缺省值从上面的变量推出来，见各套主题前的 [data-theme] 一块；需要时在主题块里覆盖）：
+ *   --chart-ink   数据图的墨色：远山、跟读的一笔、时辰盘与墨迹日历的墨点、互动页的墨迹。缺省就是 --ink
+ *
  * 对比度由 scripts/check-contrast.mjs 校验，改色后请重新运行。
  * ============================================================ */
 
@@ -33,6 +36,13 @@
 :root {
   --grain-on-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.24 0 0 0 0 0.16 0 0 0 0 0.2 0 0 0 0.55 -0.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.28'/%3E%3C/svg%3E");
   --grain-on-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 0.94 0 0 0 0 0.97 0 0 0 0.55 -0.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.12'/%3E%3C/svg%3E");
+}
+
+/* 派生变量的缺省值（见文件头）。写在 [data-theme] 上而不是 :root：色样各自带 data-theme，
+ * var(--ink) 要在色样那一层取它自己的墨色。与各套主题的选择器一样具体，靠排在它们前面让位：
+ * 主题块里写了同名变量就用主题的（长夜写了 --chart-ink）。 */
+[data-theme] {
+  --chart-ink: var(--ink);
 }
 
 /* ---- 薛涛笺（默认）：淡粉色的笺纸。唐代薛涛自制的小幅粉笺，是本主题的名字来源 ---- */
@@ -77,6 +87,12 @@
   --page: #2e2934;
   --page-line: rgb(236 226 232 / 0.14);
   --scrim: rgb(0 0 0 / 0.5);
+  /*
+   * 数据图的墨：近白的墨一大片铺在深色纸上，远山像一层灰雾，墨迹像粉笔。掺近四成胭脂（--blush），
+   * 成一种暗玫瑰色（约 #c8aab4）：比 --ink-2 亮，图里几重浓淡照旧分得清；饱和度低，
+   * 与红线（只给"今天""当前"）也分得开。试过淡紫（仍发灰）与金色（色板里没有的色相）。
+   */
+  --chart-ink: color-mix(in oklab, var(--ink) 62%, var(--blush));
 }
 
 /* ---- 豆青（护眼）：低饱和的豆绿，比传统"护眼绿"更柔，久读不累眼 ---- */

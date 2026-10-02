@@ -15,7 +15,7 @@ import { WORKS, statsOf, volumesOf, type WorkStats } from '@danmo/data/author';
 import { chapterTitle, toChineseNumber } from '@danmo/data/chapters';
 import { Book3D, POSES } from '@danmo/design/book3d/Book3D';
 import { Hills, HillsLegend } from '@danmo/design/charts/Hills';
-import { Segmented } from '@danmo/design/components/ui';
+import { HangOpen, Segmented } from '@danmo/design/components/ui';
 import { formatCount, formatNumber } from '@danmo/design/lib/format';
 import type { ScreenProps } from '@danmo/design/shell/stack';
 import { useLocalBooks } from '../local';
@@ -102,7 +102,8 @@ export function StatsScreen({ data }: ScreenProps<StatsData>) {
         <div>
           <h1 className="page-title">数据</h1>
           <p className="stats-head__sub">
-            《{book.title}》{work.state} · 已发布 {chapters} 章
+            <HangOpen text={`《${book.title}》`} />
+            {work.state} · 已发布 {chapters} 章
           </p>
         </div>
         {data.entries.length > 1 && (
@@ -142,7 +143,9 @@ export function StatsScreen({ data }: ScreenProps<StatsData>) {
           <HillsLegend far="在读的人" near="新收藏" />
         </div>
         <p className="stats-lead">
-          今天 {formatCount(today)} 人在读，最多的一天 {formatCount(Math.max(...reads))}
+          {/* "1.2 万人"、"9,800 人"：有"万"时"人"紧跟在后面 */}
+          今天 {formatCount(today)}
+          {today >= 10_000 ? '' : ' '}人在读，最多的一天 {formatCount(Math.max(...reads))}
         </p>
         {/* 三张图都按书号重新挂载：换书时探针（触屏上手指松开后留着的那一天、那一章、那个时辰）跟着清掉，
             不然新书的图上冒出上一本的序号，章数少了还会越界写出 NaN% */}

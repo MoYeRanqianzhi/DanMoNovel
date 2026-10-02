@@ -1,5 +1,6 @@
 /* ============================================================
  * 墨迹日历（InkCalendar.tsx）
+ * 墨点、没写的那几天与图例都用数据图的墨（--chart-ink，见 themes.css），今天一圈红线
  * ============================================================ */
 
 /* 宽度随日历本身：放得下时说明与图例跟着日历收拢，图例落在最近一周的下面，不飘到栏的最右边。
@@ -61,10 +62,10 @@
   fill: var(--ink-2);
 }
 .ink-cal__dry {
-  fill: color-mix(in srgb, var(--ink) 16%, transparent);
+  fill: color-mix(in srgb, var(--chart-ink) 16%, transparent);
 }
 .ink-cal__drop {
-  fill: var(--ink);
+  fill: var(--chart-ink);
 }
 .ink-cal__today {
   fill: none;
@@ -95,6 +96,6 @@
   width: calc(3.6px + var(--l) * 5.6px);
   height: calc(3.6px + var(--l) * 5.6px);
   border-radius: 50%;
-  background: var(--ink);
+  background: var(--chart-ink);
   opacity: calc(0.22 + var(--l) * 0.62);
 }

@@ -1087,6 +1087,14 @@
 .blank__option[aria-disabled] {
   cursor: not-allowed;
 }
+/* 选项后面紧跟全角标点（"……直接拦下，并告诉读者"）：逗号的字形本来就在字格的左下、右半格空着，
+ * 空的右边再留 3px、选项再留 3px，看着像在逗号前多打了一个空格 */
+.clause__text[data-punct] .blank--choice {
+  margin-right: 0;
+}
+.clause__text[data-punct] .blank--choice .blank__option:last-child {
+  padding-right: 0;
+}
 .blank__step:focus-visible,
 .blank__option:focus-visible {
   outline: 2px solid var(--thread);

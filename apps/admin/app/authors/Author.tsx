@@ -27,7 +27,7 @@ import { chapterTitle } from '@danmo/data/chapters';
 import { Book3D, POSES } from '@danmo/design/book3d/Book3D';
 import { Sheet } from '@danmo/design/components/overlays';
 import { Stamp } from '@danmo/design/components/Stamp';
-import { IconButton, Seal } from '@danmo/design/components/ui';
+import { HangOpen, IconButton, Seal } from '@danmo/design/components/ui';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { formatNumber } from '@danmo/design/lib/format';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
@@ -396,7 +396,9 @@ function WorkRow({ w, slotId, why, play, onSend }: WorkRowProps) {
     <li className="author-work" data-contract={w.contract}>
       <div className="author-work__cover">{cover}</div>
       <div className="author-work__text">
-        <p className="author-work__title">《{book.title}》</p>
+        <p className="author-work__title">
+          <HangOpen text={`《${book.title}》`} />
+        </p>
         <p className="author-work__meta">
           {book.status} · {book.chapters} 章 · {formatWords(book.words)}
         </p>

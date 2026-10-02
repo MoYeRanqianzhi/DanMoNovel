@@ -114,6 +114,12 @@
     0 0 0 1.5px var(--ink),
     0 12px 22px -16px rgb(var(--shadow-rgb) / 0.7);
 }
+/* 长夜的墨近白，一圈描边太扎眼（像一个白框）：换成掺了胭脂的墨，与长夜的 --chart-ink 同一个颜色 */
+[data-theme='changye'] .case[data-current] {
+  box-shadow:
+    0 0 0 1.5px color-mix(in oklab, var(--ink) 62%, var(--blush)),
+    0 12px 22px -16px rgb(var(--shadow-rgb) / 0.7);
+}
 .case[data-late]::before {
   content: '';
   position: absolute;
@@ -248,7 +254,7 @@
   outline: none;
 }
 /* 案由（第几章、换一张封面）整段一起折行：放不下时整段换到书名下面，不在章名中间断开 */
-.review-case__title span {
+.review-case__what {
   display: inline-block;
   margin-left: 8px;
   font-size: var(--fs-16);
@@ -422,6 +428,16 @@
   outline: 2px solid var(--thread);
   outline-offset: 1px;
 }
+/* 总批随字数长高，不留浏览器右下角那块斜纹拖拽角（在纸面上像贴错了的零件）：至少两行，最多八行，再多在框里滚。
+ * 不支持 field-sizing 的浏览器（Safari、Firefox）照旧可以竖着拖 */
+@supports (field-sizing: content) {
+  .tray__summary {
+    field-sizing: content;
+    min-height: calc(2lh + 20px);
+    max-height: calc(8lh + 20px);
+    resize: none;
+  }
+}
 .tray__row {
   display: flex;
   flex-wrap: wrap;
@@ -583,6 +599,14 @@
 .annotate__text:focus-visible {
   outline: 2px solid var(--thread);
   outline-offset: 1px;
+}
+/* 朱批同总批：随字数长高，不显示拖拽角；最矮仍是原来的 92px */
+@supports (field-sizing: content) {
+  .annotate__text {
+    field-sizing: content;
+    max-height: calc(8lh + 20px);
+    resize: none;
+  }
 }
 .annotate__actions {
   display: flex;

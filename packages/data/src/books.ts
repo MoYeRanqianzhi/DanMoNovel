@@ -338,7 +338,8 @@ export const BOOKS: Book[] = [
     binding: 'modern',
     motif: 'moon',
     palette: { from: '#F4E4F1', to: '#C9B2DC', ink: '#3C2A4F', accent: '#E86A92', band: '#FFFFFF' },
-    words: 520000,
+    // 九月中旬才上架的连载，三十多万字；书城"短篇一口气"（三十五万字以内）因此排得满五本，不空一行
+    words: 342000,
     chapters: 95,
     status: '连载',
     era: '现代',
@@ -495,8 +496,12 @@ export function thicknessRatio(words: number): number {
   return Math.min(0.26, 0.07 + (words / 1_000_000) * 0.12);
 }
 
-/** 字数的中文展示：58.2 万字 */
+/**
+ * 字数的中文展示：一万起写"58.2 万字"，不到一万写"2,180 字"（刚开的书写成"0.2 万字"读着别扭）。
+ * 千分位自己拼（同 design/lib/format.ts 的 formatNumber，数据包不依赖设计包）：toLocaleString 在服务端与浏览器可能写得不一样
+ */
 export function formatWords(words: number): string {
+  if (words < 10000) return `${String(Math.round(words)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 字`;
   return `${(words / 10000).toFixed(1).replace(/\.0$/, '')} 万字`;
 }
 

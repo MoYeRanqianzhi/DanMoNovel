@@ -1,6 +1,7 @@
 /* ============================================================
  * 远山（charts/Hills.tsx）与它的图例：作者站数据页、管理站总览共用
- * 用 --ink 着色：浅色主题是墨，长夜里是浅色的笔墨；红色只给"今天"（当前位置）。
+ * 用 --chart-ink 着色（数据图的墨：浅色主题就是 --ink，长夜里掺了胭脂，见 themes.css）；红色只给"今天"（当前位置）。
+ * 指着某一天时的竖线与两个圆点仍用 --ink：它们是指针，不是数据，要比山亮一点才看得出指在哪。
  * 指着某一天时的竖线与纸条要压在坐标轴上面（正的 z-index），.hills 用 isolation 关住，不与页面别处比高低。
  * ============================================================ */
 
@@ -20,7 +21,7 @@
   content: '';
   width: 16px;
   height: 9px;
-  background: var(--ink);
+  background: var(--chart-ink);
   clip-path: polygon(0 100%, 30% 30%, 48% 58%, 70% 0, 100% 100%);
 }
 .hills-legend__far::before {
@@ -37,7 +38,7 @@
 .hills__stage {
   position: relative;
   height: 172px;
-  color: var(--ink);
+  color: var(--chart-ink);
   /* 竖着滑照常滚动页面，横着拖才是在山上挑某一天 */
   touch-action: pan-y;
   cursor: crosshair;

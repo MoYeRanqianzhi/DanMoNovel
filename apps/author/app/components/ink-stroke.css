@@ -1,14 +1,28 @@
 /*
- * 一笔墨迹（InkStroke.tsx）：起笔、笔身、收笔三段排成一行。
- * 长度 = 起笔与收笔的固定宽度（--ink-min）+ 剩下的宽度 × --ink-w（0~1，相对外面那一格）；
+ * 一笔墨迹（InkStroke.tsx）：外面一格（.ink-stroke）定长短的标尺，里面一笔（.ink-stroke__line）是起笔、笔身、收笔三段排成一行。
+ * 长度与数值成正比：外面这一格的宽 × --ink-w（0~1），最短 6px（一点墨）。
+ * 起笔与收笔一共 46px 宽（16 + 30）：一笔比这还短时整笔按比例缩小——粗细、起笔、收笔一起变小，
+ * 像笔尖轻轻点了一下，不把笔头压扁，也不为了留住笔头把短的一笔画长（以前最短 46px，22 条段评看着有 264 条的三分之一长）。
+ * 外面这一格是尺寸容器，里面用 100cqi 取它的宽；只用"长度 × 数"，不用长度除以长度（Safari、Firefox 还不支持）。
  * 浓淡 --ink-a 加在整笔上（opacity 让三段先合成再变淡，压住的接缝不会更深）。
  */
 .ink-stroke {
-  --ink-min: 46px;
   display: flex;
-  width: calc(var(--ink-min) + (100% - var(--ink-min)) * var(--ink-w));
+  align-items: center;
+  /* 标尺是整格：调用处在纵向弹性盒里靠左排（互动页的"读者停下来的地方"）时也不缩成一笔那么宽 */
+  width: 100%;
+  /* 行高固定 16：短的一笔变细时上下居中，所在的那一行不跟着变矮 */
   height: 16px;
-  color: var(--ink);
+  container-type: inline-size;
+}
+.ink-stroke__line {
+  --ink-len: max(6px, 100cqi * var(--ink-w));
+  /* 粗细：够 46px 长时是满的 16，短了按长度的 16/46 缩 */
+  --ink-h: min(16px, var(--ink-len) * 0.3478);
+  display: flex;
+  width: var(--ink-len);
+  height: var(--ink-h);
+  color: var(--chart-ink);
   opacity: var(--ink-a);
 }
 .ink-stroke svg {
@@ -18,7 +32,7 @@
 }
 .ink-stroke__head {
   flex: none;
-  width: 16px;
+  width: var(--ink-h);
 }
 /* 笔身左右各多出 1px，压住起笔与收笔，接缝处不透出细缝 */
 .ink-stroke__body {
@@ -26,7 +40,8 @@
   min-width: 0;
   margin: 0 -1px;
 }
+/* 收笔的画布 30 × 16，宽是粗细的 1.875 倍 */
 .ink-stroke__tail {
   flex: none;
-  width: 30px;
+  width: calc(var(--ink-h) * 1.875);
 }

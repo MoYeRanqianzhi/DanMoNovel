@@ -29,7 +29,7 @@ import {
 } from '@danmo/data/author';
 import { Sheet } from '@danmo/design/components/overlays';
 import { Stamp } from '@danmo/design/components/Stamp';
-import { IconButton, Logo, Seal, Segmented } from '@danmo/design/components/ui';
+import { HangOpen, IconButton, Logo, Seal, Segmented } from '@danmo/design/components/ui';
 import { formatCount, formatNumber } from '@danmo/design/lib/format';
 import { useClientValue } from '@danmo/design/lib/useClientValue';
 import { VERSION } from '@danmo/design/lib/version';
@@ -183,7 +183,9 @@ export function MeScreen({ data }: ScreenProps<MeData>) {
               <span className="me-tie__text">
                 <span className="me-tie__title">{author.signed ? '签约作者' : '还没有签约'}</span>
                 {data.works.signed.length > 0 && (
-                  <span className="me-tie__body">{data.works.signed.map((t) => `《${t}》`).join('')}已签约</span>
+                  <span className="me-tie__body">
+                    <HangOpen text={`${data.works.signed.map((t) => `《${t}》`).join('')}已签约`} />
+                  </span>
                 )}
               </span>
             </div>

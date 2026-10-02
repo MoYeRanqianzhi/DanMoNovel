@@ -25,25 +25,13 @@
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
-/* 窄屏只留加号（列表最后还有一格"新建作品"），宽屏写上字 */
+/* 顶上只放一个加号：字写在列表最后那一格虚线书上（宽屏两处同时看得见，不写两遍）；
+ * 作品多了、那一格滚到屏外时，从这里也能新建 */
 .works-head__new.btn {
   flex: none;
   width: 42px;
   height: 42px;
   padding: 0;
-  font-size: var(--fs-14);
-}
-.works-head__new span {
-  display: none;
-}
-@media (min-width: 900px) {
-  .works-head__new.btn {
-    width: auto;
-    padding: 0 18px 0 14px;
-  }
-  .works-head__new span {
-    display: inline;
-  }
 }
 
 .works-grid {

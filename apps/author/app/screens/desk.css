@@ -141,11 +141,13 @@
 
 /* ---- 在写 ---- */
 .desk-current {
+  /* 书的按钮左边留了一点空（指着时的底色、漂浮），整块往左挪同样多，书的左沿才对齐版心；宽屏 10px */
+  --desk-bleed: 4px;
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
   gap: var(--sp-4) var(--sp-5);
-  margin-left: -4px;
+  margin-left: calc(var(--desk-bleed) * -1);
 }
 .desk-current__book {
   /* 给漂浮与投影留出空间 */
@@ -176,8 +178,8 @@
 }
 @media (min-width: 900px) {
   .desk-current {
+    --desk-bleed: 10px;
     gap: var(--sp-5) var(--sp-10);
-    margin-left: -10px;
   }
   .desk-current__book {
     padding: 22px 30px 42px 10px;
@@ -193,6 +195,8 @@
   flex-wrap: wrap;
   gap: 10px;
   grid-column: 1 / -1;
+  /* 小签是实心的一块，不跟着书往左挪：挪回来，左沿与版心、墨迹对齐 */
+  margin-left: var(--desk-bleed);
 }
 .desk-other {
   display: inline-flex;

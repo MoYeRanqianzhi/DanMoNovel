@@ -244,7 +244,8 @@
   padding: 11px 2px;
   border-bottom: 1px solid var(--line);
 }
-/* 名次写在一方小小的墨印里（"一"单独写像一道横线，框起来才认得出是字）；前三名是墨底白字 */
+/* 名次写在一方小小的墨印里（"一"单独写像一道横线，框起来才认得出是字）；前三名是墨底白字。
+ * 印用数据图的墨（--chart-ink），与右边那一笔同色：长夜里墨近白，前三名会成三块亮白的方块 */
 .fan__rank {
   display: grid;
   place-items: center;
@@ -255,12 +256,12 @@
   font-size: 14px;
   line-height: 1;
   color: var(--ink-2);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 30%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--chart-ink) 30%, transparent);
   rotate: -3deg;
 }
 .fan[data-top] .fan__rank {
   color: var(--paper);
-  background: color-mix(in srgb, var(--ink) 82%, transparent);
+  background: color-mix(in srgb, var(--chart-ink) 82%, transparent);
   box-shadow: none;
 }
 .fan__who {
