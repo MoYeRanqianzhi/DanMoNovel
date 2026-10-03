@@ -2,7 +2,7 @@
 
 详细规格、设计要点与进度见 [计划检查点](plan/2026-09-26-top-level-plan-and-ui-prototype.md)。完成或取消的条目直接删除。
 [三站 UI 原型](plan/2026-09-29-three-site-ui-prototype.md)（用户 2026-09-29 设定的目标）已完成，tag v0.1.0-alpha.1（2026-10-02；2026-10-03 随主仓库公开到 GitHub），等用户审查；真实功能与后端在审查通过后再开始。
-[站娘耽耽、墨姐](plan/2026-10-02-mascots.md)：设定（[设定稿](../docs/design/mascots.md)）、三视图、八张透明立绘、两张 Q 版三视图、品牌书内页的 16 张小画和三套表情包（54 个）都已定稿（2026-10-03），提示词见[生图提示词](../docs/design/mascot-prompts.md)。PNG 原图和出图工具在素材仓库 DanMoNovel-assets，主仓库只放 WebP，默认素材在 packages/design/src/mascots/（见计划“归档：素材仓库”）；之后出品牌书封面，接进品牌书。
+[站娘耽耽、墨姐](plan/2026-10-02-mascots.md)：设定（[设定稿](../docs/design/mascots.md)）、三视图、八张透明立绘、两张 Q 版三视图、品牌书内页的 16 张小画和三套表情包（54 个）都已定稿（2026-10-03），提示词见[生图提示词](../docs/design/mascot-prompts.md)。PNG 原图和出图工具在素材仓库 DanMoNovel-assets，主仓库只放 WebP，默认素材在 packages/design/src/mascots/（见计划“归档：素材仓库”）；品牌书封面出了两张备选，等用户挑（2026-10-04），定了以后合成书名、接进品牌书。
 
 ## 用户追加（2026-10-03）
 
