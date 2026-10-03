@@ -1,5 +1,7 @@
 # 站娘生图提示词
 
+> 本文里的角色设定与提示词属于站娘耽耽、墨姐的版权范围：保留所有权利，不适用耽墨小说代码的 AGPL-3.0 许可。见[站娘版权声明](mascots/LICENSE)。
+
 给站娘耽耽、墨姐（见 [设定稿](mascots.md)）出图用的提示词。前期为了省钱，用 OpenAI 的 GPT Image 2.5 出图。两人的三视图已经定稿（`dandan-turnaround.png`、`mojie-turnaround.png`）；立绘、Q 版三视图都以它们为参考图。PNG 原图和出图、去背、切图的工具都在素材仓库 DanMoNovel-assets 里，主仓库只放转出来的 WebP（见 [设定稿](mascots.md) 第 5 节）。
 
 写法依据 OpenAI 的 [图像提示词指南](https://developers.openai.com/api/docs/guides/image-prompting)（GPT Image 2.5 一栏）和 [图像生成文档](https://developers.openai.com/api/docs/guides/image-generation)。指南里和这里相关的几条：

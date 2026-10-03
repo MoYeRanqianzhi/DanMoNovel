@@ -86,7 +86,11 @@ packages/design/src/
   mascots/      站娘的默认素材，还没接进界面（接法见 plan/2026-10-02-mascots.md"插画到位后的接入"）：xiaohua/ 品牌书内页小画 16 张（600×852），
                 stickers/{dandan,mojie,duo}/ 表情包三套各 18 个（480×480 透明），都是 WebP、质量 85；manifest.json 记每张的原图路径与原图 SHA-256。
                 由素材仓库 DanMoNovel-assets 的 tools/export_webp.py 从 PNG 原图生成，每次导出先清空这里的 WebP，不要手改；
-                PNG 原图与出图工具都在素材仓库（设定稿 docs/design/mascots.md 第 5 节）
+                PNG 原图与出图工具都在素材仓库（设定稿 docs/design/mascots.md 第 5 节）。
+                LICENSE 是站娘版权声明：保留所有权利，不适用 AGPL（规则见 license 记忆）。docs/design/mascots/LICENSE 与它逐字相同，
+                素材仓库根目录的 LICENSE 把范围那句换成整个仓库，并去掉了 GitHub 上浏览、派生那句（仓库私有），改措辞时三份一起改；
+                导出只清 WebP，碰不到 LICENSE。
+                自建站点要把这些素材换掉或删掉，所以接入时缺了它们也要能照常运行
 packages/design/scripts/
   check-contrast.mjs   对比度校验（pnpm check:contrast）
   gen-paper-art.mjs    程序画的纸张图案（pnpm gen:paper）

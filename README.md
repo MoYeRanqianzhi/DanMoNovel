@@ -66,3 +66,5 @@ docs/         写给人看的文档
 ## 许可
 
 代码以 [AGPL-3.0-only](LICENSE) 发布。界面字体（霞鹜文楷、马善政毛笔楷书、思源宋体等）以 SIL Open Font License 1.1 授权，随各自的许可分发。
+
+站娘耽耽、墨姐不在 AGPL 之内：她们的名称、形象、设定与图片保留所有权利，不按任何开源许可授权，见[站娘版权声明](packages/design/src/mascots/LICENSE)。涉及的文件是 `packages/design/src/mascots/`、`docs/design/mascots/` 两个目录，以及描述她们的[设定稿](docs/design/mascots.md)和[生图提示词](docs/design/mascot-prompts.md)。用这里的代码搭建自己的站点时，请把站娘素材换掉或删掉。
