@@ -83,6 +83,10 @@ packages/design/src/
                 client.ts（模拟客户端的字体下载）、FontList.tsx + font-list.css（字体列表）、sfnt.ts（格式识别、读字体名、拆合集）
   paper/        阅读纸张（第 10 节"背景"）：papers.ts（十种纸张的 id 与名称）、PaperTexture.tsx（纹理层）、
                 papers.css（各纸的纹理与每套配色的颜色表）、masks/（遮罩图案）、motifs/（花笺每套配色一幅的角花）
+  mascots/      站娘的默认素材，还没接进界面（接法见 plan/2026-10-02-mascots.md"插画到位后的接入"）：xiaohua/ 品牌书内页小画 16 张（600×852），
+                stickers/{dandan,mojie,duo}/ 表情包三套各 18 个（480×480 透明），都是 WebP、质量 85；manifest.json 记每张的原图路径与原图 SHA-256。
+                由素材仓库 DanMoNovel-assets 的 tools/export_webp.py 从 PNG 原图生成，每次导出先清空这里的 WebP，不要手改；
+                PNG 原图与出图工具都在素材仓库（设定稿 docs/design/mascots.md 第 5 节）
 packages/design/scripts/
   check-contrast.mjs   对比度校验（pnpm check:contrast）
   gen-paper-art.mjs    程序画的纸张图案（pnpm gen:paper）

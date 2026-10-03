@@ -1,0 +1,643 @@
+{
+ "quality": 85,
+ "xiaohua": [
+  {
+   "file": "xiaohua/xiaohua-01.webp",
+   "source": "mascots/xiaohua/xiaohua-01.png",
+   "sha256": "af3f7b14df8660881082a9d9c6b85810d7ec090a8ec77957aaea990faf59e8eb",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-02.webp",
+   "source": "mascots/xiaohua/xiaohua-02.png",
+   "sha256": "74735b05efc4ac34ae241d2e96139c73e69ea952c2e16f3dd4c9462229f7b46f",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-03.webp",
+   "source": "mascots/xiaohua/xiaohua-03.png",
+   "sha256": "be67b192f2903f6aff5dba3279f6d61b5c9442a671efef18839d71b52f290168",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-04.webp",
+   "source": "mascots/xiaohua/xiaohua-04.png",
+   "sha256": "39bfc7728a6921d97b8e94b3add2c1a74e5ed8caf8e6865873c84a9e06e92c0d",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-05.webp",
+   "source": "mascots/xiaohua/xiaohua-05.png",
+   "sha256": "8d8b6cda4c1ff735fb8cc1dba8fcd7bc69529bcc2fc828b1cb19bc6fbd9dac18",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-06.webp",
+   "source": "mascots/xiaohua/xiaohua-06.png",
+   "sha256": "ddbff621fec4a7558c47fb9c314c35680d9c642973612d3c64751c45b7a93e3e",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-07.webp",
+   "source": "mascots/xiaohua/xiaohua-07.png",
+   "sha256": "0f25101654a6a53e9b7450d1814aabf06dcf52e2cf3330604f48aa1f2d8da444",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-08.webp",
+   "source": "mascots/xiaohua/xiaohua-08.png",
+   "sha256": "ae9ae38e34f433bb8cc7972daf61478f8a58c9f4790f6c4657c88b7e787c985b",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-09.webp",
+   "source": "mascots/xiaohua/xiaohua-09.png",
+   "sha256": "26a98744b36e79997a853c2ed7e74aa7d0fc52943b2103e2ca72151cde50a593",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-10.webp",
+   "source": "mascots/xiaohua/xiaohua-10.png",
+   "sha256": "bee62c72b9fdb16f543f49b47e678296dfb7cb5731ecd05070bcd912dc0bf5fd",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-11.webp",
+   "source": "mascots/xiaohua/xiaohua-11.png",
+   "sha256": "de6cb24afbc13ee563c5d11cd4d8fcbff7cef4e21a87787c57bce5a19d50deb1",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-12.webp",
+   "source": "mascots/xiaohua/xiaohua-12.png",
+   "sha256": "cfa846a3ca0d35d257b4e0dda4fb374ea4320aa42f16d547b34cb2c6d012940d",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-13.webp",
+   "source": "mascots/xiaohua/xiaohua-13.png",
+   "sha256": "5532bd6ccd04bf2c275c5a68da2a588eedbddbb66f887516cf147d1e856ed1ce",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-14.webp",
+   "source": "mascots/xiaohua/xiaohua-14.png",
+   "sha256": "ae3334f225c85995bb322c08cdbe4b62fc541a51e4726b36eedfd1cd660ecc46",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-15.webp",
+   "source": "mascots/xiaohua/xiaohua-15.png",
+   "sha256": "e60649f60d0004645041d407e010ca7a4ad75e68d98c1365d2481d35f6c59ab4",
+   "size": [
+    600,
+    852
+   ]
+  },
+  {
+   "file": "xiaohua/xiaohua-16.webp",
+   "source": "mascots/xiaohua/xiaohua-16.png",
+   "sha256": "1500016d25e535c0b28d87dbe806a2909a2d9c153cd303dce379eda2862775e9",
+   "size": [
+    600,
+    852
+   ]
+  }
+ ],
+ "stickers": {
+  "dandan": [
+   {
+    "file": "stickers/dandan/dandan-01.webp",
+    "source": "mascots/stickers/dandan/dandan-01.png",
+    "sha256": "8da8985fe127df092bfd0b9effacc3513382c35082c8f4839900c1c2ebfd3a17",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-02.webp",
+    "source": "mascots/stickers/dandan/dandan-02.png",
+    "sha256": "a81b1374dbfcd8fb2abd5c946ef03aca2489b837da59eb65230d31fe2885a35b",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-03.webp",
+    "source": "mascots/stickers/dandan/dandan-03.png",
+    "sha256": "3d6adfa879339b106281c09b5d01a9cfe79233acc595b0a59a8e51685409f999",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-04.webp",
+    "source": "mascots/stickers/dandan/dandan-04.png",
+    "sha256": "30e4b511126dfffe33a70b28d0a7c15c7b07a50432f1abbd695524c7c81b695e",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-05.webp",
+    "source": "mascots/stickers/dandan/dandan-05.png",
+    "sha256": "87e3e967e82c0c732321e9d931138957ff327faddb4a8029b46dc0413e8b1d32",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-06.webp",
+    "source": "mascots/stickers/dandan/dandan-06.png",
+    "sha256": "7ce72df8733a88ff5085eb81f6630c6fa9144b98cbe6851a8421e488b3b2c144",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-07.webp",
+    "source": "mascots/stickers/dandan/dandan-07.png",
+    "sha256": "f225c7930cfd997495dd4bb0b659f4963f6d3bc9f05e9b7e41c8f3ad787ae0bc",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-08.webp",
+    "source": "mascots/stickers/dandan/dandan-08.png",
+    "sha256": "c6e99ebdf84124be9ebe93291328c5566691932c42bfbb9192397927c89b6f5d",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-09.webp",
+    "source": "mascots/stickers/dandan/dandan-09.png",
+    "sha256": "21482baf9843ee85e7cf768fe3090ba7ce512fb0f22b51171f790b1addff5123",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-10.webp",
+    "source": "mascots/stickers/dandan/dandan-10.png",
+    "sha256": "f651c8506f3e27b2c19f5b8c6df9531716441ad7e2048ac4523ffe2a724f3141",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-11.webp",
+    "source": "mascots/stickers/dandan/dandan-11.png",
+    "sha256": "00c8cd314ddffc2abb7b4dc48762613ec1cbf68c3d2ce25aaef552e8f7292a04",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-12.webp",
+    "source": "mascots/stickers/dandan/dandan-12.png",
+    "sha256": "e74595d3335ddccf8ce66d60d54196862e13d0b45ffeceeffa5f0fa77594aec0",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-13.webp",
+    "source": "mascots/stickers/dandan/dandan-13.png",
+    "sha256": "a475224194e3924b2f926ca6d68f6896e644149d7d94b0606d39c3e40118b9b1",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-14.webp",
+    "source": "mascots/stickers/dandan/dandan-14.png",
+    "sha256": "d88d2ad4a0c6b5120b562c19bcea5e51d309467ee970d49a5da77f16d485fc3b",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-15.webp",
+    "source": "mascots/stickers/dandan/dandan-15.png",
+    "sha256": "8a79f71bd71686930a881a62af8c1d573ebc1630ea0ca95c7565cbeb2eef98a6",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-16.webp",
+    "source": "mascots/stickers/dandan/dandan-16.png",
+    "sha256": "b3da94873239729427e98b685a3102de6e4c3be5a4c20bf586fb5b1eac216abe",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-17.webp",
+    "source": "mascots/stickers/dandan/dandan-17.png",
+    "sha256": "b287949366a37d4cd1966ade8cd0abd61cc58ca9cf2d4f754e75a12ea340294b",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/dandan/dandan-18.webp",
+    "source": "mascots/stickers/dandan/dandan-18.png",
+    "sha256": "8f91a258c0163dacb2a1a6267616cb1c419d94e843f1d7f0acc0af4d8b7e2f19",
+    "size": [
+     480,
+     480
+    ]
+   }
+  ],
+  "mojie": [
+   {
+    "file": "stickers/mojie/mojie-01.webp",
+    "source": "mascots/stickers/mojie/mojie-01.png",
+    "sha256": "3f7e293fd3da1f2702deaac9c606fb9d75c02ea88600cda33f00c31af9ab9a9a",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-02.webp",
+    "source": "mascots/stickers/mojie/mojie-02.png",
+    "sha256": "98696fb97504b98307f163b150798678962b37bfae7d20cae92b4635fc5e4556",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-03.webp",
+    "source": "mascots/stickers/mojie/mojie-03.png",
+    "sha256": "a5138c82057c17424321fc63c1ff6a35f89286568e7d9a4a64a5c96e271a5e45",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-04.webp",
+    "source": "mascots/stickers/mojie/mojie-04.png",
+    "sha256": "12bef609d776ce3fec63aeaad9e1b9a1a1e5793879079c712b3b87b4cb6b7e3a",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-05.webp",
+    "source": "mascots/stickers/mojie/mojie-05.png",
+    "sha256": "9ddd2e9975d00e821a4039601b77f1ad311af4e039e6a70ee66252a849e1d42a",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-06.webp",
+    "source": "mascots/stickers/mojie/mojie-06.png",
+    "sha256": "780f0a8bd8e006a2b3379a24c5d4bf2d61452b905bdcee9b48c218d5ea0bda1e",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-07.webp",
+    "source": "mascots/stickers/mojie/mojie-07.png",
+    "sha256": "2a2c155b9c610b8698103ba3a2d1ccf8202d27a23a7d3e4f6a3b25d0dc9c9867",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-08.webp",
+    "source": "mascots/stickers/mojie/mojie-08.png",
+    "sha256": "8714e38c8e799b3e42d58ffe07372a489ef345b0945fc42c4255b99c3e020eac",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-09.webp",
+    "source": "mascots/stickers/mojie/mojie-09.png",
+    "sha256": "cba857276fb8e171528195775355d95549d877c1e6403d839444a8ab6f517180",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-10.webp",
+    "source": "mascots/stickers/mojie/mojie-10.png",
+    "sha256": "747a1188704aebf73cdb42d67a33e7358d94b14edd1aba0500d4df48a543146f",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-11.webp",
+    "source": "mascots/stickers/mojie/mojie-11.png",
+    "sha256": "df312dcefecfc030a0295825bbd79fc3826b3e41550e29f8071a5a1b973f8a6f",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-12.webp",
+    "source": "mascots/stickers/mojie/mojie-12.png",
+    "sha256": "bb7c23b6354188d0807c2d9cbe4c38e356f3b8b9f96c86e8e6cb836ce815e761",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-13.webp",
+    "source": "mascots/stickers/mojie/mojie-13.png",
+    "sha256": "e22ed33abb583a22b2f357069d1ed91c11fd46dfbbf1249bb4c6ae4de00a05e5",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-14.webp",
+    "source": "mascots/stickers/mojie/mojie-14.png",
+    "sha256": "a78da6861c74cc29fd7f3e4c252172ce73021e71827884c7560e9df13af491fc",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-15.webp",
+    "source": "mascots/stickers/mojie/mojie-15.png",
+    "sha256": "df87d9003a1402ee606d47a11b38fefc6cca805aca779fefd558a5b2394fb355",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-16.webp",
+    "source": "mascots/stickers/mojie/mojie-16.png",
+    "sha256": "a7383ae038098fd434bec2b58a144887398606a15c3195e9b0b3adf8cfc902ab",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-17.webp",
+    "source": "mascots/stickers/mojie/mojie-17.png",
+    "sha256": "f89628b8852da7ec95550c1dc03940511f1c532c1144dab69715a522e8da91f5",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/mojie/mojie-18.webp",
+    "source": "mascots/stickers/mojie/mojie-18.png",
+    "sha256": "40914ef88e2ee8f82b87e166a9fea40e218b575d98f507b5521f936d1e570566",
+    "size": [
+     480,
+     480
+    ]
+   }
+  ],
+  "duo": [
+   {
+    "file": "stickers/duo/duo-01.webp",
+    "source": "mascots/stickers/duo/duo-01.png",
+    "sha256": "b36ee5becc0c986ebab8761d7185dcc88fa24cadf98dd1dfff991b22528b950f",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-02.webp",
+    "source": "mascots/stickers/duo/duo-02.png",
+    "sha256": "2c9f55618ef4178f2eba9bc01b35f63285e0a24f19df8cb0e3544a4c33b07785",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-03.webp",
+    "source": "mascots/stickers/duo/duo-03.png",
+    "sha256": "0f6e2625a384a9bdd9c1e44d7ed514dff98211e4883a2f2b79ea949e86f26a65",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-04.webp",
+    "source": "mascots/stickers/duo/duo-04.png",
+    "sha256": "61e251d2feaf714923db69d30c9c89917be94db8fc5fe5d66d6cf38c89d3f76b",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-05.webp",
+    "source": "mascots/stickers/duo/duo-05.png",
+    "sha256": "4a07a8884703dda48049fd71a9f1ecf6d9584fdaf4b4b6c26221c8fe3de76e47",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-06.webp",
+    "source": "mascots/stickers/duo/duo-06.png",
+    "sha256": "f2e55543ba96348aa6753dc78435d832a99fada959ad73c604d932cdfee17fc1",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-07.webp",
+    "source": "mascots/stickers/duo/duo-07.png",
+    "sha256": "caa1cbe386bd03526239502566628648c285c462363c4cb09207dc4a9db1391b",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-08.webp",
+    "source": "mascots/stickers/duo/duo-08.png",
+    "sha256": "50f122ecf2730a5cc3e160feb965c193b3671a0f8f2293232d69c590af0967c7",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-09.webp",
+    "source": "mascots/stickers/duo/duo-09.png",
+    "sha256": "15c8277f68ca4e479e3809d3c018c40281ca1d7b50c125444b5971f64626ed7d",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-10.webp",
+    "source": "mascots/stickers/duo/duo-10.png",
+    "sha256": "70095a49c88e166c7ef532c64dbf89413bf63748f6e00fdfe02a954532af2f80",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-11.webp",
+    "source": "mascots/stickers/duo/duo-11.png",
+    "sha256": "f466c173fd0308f2995ef47836287fe97c1bc64dbaac06cd868d478411dc1e73",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-12.webp",
+    "source": "mascots/stickers/duo/duo-12.png",
+    "sha256": "cbcc62c030709a8b39b94ba8a7cab08e6ada9b7430e966ada92a73224e5e7320",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-13.webp",
+    "source": "mascots/stickers/duo/duo-13.png",
+    "sha256": "386f53dafb432f0abfd3063d146b84d95d510cb8e87834958c87c76edcedf557",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-14.webp",
+    "source": "mascots/stickers/duo/duo-14.png",
+    "sha256": "5d9c29a7f5bf92debe7a4d74b78025b116d5b93aec9ec83206016c529fc8b842",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-15.webp",
+    "source": "mascots/stickers/duo/duo-15.png",
+    "sha256": "4ab6049d81719b99ad6cb92855b250a217db5d4f6ca3c6d637b8314c7adead7f",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-16.webp",
+    "source": "mascots/stickers/duo/duo-16.png",
+    "sha256": "a56e052d80f3d64016834a1776f611f6f512cf182fb64d8153bad14efc9b44f7",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-17.webp",
+    "source": "mascots/stickers/duo/duo-17.png",
+    "sha256": "3004eaaea1fcfc7f97c957f90671fc5aa4dc230c6991c0350fa9e293327e3aca",
+    "size": [
+     480,
+     480
+    ]
+   },
+   {
+    "file": "stickers/duo/duo-18.webp",
+    "source": "mascots/stickers/duo/duo-18.png",
+    "sha256": "74c823b8bda1c0b99f925aadf1c328f8a15d8bb37467c5b9d94d94040ca251d8",
+    "size": [
+     480,
+     480
+    ]
+   }
+  ]
+ }
+}
