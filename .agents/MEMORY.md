@@ -31,3 +31,4 @@
 - [竖排文字](memory/vertical-text.md) — 写竖排文字（竖写的名字、信笺、题签）之前读；界面楷体的网页字体没有竖排度量与竖排标点，对格子或带标点的竖排要一格一个字自己排
 - [注册过的 CSS 变量](memory/registered-properties.md) — 给 CSS 自定义属性起名、往元素上写 style 变量之前读；tokens.css 用 @property 注册的 --rx、--ry、--open、--lift 等带类型且全局生效，存别的类型的值会让整条声明静默作废
 - [站娘素材的存放](memory/mascot-assets.md) — 往仓库里加图片、改或导出站娘的图、接入品牌书内页与表情包、做管理站的素材管理时读；PNG 原图和出图工具在素材仓库 DanMoNovel-assets，主仓库只放 export_webp.py 导出的 WebP（不要手改），已有的是默认素材，管理站以后可以再加
+- [提交信息](memory/commit-messages.md) — 写提交信息、改写历史、看到对不上的提交号时读；不加 Co-Authored-By 等署名尾注（用户 2026-10-04 要求），2026-10-04 改写了两个仓库的历史去掉它并强推，提交号都变了

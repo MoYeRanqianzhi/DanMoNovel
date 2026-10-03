@@ -19,6 +19,6 @@ metadata:
 
 **How to apply:** 写页面 CSS 时按第 1 条自查；改页面切换或动效后，按[实现说明第 12 节"测试注意"](../docs/prototype.md)起一个临时生产服务逐帧看。升级 React Router 时核对 `UNSAFE_FrameworkContext` 与 `manifest.routes[id].css` 还在（keepStyles.ts 靠它们认出哪些样式表属于哪个路由）。
 
-**Evidence:** 提交 69893fa 与[实现说明第 4 节"留住样式表"](../docs/prototype.md)的逐帧验证记录；2026-10-01 查过三站与 paper、manuscript、fonts 的样式，没有漏到全局的规则、没有重名的 @keyframes。第 3 条：2026-10-02 在日志页逐帧取样，推入"我"的淡入过程中账簿纸（z-index 1）一直在最上面，.audit-body 加 isolation 后"我"在上（提交 cc34e7c，实现说明第 4 节）。第 4 条：2026-10-02 管理站总览的举报面板，生产构建（静态托管）里 `<link>` 的次序是 overview-*.css 在 Stamp-*.css 前面，`.report__stamp` 的计算值是 position: relative、盖了印的纸条从 150px 撑到 189px；开发服务器上正常。改成外面一层 span 定位之后，生产构建里是 absolute、离纸条右边 18px（提交 d8a38ac，实现说明第 16 节"总览"）。
+**Evidence:** 提交 5767986 与[实现说明第 4 节"留住样式表"](../docs/prototype.md)的逐帧验证记录；2026-10-01 查过三站与 paper、manuscript、fonts 的样式，没有漏到全局的规则、没有重名的 @keyframes。第 3 条：2026-10-02 在日志页逐帧取样，推入"我"的淡入过程中账簿纸（z-index 1）一直在最上面，.audit-body 加 isolation 后"我"在上（提交 e657aed，实现说明第 4 节）。第 4 条：2026-10-02 管理站总览的举报面板，生产构建（静态托管）里 `<link>` 的次序是 overview-*.css 在 Stamp-*.css 前面，`.report__stamp` 的计算值是 position: relative、盖了印的纸条从 150px 撑到 189px；开发服务器上正常。改成外面一层 span 定位之后，生产构建里是 absolute、离纸条右边 18px（提交 56bf17a，实现说明第 16 节"总览"）。
 
 **Recheck when:** React Router 改变 `<Links>` 的行为或这个导出（第 4 条的次序来自它为匹配到的路由收集样式表的先后）；改用别的样式加载方式（例如 CSS 不再按路由拆分、共用组件的样式不再拆成单独的块）；页面栈不再保留被盖住的页面；`.screen` 改成层叠上下文（例如静止时也带 z-index 或 transform）。
