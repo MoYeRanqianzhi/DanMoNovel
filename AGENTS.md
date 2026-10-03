@@ -93,8 +93,8 @@ Memory is the project's documentation for agents. Write it as though the user wi
 
 ## Storage boundaries
 
-- ./.agents/MEMORY.md -- the index of shared memory: one line per active entry, `- [name](memory/name.md) -- <description>`, sorted by name; MEMORY.local.md indexes local entries the same way.
-- ./.agents/memory/ -- one durable topic per `<name>.md` file.
+- ./.agents/MEMORY.md -- the index of shared memory: one line per active entry, `- [Title](memory/file.md) -- hook`, never the entry itself; MEMORY.local.md indexes local entries the same way.
+- ./.agents/memory/ -- one durable topic per file, with an English file name.
 - ./.agents/plan/ -- plans for unfinished work, and hypotheses not yet verified.
 - ./.agents/TODO.md -- outstanding work, linked to its plans.
 
@@ -102,7 +102,7 @@ Give each piece of knowledge one home, and link to sources rather than copying t
 
 ## Shared and local records
 
-Shared records may travel with a release, fork, or export, so keep personal preferences, machine-specific setup, and private context local. A `.local` segment in a name marks a record local -- MEMORY.local.md, TODO.local.md, `memory/<name>.local.md`, `plan/<name>.local.md` -- and shared records must not depend on local ones. Keep secret values out of every record, local ones included, noting only where a credential can be found. Leave `.local` records out of anything you copy or export.
+Shared records may travel with a release, fork, or export, so keep personal preferences, machine-specific setup, and private context local. A `.local` segment in a name marks a record local -- MEMORY.local.md, TODO.local.md, `memory/*.local.md`, `plan/*.local.md` -- and shared records must not depend on local ones. Keep secret values out of every record, local ones included, noting only where a credential can be found. Leave `.local` records out of anything you copy or export.
 
 ## Recall before acting
 
@@ -120,7 +120,7 @@ Each entry states one fact or rule, written for that fresh session, under this f
 
 ```yaml
 ---
-name: <short-kebab-case-topic>
+name: <memory name>
 description: <when this memory should be recalled>
 metadata:
   type: <user | feedback | project | reference>
