@@ -11,14 +11,20 @@ dist/
 .react-router/
 apps/*/build/
 
-# ---- 本地工作树：约定放在主检出目录的 .worktrees/ 下，永不提交 ----
-/.worktrees/
+# Keep user- and machine-specific agent records out of shared history.
+# A `.local` segment in a name marks a record local: MEMORY.local.md,
+# TODO.local.md, memory/<name>.local.md, plan/<name>.local.md.
+# Match the segment exactly. A looser `*.local*` also hides shared files whose
+# names merely contain "local" after a dot, such as i18n.locale.md.
+/.agents/**/*.local.*
+# Extensionless files and directories marked `.local` are local as well.
+/.agents/**/*.local
 
-# ---- 本地记忆与私有记录 ----
-# .agents/ 下所有名称含 ".local" 的文件或目录（如 MEMORY.local.md、
-# memory/xxx.local.md、memory.local/）只属于当前机器或当前贡献者，
-# 可能包含私有路径、账号或偏好，任何情况下都不得强制加入版本库。
-.agents/**/*.local*
+# Worktrees have their own Git state and must not enter the main checkout's history.
+# Agents create them under .worktrees/ unless a client's worktree tool has its own
+# default location; Claude Code's tool uses .claude/worktrees/.
+/.worktrees/
+/.claude/worktrees/
 
 # ---- 编辑器、系统与调试工具产生的临时文件 ----
 .idea/
