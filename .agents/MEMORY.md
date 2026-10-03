@@ -30,3 +30,4 @@
 - [页面样式会一直留着](memory/route-styles.md) — 写或改任何页面的 CSS、做页面切换与淡出动效、升级 React Router 时读；访问过的页面样式不卸载，不能写漏到别的页的全局规则，页里正的 z-index 要用 isolation 关住，生产构建里共用组件的样式排在页面样式后面（页面不能用同样分量的选择器改共用组件的类），页面切换要在生产构建上看
 - [竖排文字](memory/vertical-text.md) — 写竖排文字（竖写的名字、信笺、题签）之前读；界面楷体的网页字体没有竖排度量与竖排标点，对格子或带标点的竖排要一格一个字自己排
 - [注册过的 CSS 变量](memory/registered-properties.md) — 给 CSS 自定义属性起名、往元素上写 style 变量之前读；tokens.css 用 @property 注册的 --rx、--ry、--open、--lift 等带类型且全局生效，存别的类型的值会让整条声明静默作废
+- [站娘素材的存放](memory/mascot-assets.md) — 往仓库里加图片、改或导出站娘的图、接入品牌书内页与表情包、做管理站的素材管理时读；PNG 原图和出图工具在素材仓库 DanMoNovel-assets，主仓库只放 export_webp.py 导出的 WebP（不要手改），已有的是默认素材，管理站以后可以再加
