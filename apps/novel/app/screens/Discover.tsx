@@ -6,22 +6,25 @@
  * 宽屏上帖子在左、正在热议在右侧一栏。
  *
  * 帖子分长评、摘句、求文、闲聊四类。每帖：发帖人（一枚淡色的闲章作头像）、正文、摘的那一句、提到的书、时间、收藏与回复。
+ * 正文里的短码 [名字] 显示成文字内小表情，帖子带的表情包显示在正文下面（@danmo/design 的 expressions）。
  * 书仍是主角：正在热议与帖子里提到的书都是书位，点了飞进详情页。
  *
  * 原型：帖子是固定的示例数据（packages/data/src/posts.ts）；收藏只在本机切换（本地存储 danmo:liked）；
- * 发帖与回复要登录，原型里给出提示。
+ * “写点什么”和回复都打开一张底部面板，以示例账号“夜读人”发，存在本机（posting.tsx）。我发的帖子排在最前，自己的帖子不能收藏。
  * 公开页面：帖子随 HTML 服务端渲染（长评、摘句也是搜索引擎的落地内容），HTML 可被 CDN 缓存；
- * 收藏状态是个人数据，只在浏览器里补上（服务端快照是"一条都没收藏"）。
+ * 收藏状态、我发的帖子和回复是个人数据，只在浏览器里补上（服务端快照是"一条都没收藏""一条都没发"）。
  */
-import { useState, useSyncExternalStore } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 import { ChevronRight, Heart, MessageCircle, PenLine } from 'lucide-react';
 import { getBook, type Book } from '@danmo/data/books';
 import { POSTS, POST_KINDS, formatPostTime, type Post, type PostKind } from '@danmo/data/posts';
 import { POSES } from '@danmo/design/book3d/Book3D';
-import { useToast } from '@danmo/design/components/overlays';
+import { Sheet, useToast } from '@danmo/design/components/overlays';
 import { TagMark } from '@danmo/design/components/ui';
+import { RichText, StickerImage } from '@danmo/design/expressions/Expressions';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
 import { useStack, type ScreenHero, type ScreenProps } from '@danmo/design/shell/stack';
+import { PostComposer, RepliesPanel, useMyPosts, useMyReplies } from './posting';
 import './discover.css';
 
 export interface DiscoverData {
@@ -98,15 +101,24 @@ export function DiscoverScreen({ data, screen }: ScreenProps<DiscoverData>) {
   const toast = useToast();
   const [kind, setKind] = useState<PostKind | null>(null);
   const likedIds = useLiked();
+  const myPosts = useMyPosts();
+  const myReplies = useMyReplies();
+  const [writing, setWriting] = useState(false);
+  const [replyTo, setReplyTo] = useState<Post | null>(null);
+  // 回复面板收起时还要播 260ms 的动画，内容不能先没了：记住最后一次打开的是哪一帖
+  const lastReplyTo = useRef(replyTo);
+  if (replyTo) lastReplyTo.current = replyTo;
+  const shownReplyTo = replyTo ?? lastReplyTo.current;
 
   const open = (book: Book, slotId: string) => push(`/book/${book.id}`, { flightFrom: slotId, book });
-  const posts = data.posts.filter((p) => !kind || p.kind === kind);
+  const mine = new Set(myPosts.map((p) => p.id));
+  const posts = [...myPosts, ...data.posts].filter((p) => !kind || p.kind === kind);
 
   return (
     <div className="page discover">
       <header className="discover-head">
         <h1 className="page-title">发现</h1>
-        <button type="button" className="btn btn--primary discover-write" onClick={() => toast('发帖要先登录，原型里还没有接入')}>
+        <button type="button" className="btn btn--primary discover-write" onClick={() => setWriting(true)}>
           <PenLine aria-hidden="true" />
           写点什么
         </button>
@@ -147,22 +159,43 @@ export function DiscoverScreen({ data, screen }: ScreenProps<DiscoverData>) {
               <PostCard
                 key={p.id}
                 post={p}
+                mine={mine.has(p.id)}
+                replies={p.replies + (myReplies[p.id]?.length ?? 0)}
                 liked={likedIds.has(p.id)}
                 slotId={screen.slot(`post:${p.id}`)}
                 onOpen={open}
                 onLike={() => toggleLiked(p.id)}
-                onReply={() => toast('回复要先登录，原型里还没有接入')}
+                onReply={() => setReplyTo(p)}
               />
             ))}
           </ol>
         </section>
       </div>
+
+      <Sheet open={writing} title="写点什么" onClose={() => setWriting(false)}>
+        <PostComposer
+          kind={kind ?? '闲聊'}
+          onPosted={() => {
+            setWriting(false);
+            // 回到“全部”：正在看别的类别时，刚发的帖子也排在最前面看得见
+            setKind(null);
+            toast('帖子发出去了');
+          }}
+        />
+      </Sheet>
+      <Sheet open={!!replyTo} title="回复" onClose={() => setReplyTo(null)}>
+        {shownReplyTo && <RepliesPanel key={shownReplyTo.id} post={shownReplyTo} />}
+      </Sheet>
     </div>
   );
 }
 
 interface PostCardProps {
   post: Post;
+  /** 我发的帖子：昵称旁标一个“我”，不能收藏 */
+  mine: boolean;
+  /** 回复数（帖子上的数加上我回的） */
+  replies: number;
   liked: boolean;
   /** 帖子里提到的那本书的书位 */
   slotId: string;
@@ -172,10 +205,10 @@ interface PostCardProps {
 }
 
 /**
- * 一张帖子：浮起的一张纸。摘句帖先放摘的那一句再放感想，其他帖子先正文、后摘句。
+ * 一张帖子：浮起的一张纸。摘句帖先放摘的那一句再放感想，其他帖子先正文、后摘句；带的表情包紧跟在正文后面。
  * 收藏过的心染成红线色（红线表示"你收藏过"这个状态，是信息）；数字是这帖的收藏数，收藏后加上自己这一个。
  */
-function PostCard({ post: p, liked, slotId, onOpen, onLike, onReply }: PostCardProps) {
+function PostCard({ post: p, mine, replies, liked, slotId, onOpen, onLike, onReply }: PostCardProps) {
   const book = p.bookId ? getBook(p.bookId) : null;
   const quote = p.quote && <blockquote className="post__quote">{p.quote}</blockquote>;
   return (
@@ -186,13 +219,21 @@ function PostCard({ post: p, liked, slotId, onOpen, onLike, onReply }: PostCardP
             {p.author[0]}
           </span>
           <span className="post__who">
-            <span className="post__name">{p.author}</span>
-            <span className="post__note">{p.authorNote}</span>
+            <span className="post__name">
+              {p.author}
+              {mine && <span className="post__me">我</span>}
+            </span>
+            {p.authorNote && <span className="post__note">{p.authorNote}</span>}
           </span>
           <span className="post__kind">{p.kind}</span>
         </header>
         {p.kind === '摘句' && quote}
-        <p className="post__body">{p.body}</p>
+        {p.body && (
+          <p className="post__body">
+            <RichText text={p.body} />
+          </p>
+        )}
+        {p.sticker && <StickerImage id={p.sticker} />}
         {p.kind !== '摘句' && quote}
         {book && (
           <button type="button" className="post__book" onClick={() => onOpen(book, slotId)}>
@@ -206,19 +247,21 @@ function PostCard({ post: p, liked, slotId, onOpen, onLike, onReply }: PostCardP
         )}
         <footer className="post__foot">
           <time dateTime={p.at}>{formatPostTime(p.at)}</time>
-          <button
-            type="button"
-            className="post__act"
-            aria-pressed={liked}
-            aria-label={`收藏，${p.likes + (liked ? 1 : 0)} 人收藏`}
-            onClick={onLike}
-          >
-            <Heart aria-hidden="true" />
-            <span>{p.likes + (liked ? 1 : 0)}</span>
-          </button>
-          <button type="button" className="post__act" aria-label={`回复（${p.replies} 条）`} onClick={onReply}>
+          {!mine && (
+            <button
+              type="button"
+              className="post__act"
+              aria-pressed={liked}
+              aria-label={`收藏，${p.likes + (liked ? 1 : 0)} 人收藏`}
+              onClick={onLike}
+            >
+              <Heart aria-hidden="true" />
+              <span>{p.likes + (liked ? 1 : 0)}</span>
+            </button>
+          )}
+          <button type="button" className="post__act" aria-label={`回复（${replies} 条）`} onClick={onReply}>
             <MessageCircle aria-hidden="true" />
-            <span>{p.replies}</span>
+            <span>{replies}</span>
           </button>
         </footer>
       </article>

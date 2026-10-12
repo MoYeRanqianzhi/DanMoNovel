@@ -35,8 +35,8 @@ packages/data/src/
   api.ts        模拟服务端（正式版换成请求 Go 接口，签名不变）：fetchChapter、chapterAccess、FREE_CHAPTERS；
                 试读开头 chapterLead 与预览 fetchPreview；字数与价格；书币余额与充值；自动订阅开关；subscribeChapters；
                 localRecord（本地存储里的一份账户数据，阅读器的书签与笔记也用它）
-  posts.ts      发现页的示例帖子 POSTS、帖子类别 POST_KINDS、formatPostTime
-  comments.ts   阅读器的示例段评：paragraphCommentCount、paragraphComments（第 10 节"书签、划线、想法与段评"）
+  posts.ts      发现页的示例帖子 POSTS、帖子类别 POST_KINDS、formatPostTime、按帖子编号生成的示例回复 postReplies
+  comments.ts   阅读器的示例段评：paragraphCommentCount、paragraphComments（第 10 节"书签、划线、想法与段评"）；固定散列 hash（posts.ts 也用）
   author.ts     作者站的示例数据（第 13 节）：AUTHOR、WORKS、volumesOf、MESSAGES、LETTERS、statsOf、FANS、REVIEWS（朱批）、今日字数
   manuscripts.ts 写作页与审核页的示例稿件：manuscriptOf、wordCount、draftWords
   admin.ts      管理站的示例数据（第 16 节）：身份与权限、工作人员、审核队列、作者名册、设置页的三份（橱窗、告示、站规）、举报、全站三十天的数、账簿
@@ -391,7 +391,11 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - 提到的书是一条书签，小书飞进详情页，书位 `post:${帖子 id}`。
     - 时间用 `formatPostTime`，只取字面上的日期与时刻，不经过 Date，服务端与浏览器结果一致。
   - **收藏**：只在本机切换。本地存储 `danmo:liked`，读取时只收字符串。收藏过的心用红线色填满，数字加上自己这一个。
-  - 发帖与回复要登录，原型里弹出提示。
+  - **发帖与回复**（posting.tsx，2026-10-13，原先只弹“要先登录”的提示）：
+    - “写点什么”打开底部面板：选类别（打开时是正在看的那一类，没有就是闲聊），摘句帖要先写摘的那一句，正文下面是表情（ExpressionTools）。发出后筛选回到“全部”，帖子排在最前，昵称后标“我”、不能收藏。没发就关掉，草稿留着（模块里的一个变量，只在这次打开网页期间）。
+    - 回复面板和段评面板同一种样子：帖子的开头（摘句与三行正文）、“N 条回复”、我回的在最前，其余是 postReplies 按帖子编号生成的示例回复（最多 8 条，按赞排），写字框贴在面板底上。帖子上的回复数加上我回的。
+    - 本地存储 `danmo:my-posts`（从新到旧）、`danmo:my-replies`（帖子编号 → 从新到旧），读出时逐条校验；服务端快照是空的。我发的帖子时间按东八区写成 Post.at 的样子，照旧用 formatPostTime 显示。
+    - 帖子和回复的正文用 RichText 显示小表情，带的表情包跟在正文后面。
 - **Detail**（公开）：
   - 染色纸；大书点一下翻面、拖动转着看。书下不放任何说明文字（见 design-direction 记忆"安静，少说明"）。
   - 舞台是 `role="button"`，回车或空格翻面，不挂 onClick，否则点一下会翻两次。
@@ -642,7 +646,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
 - **正文的 DOM**（pages.tsx 的 ChapterContent）：每段 `<p data-p>`；划线把一段切成几截，包在 `<mark class="rd-line" data-style data-note>` 里（`linesIn`；跨段的划线每段一截，带想法的只在最后一截有 `data-thought`）；段评气泡 `<button class="rd-cmt" data-extra data-p data-n tabIndex=-1>`，数字用 `::after { content: attr(data-n) }` 画（超过 99 写 99+）。气泡与想法记号都带 `data-extra`、里面没有文字，textpoints.ts 数偏移时跳过。气泡不进 Tab 顺序：每层页面都是整章，Tab 到页外的气泡会让裁出一页的窗口滚动。
   - ChapterContent 是 memo 的，notes、comments 由 Reader 按章缓存（`notesByChapter`、`commentCache`），同一章每次给同一个数组。划线只改装饰不加宽度，分页不变；气泡会改排版，所以测量层也画气泡，`commentCache` 进了测量的依赖。
 - **textpoints.ts**：`domPoint`/`textPointOf`（TextPoint 与文字节点位置互换）、`rangeOf`、`charRect`、`caretAt`（`caretPositionFromPoint`，没有就 `caretRangeFromPoint`）、`textBetween`（按原文取，不从页面取）、`fracOfPoint`（按字数比例）、`wordAt`（`Intl.Segmenter('zh', word)`，标点或没有分词时选一个字）、`firstVisiblePoint`（视野里第一个字：先找第一段露在视野里的段，再二分查找第一个不在视野之前的字）、`pointSide`。"在视野之前"按走向判断：横排分页 cols（前面的栏在左）、横排滚动 rows（前面的行在上）、竖排 vertical（前面的列在右）。
-- **存储**（marks.ts）：`danmo:marks` 书号 → `{ bookmarks, notes }`；`danmo:my-comments` "书号:章:段" → 我发的段评 `{ id, text, quote?, at }`。用 api.ts 的 `localRecord`，读出时逐条校验，不合法的条目丢掉。服务端快照是空的。
+- **存储**（marks.ts）：`danmo:marks` 书号 → `{ bookmarks, notes }`；`danmo:my-comments` "书号:章:段" → 我发的段评 `{ id, text, quote?, sticker?, at }`。用 api.ts 的 `localRecord`，读出时逐条校验，不合法的条目丢掉。服务端快照是空的。
   - `Bookmark { id, chapter, point, excerpt, at }`；`Note { id, chapter, start, end, style, quote, thought, at }`，style 是 wave（红线波浪）、marker（淡粉荧光）、ink（墨线）。
   - `addNote(bookId, note, replaces)`：Reader 的 `saveLine` 把与新划线重叠的旧划线并进来（范围取并集、想法用换行接起来、样式用这一次的），旧的随 replaces 删掉，同一处只留一条。
 - **书签**：上栏按钮的状态是"眼前夹着书签"（`hereMarks`）。分页时 `markPages` 用测量层量出每枚书签在它那一章的第几页（`pageOfPoint`：横排看字落在第几栏，竖排看离正文右缘几个窗口宽），依赖与测量相同；滚动时 `screenMarks` 看书签那个字在不在滚动区里（随 scrollFrac 重算）。夹上：`visibleStart` 取眼前第一个字（分页用当前页的窗口；滚动取第一个真正露在视野里的字），摘 36 个字做 excerpt。取下：删掉眼前的几枚。
@@ -664,7 +668,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - 点已有的划线：浮出它的小浮层，上面是想法（有的话），下面一排是三种线的小样（一个"文"字划上这种线）、想法（改想法）、复制、删除。点别处先收起它。
   - 翻页、跳转、改排版设置时选择与小浮层都收起；选中了字时上下两栏收起。Esc 先收起它们（捕获阶段，不返回上一页）；Ctrl/⌘+C 复制选中的字。
 - **想法**（remarks.tsx 的 ThoughtEditor）：上面是划下的字，下面写想法（上限 1000 字）。新写的不能是空的；改已有的想法时清空再保存就是删掉想法。
-- **段评**（remarks.tsx 的 CommentsPanel）：上面这一段的原文（四行），"N 条段评"，我发的在最前（深色闲章头像、"我"），其余按点赞排、能点赞；最多列 12 条，其余写"还有 N 条"。写字框贴在面板底上（sticky），引的字可以叉掉；以"夜读人"发表（原型的示例账号，存在本机；正式版要登录、由服务端审核）。
+- **段评**（remarks.tsx 的 CommentsPanel）：上面这一段的原文（四行），"N 条段评"，我发的在最前（深色闲章头像、"我"），其余按点赞排、能点赞；最多列 12 条，其余写"还有 N 条"。写字框贴在面板底上（sticky），引的字可以叉掉；以"夜读人"发表（原型的示例账号，存在本机；正式版要登录、由服务端审核）。写字框下面是表情（2026-10-13）：可以插小表情、带一张表情包，只带表情包不写字也能发。
   - 示例数据（packages/data/src/comments.ts）：两本书的第一章有几段手写的评论（贴着正文），其余按"书号:章:段"的 FNV-1a 散列给数：约八成没有，有的多半个位数，少数几十、上百。通用评论的昵称不与手写的重复。
   - 设置面板在"反向翻页"之后加了"显示段评"开关（settings.ts 的 comments，默认开）。关掉后正文里没有气泡，段评仍可从选中文字后的工具条进去。
 - **键盘**：分页模式的翻页键在写想法、段评面板打开时也让开（原先只看 panel），textarea 里按键不翻页。

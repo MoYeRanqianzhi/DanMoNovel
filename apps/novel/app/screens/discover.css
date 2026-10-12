@@ -191,6 +191,15 @@
   font-size: var(--fs-14);
   color: var(--ink);
 }
+/* 我发的帖子：昵称后面一个小小的“我”（同段评） */
+.post__me {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--ink-2);
+  background: var(--sheet-2);
+}
 .post__note {
   overflow: hidden;
   white-space: nowrap;
@@ -208,6 +217,14 @@
   line-height: 1.8;
   color: var(--ink);
   text-align: justify;
+  /* 读者自己写的帖子里有换行，也可能有一长串不断行的字母 */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* 帖子带的表情包：帖子里各块之间已经有间距，不再要表情包自带的上边距
+ * （选择器比 expressions.css 的高一级：生产构建里共享的样式表比页面的晚加载） */
+.post .expr-sticker {
+  margin-top: 0;
 }
 /* 摘的那一句：楷书，左边一道淡色的竖线，像在书页上划过的一笔 */
 .post__quote {
@@ -301,4 +318,188 @@
   color: var(--thread);
   fill: var(--thread);
   transform: scale(1.12);
+}
+
+/* ============================================================
+ * 发帖与回复的面板（posting.tsx），都在底部的面板（Sheet）里
+ * 和阅读器的段评面板（reader.css 的 .rd-textarea、.rd-talk）是同一种样子，改一边要对照另一边
+ * ============================================================ */
+.compose {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.compose .segmented {
+  align-self: flex-start;
+}
+.compose__field {
+  width: 100%;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-size: var(--fs-16);
+  line-height: 1.7;
+  color: var(--ink);
+  background: var(--sheet-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  resize: vertical;
+  outline: none;
+  transition: box-shadow var(--dur-quick) ease;
+}
+.compose__field:focus {
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}
+/* 摘的那一句：楷书，和帖子里的摘句一样 */
+.compose__quote {
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+}
+.compose__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.compose__as {
+  margin-right: auto;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+
+/* 回复：上面是帖子的开头，下面一条条回复，最下面写一条（贴在面板底上，列表在它上面滚） */
+.talk__post {
+  padding: 10px 14px 12px;
+  border-radius: var(--radius-m);
+  background: var(--sheet-2);
+}
+.talk__by {
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.talk__cite {
+  margin-top: 6px;
+  padding-left: 10px;
+  font-family: var(--font-kai);
+  font-size: var(--fs-16);
+  line-height: 1.7;
+  color: var(--ink);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--blush) 80%, var(--ink) 10%);
+}
+.talk__para {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  margin-top: 4px;
+  font-size: var(--fs-14);
+  line-height: 1.7;
+  color: var(--ink);
+}
+.talk__count {
+  margin-top: 14px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.talk__list {
+  list-style: none;
+}
+.talk__item {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 11px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+/* 头像：一枚淡色的闲章，刻昵称的第一个字；我自己的是深色的一枚 */
+.talk__avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  font-family: var(--font-brush);
+  font-size: 19px;
+  color: var(--blush-ink);
+  background: color-mix(in srgb, var(--blush) 55%, var(--sheet));
+}
+.talk__item[data-mine] .talk__avatar {
+  color: var(--sheet);
+  background: color-mix(in srgb, var(--ink) 72%, var(--sheet));
+}
+.talk__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.talk__name {
+  font-size: var(--fs-14);
+  color: var(--ink);
+}
+.talk__me {
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  background: var(--sheet-2);
+}
+.talk__time {
+  font-variant-numeric: tabular-nums;
+}
+.talk__text {
+  margin-top: 4px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.talk__like {
+  align-self: start;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  min-width: 40px;
+  padding: 2px 0;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--dur-quick) ease;
+}
+.talk__like svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.7;
+}
+.talk__like:hover,
+.talk__like[aria-pressed='true'] {
+  color: var(--thread-ink);
+}
+.talk__like[aria-pressed='true'] svg {
+  fill: currentColor;
+}
+.talk__rest {
+  padding-top: 12px;
+  text-align: center;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+.talk__compose {
+  position: sticky;
+  bottom: calc((var(--sp-6) + var(--safe-bottom)) * -1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px calc(var(--sp-5) * -1) calc((var(--sp-6) + var(--safe-bottom)) * -1);
+  padding: 12px var(--sp-5) calc(14px + var(--safe-bottom));
+  background: var(--sheet);
+  box-shadow: 0 -1px 0 var(--line);
+}
+@media (min-width: 900px) {
+  .talk__compose {
+    bottom: calc(var(--sp-6) * -1);
+    margin-bottom: calc(var(--sp-6) * -1);
+    padding-bottom: 16px;
+  }
 }

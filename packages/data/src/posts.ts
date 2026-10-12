@@ -4,7 +4,10 @@
  * 发现是书友交流的地方：写长评、分享摘句、求文、闲聊（用户 2026-09-27 纠正，见 tab-roles 记忆）。
  * 原型用一批固定的帖子；正式版由 Go 接口按类别与时间分页返回，发帖、回复、点赞都要登录。
  * 所有昵称与帖子内容均为原型虚构；帖子提到的书都是示例书目里的书，用书号（DMBN）关联（book-number 记忆）。
+ * 回复：原型只按帖子编号生成几条示例回复（postReplies），同一帖每次打开都一样；回复数仍是帖子上写的那个数。
+ * 帖子和回复的文字里可以有文字内小表情的短码 [名字]，也可以带一张表情包（见 @danmo/design 的 expressions）。
  */
+import { hash } from './comments';
 
 /** 帖子的类别，也是发现页顶部的筛选标签（顺序即展示顺序） */
 export const POST_KINDS = ['长评', '摘句', '求文', '闲聊'] as const;
@@ -24,6 +27,8 @@ export interface Post {
   bookId?: string;
   /** 摘的那一句（摘句帖一定有，长评可以有） */
   quote?: string;
+  /** 带的一张表情包的编号（如 dandan/02，见 @danmo/design 的 expressions）；正文里的 [名字] 是文字内小表情的短码 */
+  sticker?: string;
   likes: number;
   replies: number;
 }
@@ -72,6 +77,7 @@ export const POSTS: Post[] = [
     at: '2026-09-27T15:22',
     body: '《镜头之外》的综艺部分写得比正文还好看，每次镜头一开我就想笑：摄像大哥就在旁边，两个人还要装作刚好遇见。有没有人跟我一样，看到镜头关掉的那一章才真的开始心疼？',
     bookId: '1002100000010006',
+    sticker: 'duo/09',
     likes: 187,
     replies: 40,
   },
@@ -93,7 +99,7 @@ export const POSTS: Post[] = [
     author: '三点水',
     authorNote: '在读《潮汐来信》',
     at: '2026-09-26T10:31',
-    body: '海边的邮局，只收寄给明天的信——光是设定就很温柔。适合睡前读，读两章刚好，多了会舍不得睡。',
+    body: '海边的邮局，只收寄给明天的信——光是设定就很温柔。适合睡前读，读两章刚好，多了会舍不得睡[晚安]',
     bookId: '1002100000010002',
     quote: '寄给明天的信，明天总有人会替你收着。',
     likes: 271,
@@ -105,7 +111,7 @@ export const POSTS: Post[] = [
     author: '白开水',
     authorNote: '刚来',
     at: '2026-09-25T23:10',
-    body: '有没有星际背景、但不以打仗为主的？想看安安静静修飞船、隔着很远互相发消息的那种。《星轨同行》前几章就是这个感觉，还有类似的吗？',
+    body: '有没有星际背景、但不以打仗为主的？想看安安静静修飞船、隔着很远互相发消息的那种。《星轨同行》前几章就是这个感觉，还有类似的吗？[拜托]',
     bookId: '1003100000010001',
     likes: 39,
     replies: 9,
@@ -138,4 +144,122 @@ export const POSTS: Post[] = [
 export function formatPostTime(at: string): string {
   const [, m, d, hm] = at.match(/^\d{4}-(\d{2})-(\d{2})T(\d{2}:\d{2})/) ?? [];
   return m ? `${Number(m)}月${Number(d)}日 ${hm}` : at;
+}
+
+/* ---------------- 回复 ---------------- */
+
+/** 帖子的一条回复 */
+export interface PostReply {
+  id: string;
+  /** 回复的读者的昵称 */
+  name: string;
+  /** 回复的文字；只带一张表情包时是空的 */
+  text: string;
+  /** 带的一张表情包的编号 */
+  sticker?: string;
+  likes: number;
+  /** 回复的时间，写法同 Post.at */
+  at: string;
+}
+
+/** 回复面板里最多列出几条示例回复；其余的只算在回复数里 */
+const REPLIES_SHOWN = 8;
+
+/** 回帖的读者（虚构的昵称，和段评里是同一群人，不与发帖人重名）。16 个：取的时候每次跳 7 个，16 条以内不重复 */
+const REPLY_NAMES = [
+  '半盏茶',
+  '枕书眠',
+  '南风知意',
+  '不吃香菜',
+  '晚星',
+  '山有木兮',
+  '鹿呦呦',
+  '青梅煮酒',
+  '听雨',
+  '一只鹅',
+  '橘子汽水',
+  '纸飞机',
+  '夏至未至',
+  '慢慢来',
+  '云深处',
+  '月亮邮差',
+];
+
+type ReplyLine = { text: string; sticker?: string };
+
+/** 放在哪一类帖子下面都说得通的回复 */
+const REPLY_ANY: ReplyLine[] = [
+  { text: '马克一下，回头细看[点赞]' },
+  { text: '', sticker: 'dandan/07' },
+  { text: '前排围观[吃瓜]' },
+  { text: '深夜刷到，今晚又不用睡了', sticker: 'dandan/05' },
+  { text: '同好握手[好耶]' },
+  { text: '', sticker: 'mojie/01' },
+  { text: '顶一下，让更多人看到[加油]' },
+  { text: '来晚了，想说的楼上都说完了[委屈]' },
+  { text: '', sticker: 'duo/01' },
+  { text: '抱抱楼主[抱抱]' },
+];
+
+/** 各类帖子自己的回复。每类 6 条，加上通用的 10 条共 16 条：取的时候每次跳 5 条，16 条以内不重复 */
+const REPLY_BY_KIND: Record<PostKind, ReplyLine[]> = {
+  长评: [
+    { text: '这篇长评比我读得细多了[鼓掌]' },
+    { text: '同感！！看到那里我也愣了好久[嗑到了]' },
+    { text: '看完长评又想去二刷了', sticker: 'mojie/04' },
+    { text: '被楼主种草了，已经加进书架[撒花]' },
+    { text: '', sticker: 'duo/04' },
+    { text: '楼主分析得好细，我当时只顾着哭了[哭]' },
+  ],
+  摘句: [
+    { text: '这一句我也划了线[心动]' },
+    { text: '抄下来了，谢谢楼主[比心]' },
+    { text: '', sticker: 'mojie/05' },
+    { text: '截图做成锁屏了' },
+    { text: '小声读了一遍，好温柔[害羞]' },
+    { text: '这句后劲好大', sticker: 'dandan/04' },
+  ],
+  求文: [
+    { text: '蹲一个，我也想看[催更]' },
+    { text: '同求！！[拜托]' },
+    { text: '', sticker: 'dandan/08' },
+    { text: '楼主找到了记得回来说一声' },
+    { text: '去书城按口味标签筛一筛试试？[思考]' },
+    { text: '我也在找这种，一起蹲', sticker: 'duo/13' },
+  ],
+  闲聊: [
+    { text: '哈哈哈哈哈哈哈[笑哭]' },
+    { text: '我也是！！[大笑]' },
+    { text: '这个话题我能聊一晚上[熬夜]' },
+    { text: '', sticker: 'mojie/10' },
+    { text: '上班摸鱼刷到，差点笑出声', sticker: 'dandan/14' },
+    { text: '楼上说出了我的心声[比心]' },
+  ],
+};
+
+/** at 之后 minutes 分钟，写法同 Post.at。借 Date.UTC 只为进位（分进时、时进日……），结果只是字面上的加减，与时区无关 */
+function laterAt(at: string, minutes: number): string {
+  const [y, mo, d, h, mi] = (at.match(/\d+/g) ?? []).map(Number);
+  return new Date(Date.UTC(y, mo - 1, d, h, mi + minutes)).toISOString().slice(0, 16);
+}
+
+/**
+ * 一个帖子的示例回复：最多 REPLIES_SHOWN 条，按赞从多到少。
+ * 从这类帖子自己的回复和通用的回复里取，昵称与回复错开（同 comments.ts 的通用段评），时间在发帖后三天以内。
+ */
+export function postReplies(post: Post): PostReply[] {
+  const lines = [...REPLY_BY_KIND[post.kind], ...REPLY_ANY];
+  const h = hash(post.id);
+  const out: PostReply[] = [];
+  for (let k = 0; k < Math.min(post.replies, REPLIES_SHOWN); k++) {
+    const seed = hash(`${post.id}:r${k}`);
+    out.push({
+      id: `${post.id}:r${k}`,
+      name: REPLY_NAMES[(h + k * 7) % REPLY_NAMES.length],
+      ...lines[(h + k * 5) % lines.length],
+      likes: seed % (k < 2 ? 200 : 40),
+      at: laterAt(post.at, 3 + ((seed >>> 6) % 4300)),
+    });
+  }
+  return out.sort((a, b) => b.likes - a.likes);
 }

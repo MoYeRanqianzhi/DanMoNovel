@@ -74,6 +74,9 @@ export const STICKER_SETS: readonly { id: string; name: string; stickers: readon
 
 const STICKER_BY_ID = new Map(STICKER_SETS.flatMap((s) => s.stickers.map((t) => [t.id, t] as const)));
 
+/** 表情包编号的样子：“套/两位序号”。本地存储这类外部来的编号先用它校验，再存、再显示 */
+export const isStickerId = (v: unknown): v is string => typeof v === 'string' && /^[a-z]+\/\d{2}$/.test(v);
+
 /** 按编号找一张表情包；没有这张图时返回 undefined */
 export function stickerOf(id: string): StickerItem | undefined {
   return STICKER_BY_ID.get(id);

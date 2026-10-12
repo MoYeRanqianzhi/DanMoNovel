@@ -11,6 +11,7 @@
  */
 import { useSyncExternalStore } from 'react';
 import { localRecord } from '@danmo/data/api';
+import { isStickerId } from '@danmo/design/lib/mascots';
 
 /** 正文里的一个位置：第几段（p）、段内第几个字之前（o） */
 export interface TextPoint {
@@ -179,9 +180,6 @@ export interface MyComment {
   at: number;
 }
 
-/** 表情包编号的样子：“套/两位序号” */
-const STICKER_ID = /^[a-z]+\/\d{2}$/;
-
 /** 本机这位读者（原型的示例账号"夜读人"）发的段评："书号:章:段" → 从新到旧 */
 const mine = localRecord<Record<string, MyComment[]>>('danmo:my-comments', (raw) => {
   const out: Record<string, MyComment[]> = {};
@@ -195,7 +193,7 @@ const mine = localRecord<Record<string, MyComment[]>>('danmo:my-comments', (raw)
           id: r.id,
           text: r.text,
           quote: typeof r.quote === 'string' ? r.quote : undefined,
-          sticker: typeof r.sticker === 'string' && STICKER_ID.test(r.sticker) ? r.sticker : undefined,
+          sticker: isStickerId(r.sticker) ? r.sticker : undefined,
           at: r.at,
         };
       });

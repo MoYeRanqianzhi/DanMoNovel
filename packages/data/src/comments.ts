@@ -147,8 +147,8 @@ const HANDWRITTEN: Record<string, readonly { name: string; text: string; sticker
 /** 手写评论的那几段，总数在手写的条数之上再加这么多（其余是通用评论，面板里只报总数） */
 const HANDWRITTEN_EXTRA = [36, 12, 87, 5, 64, 140, 23, 9];
 
-/** "书号:章:段" 的固定散列（FNV-1a，32 位）：同一段每次都一样 */
-function hash(key: string): number {
+/** 字符串的固定散列（FNV-1a，32 位）：同一个键每次都一样，服务端与浏览器结果一致。段评按"书号:章:段"取，帖子的示例回复也用它 */
+export function hash(key: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < key.length; i++) {
     h ^= key.charCodeAt(i);
