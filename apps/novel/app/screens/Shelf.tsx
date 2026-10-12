@@ -19,7 +19,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { RefreshCw } from 'lucide-react';
 import {
-  BRAND_BOOK,
   SHELF,
   formatWords,
   getBook,
@@ -30,6 +29,7 @@ import {
 } from '@danmo/data/books';
 import { chapterTitle } from '@danmo/data/chapters';
 import { Book3D, POSES } from '@danmo/design/book3d/Book3D';
+import { brandBook, usePagePictures } from '@danmo/design/book3d/brandBook';
 import { useTilt } from '@danmo/design/book3d/gestures';
 import { IconButton, ThreadProgress } from '@danmo/design/components/ui';
 import { useToast } from '@danmo/design/components/overlays';
@@ -434,6 +434,7 @@ function usePullToRefresh(onRefresh: () => Promise<void>) {
 /** 下拉时出现的小书：封面随下拉翻开，同步中翻页 */
 function PullIndicator({ pull, refreshing, dragging }: { pull: number; refreshing: boolean; dragging: boolean }) {
   const { reduced } = useTheme();
+  const pages = usePagePictures();
   const shown = pull > 0 || refreshing;
   const caption = refreshing ? '正在同步书架' : pull >= 1 ? '松手同步' : '下拉同步书架';
   return (
@@ -447,7 +448,8 @@ function PullIndicator({ pull, refreshing, dragging }: { pull: number; refreshin
         <div className="pull__inner" role={refreshing ? 'status' : undefined}>
           <div className="pull__stage">
             <Book3D
-              book={BRAND_BOOK}
+              book={brandBook}
+              pages={pages}
               width={40}
               rx={40}
               ry={0}

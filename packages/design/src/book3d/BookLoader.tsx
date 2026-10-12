@@ -3,11 +3,12 @@
  *
  * 书向后仰（像摊开在桌上），封面打开，内页一张张翻过去再翻回来。
  * 有"当前这本书"时（例如阅读器切章）就用那本书，读者看到的是自己的书在翻页；
- * 否则用品牌书。
+ * 否则用品牌书，有站娘素材时内页翻出来的是她们的小画（见 brandBook.ts）。
  */
 import type { CSSProperties } from 'react';
-import { BRAND_BOOK, type Book } from '@danmo/data/books';
+import type { Book } from '@danmo/data/books';
 import { Book3D } from './Book3D';
+import { brandBook, usePagePictures } from './brandBook';
 import './loader.css';
 
 interface BookLoaderProps {
@@ -18,12 +19,13 @@ interface BookLoaderProps {
   caption?: string;
 }
 
-export function BookLoader({ book = BRAND_BOOK, size = 64, caption }: BookLoaderProps) {
+export function BookLoader({ book = brandBook, size = 64, caption }: BookLoaderProps) {
+  const pages = usePagePictures(book.id === brandBook.id);
   return (
     <div className="loader" role="status">
       {/* 书打开后封面伸到左侧，舞台左侧预留一本书宽，让整个跨页居中 */}
       <div className="loader__stage" style={{ '--size': `${size}px` } as CSSProperties}>
-        <Book3D book={book} width={size} rx={40} ry={0} state="loading" label={null} />
+        <Book3D book={book} width={size} rx={40} ry={0} state="loading" pages={pages} label={null} />
       </div>
       {caption ? <p className="loader__caption">{caption}</p> : <span className="sr-only">正在加载</span>}
     </div>

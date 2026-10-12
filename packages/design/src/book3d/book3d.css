@@ -243,6 +243,22 @@
       content-box,
     var(--page);
 }
+/*
+ * 内页贴图（品牌书的小画）：像印在书页上的插图，四周留一圈纸边，盖住示意的文字行。
+ * 不设 z-index，各面的光照层（::after，z-index 2）仍然压在图上，翻页时图跟着纸一起变暗。
+ * 图放在面上，不放在 .book3d__leaf 上：那一层带 preserve-3d，不能加会压扁 3D 的属性。
+ */
+.book3d__picture {
+  position: absolute;
+  left: calc(var(--w) * 0.05);
+  top: calc(var(--w) * 0.05);
+  width: calc(100% - var(--w) * 0.1);
+  height: calc(100% - var(--w) * 0.1);
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
 /* 书页块顶面：书打开后右手边的那一页 */
 .book3d__block {
   left: 0;

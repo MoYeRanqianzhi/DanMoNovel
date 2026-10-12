@@ -639,5 +639,90 @@
     ]
    }
   ]
+ },
+ "lihui": [
+  {
+   "file": "lihui/dandan-lihui-baoshu.webp",
+   "source": "mascots/dandan-lihui-baoshu.png",
+   "sha256": "34fdfeb744acce40fd1275a646e221eb30152ced18eb8a041b86310ec403592a",
+   "size": [
+    540,
+    960
+   ]
+  },
+  {
+   "file": "lihui/dandan-lihui-kedaole.webp",
+   "source": "mascots/dandan-lihui-kedaole.png",
+   "sha256": "eb81865e5ae1c2000f85380f6436afd961c6b49b617382989de625d6e63888af",
+   "size": [
+    540,
+    960
+   ]
+  },
+  {
+   "file": "lihui/dandan-lihui-zhaohu.webp",
+   "source": "mascots/dandan-lihui-zhaohu.png",
+   "sha256": "e513632ee59e8f2a061f226c46335947a7bb8d015888d0e86d0ab4b4062dbdfb",
+   "size": [
+    540,
+    960
+   ]
+  },
+  {
+   "file": "lihui/dandan-lihui-zoudu.webp",
+   "source": "mascots/dandan-lihui-zoudu.png",
+   "sha256": "b0dd414aa1d9a49b4e238f8db6444a621401452db3952e07dd927fcb0965a07b",
+   "size": [
+    540,
+    960
+   ]
+  },
+  {
+   "file": "lihui/mojie-lihui-anjian.webp",
+   "source": "mascots/mojie-lihui-anjian.png",
+   "sha256": "19dcf91535a63952e811add3cc75d085f12ada0c476572384624ffe6e083e931",
+   "size": [
+    540,
+    960
+   ]
+  },
+  {
+   "file": "lihui/mojie-lihui-bajian.webp",
+   "source": "mascots/mojie-lihui-bajian.png",
+   "sha256": "49053969315fceaad99c4ade131cb8124bd1590951e4d691ffc4144e504ec137",
+   "size": [
+    540,
+    960
+   ]
+  },
+  {
+   "file": "lihui/mojie-lihui-kanshu.webp",
+   "source": "mascots/mojie-lihui-kanshu.png",
+   "sha256": "f05956a2cd711c8a04bb335150a8f073976184d3990fc7ba223af568c2755c17",
+   "size": [
+    540,
+    960
+   ]
+  },
+  {
+   "file": "lihui/mojie-lihui-zhibi.webp",
+   "source": "mascots/mojie-lihui-zhibi.png",
+   "sha256": "55e9c0bffac1f23a0c9e473fa4a1ed3989099f197aef814ce4df66a3cd4aad6d",
+   "size": [
+    540,
+    960
+   ]
+  }
+ ],
+ "cover": {
+  "file": "cover/brandbook-cover.webp",
+  "source": "mascots/brandbook-cover.png",
+  "sha256": "00e104793aa5a28510a76f4022ff0c3919d5e5ab6252b38fd7a8c878909143e6",
+  "size": [
+   800,
+   1136
+  ],
+  "edge": "#b7afad",
+  "main": "#f9f3ed"
  }
 }

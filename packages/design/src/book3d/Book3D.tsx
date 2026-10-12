@@ -87,6 +87,11 @@ export interface Book3DProps {
   state?: BookState;
   /** 内页张数；缺省时 loading 为 5 张，打开时 4 张，合上时 0 张（省 DOM） */
   leaves?: number;
+  /**
+   * 内页贴的图（地址）：按顺序贴在每张内页的正面、背面（最上面那张先），再下一张贴书芯（内页全翻过去后右手边那一页）。
+   * 不给或不够时，没贴图的页画示意的文字行。品牌书加载时贴站娘的小画（见 brandBook.ts 的 usePagePictures）。
+   */
+  pages?: readonly string[];
   /** 阅读进度 0~1，决定丝带书签夹在书页的哪个深度 */
   progress?: number;
   /** 是否显示丝带书签 */
@@ -114,6 +119,7 @@ export function Book3D({
   open = 0,
   state = 'rest',
   leaves,
+  pages,
   progress = 0,
   ribbon = false,
   shadow = true,
@@ -168,11 +174,17 @@ export function Book3D({
           <div className="book3d__face book3d__edge book3d__edge--fore" />
           <div className="book3d__face book3d__edge book3d__edge--top" />
           <div className="book3d__face book3d__edge book3d__edge--bottom" />
-          <div className="book3d__face book3d__page book3d__block" />
+          <div className="book3d__face book3d__page book3d__block">
+            <PagePicture src={pages?.[leafCount * 2]} />
+          </div>
           {Array.from({ length: leafCount }, (_, i) => (
             <div key={i} className="book3d__leaf" style={{ '--i': i } as CSSProperties}>
-              <div className="book3d__face book3d__page book3d__leaf-front" />
-              <div className="book3d__face book3d__page book3d__leaf-back" />
+              <div className="book3d__face book3d__page book3d__leaf-front">
+                <PagePicture src={pages?.[i * 2]} />
+              </div>
+              <div className="book3d__face book3d__page book3d__leaf-back">
+                <PagePicture src={pages?.[i * 2 + 1]} />
+              </div>
             </div>
           ))}
           <div className="book3d__cover">
@@ -188,6 +200,12 @@ export function Book3D({
       </div>
     </div>
   );
+}
+
+/** 内页上的一张图：像印在书页上的插图，盖住示意的文字行；纯装饰，读屏不念 */
+function PagePicture({ src }: { src: string | undefined }) {
+  if (!src) return null;
+  return <img className="book3d__picture" src={src} alt="" decoding="async" draggable={false} />;
 }
 
 /**

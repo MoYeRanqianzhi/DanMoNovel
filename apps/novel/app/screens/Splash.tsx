@@ -15,8 +15,8 @@
  * CSS 把启动页藏起来，水合后组件自己卸载。
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { BRAND_BOOK } from '@danmo/data/books';
 import { POSES } from '@danmo/design/book3d/Book3D';
+import { brandBook, usePagePictures } from '@danmo/design/book3d/brandBook';
 import { Logo } from '@danmo/design/components/ui';
 import { BookSlot, useFlight } from '@danmo/design/flight/FlightContext';
 import { HOP_MS } from '@danmo/design/flight/timing';
@@ -61,7 +61,9 @@ function Splash({ onDone }: { onDone: () => void }) {
   const { hero } = useStack();
   const { reduced } = useTheme();
   const [stage, setStage] = useState<Stage>('intro');
-  const book = hero?.book ?? BRAND_BOOK;
+  const book = hero?.book ?? brandBook;
+  // 品牌书翻页时露出站娘的小画；页面主角是读者的书时照旧是示意内页
+  const pages = usePagePictures(!hero);
   /** 片头的各个时刻（离场之前） */
   const timers = useRef<number[]>([]);
   /** 离场之后卸载启动页的那一个（与上面分开：减少动效的偏好在离场后才变过来时，重排不能把它清掉） */
@@ -113,6 +115,7 @@ function Splash({ onDone }: { onDone: () => void }) {
           rx={lying ? 34 : POSES.hero.rx}
           ry={lying ? 0 : POSES.hero.ry}
           state={lying ? 'loading' : 'rest'}
+          pages={pages}
           ribbon={hero?.progress !== undefined}
           progress={hero?.progress}
           label={null}
