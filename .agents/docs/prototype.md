@@ -53,7 +53,9 @@ packages/design/src/
   theme/        themes.ts（主题元数据）、ThemeContext.tsx（偏好存储、themeBootScript、墨晕切换）、
                 ThemeSwatches.tsx + swatches.css（八张主题纸样，作者站与管理站的"我"共用）
   book3d/       Book3D.tsx + book3d.css、faces.tsx + faces.css（各面平面内容）、motifs.tsx（封面纹样）、barcode.ts（Code 128C）、
-                BookLoader.tsx + loader.css、gestures.ts（useTilt、useSpin）
+                BookLoader.tsx + loader.css、gestures.ts（useTilt、useSpin）、
+                brandBook.ts（2026-10-13：有站娘素材时带插画封面的品牌书 brandBook；usePagePictures 挂载后在浏览器里挑 11 张内页小画，传给 Book3D 的 pages，
+                服务端渲染与水合时没有小画，免得两边对不上。启动页、书架下拉、BookLoader 缺省用它；主题页的色样书照旧用 data 的 BRAND_BOOK）
   flight/       FlightContext.tsx（飞行引擎与 BookSlot）、timing.ts、flight.css
   shell/        stack.tsx（页面栈，第 4 节）、keepStyles.ts（留住栈里页面的样式表）、nav.tsx + nav.css（TabBar、SideRail、RailLink）、not-found.tsx（notFoundHandle）
   components/   ui.tsx（IconButton/ThreadProgress/TagMark/Seal/PairLine/HangOpen/Segmented/Logo）、overlays.tsx（Sheet、Toast；Sheet 打开时把焦点移进面板，内容已自己拿了焦点（autoFocus）时不抢；Sheet 是 aria-modal，面板开着时要播报的话放在面板里面，面板外的 role="status" 与 Toast 有的读屏不念）、ErrorPage.tsx、
@@ -72,7 +74,7 @@ packages/design/src/
                 核对：1440 与 390 宽下量书名号墨迹的左沿与上下行字的左沿，挂出后差 0.14~0.26px（原先差约半个字）。
   manuscript/   稿纸（第 14 节）：Manuscript.tsx + manuscript.css、danmo-grid.woff2（方格补字字体）与 danmo-grid-OFL.txt
   charts/       Hills.tsx + hills.css（远山与图例 HillsLegend，第 13 节；作者站数据页、管理站总览共用）
-  lib/          util.ts（cls、seededRandom、lerp）、format.ts（formatNumber、formatCount）、version.ts（VERSION）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts、
+  lib/          mascots.ts（站娘素材：MASCOT_COVER、PAGE_PICTURES、STICKER_SETS、stickerOf、isStickerId、EMOJI、lihuiSrc）、util.ts（cls、seededRandom、lerp）、format.ts（formatNumber、formatCount）、version.ts（VERSION）、useMedia.ts、useElementSize.ts、useClientValue.ts（useClientValue、useMounted）、season.ts、
                 curve.ts（q、smooth、hash：服务端与浏览器画得一字不差的曲线工具，第 13 节）、
                 radioGroup.ts（onRadioGroupKeyDown：挂在 radiogroup 容器上，←→↑↓ 换一个、Home/End 到头尾，焦点跟着走；
                 默认点一下移到的 radio，传 select 自己定"选中"做什么——ChoiceCards 传 onChange，字体列表传空函数只挪焦点。
@@ -83,14 +85,19 @@ packages/design/src/
                 client.ts（模拟客户端的字体下载）、FontList.tsx + font-list.css（字体列表）、sfnt.ts（格式识别、读字体名、拆合集）
   paper/        阅读纸张（第 10 节"背景"）：papers.ts（十种纸张的 id 与名称）、PaperTexture.tsx（纹理层）、
                 papers.css（各纸的纹理与每套配色的颜色表）、masks/（遮罩图案）、motifs/（花笺每套配色一幅的角花）
-  mascots/      站娘的默认素材，还没接进界面（接法见 plan/2026-10-02-mascots.md"插画到位后的接入"）：xiaohua/ 品牌书内页小画 16 张（600×852），
-                stickers/{dandan,mojie,duo}/ 表情包三套各 18 个（480×480 透明），都是 WebP、质量 85；manifest.json 记每张的原图路径与原图 SHA-256。
+  mascots/      站娘的默认素材（2026-10-13 接进界面，一律经 lib/mascots.ts 取）：cover/ 品牌书封面（800×1136，书名与标记已烤上），xiaohua/ 品牌书内页小画 16 张（600×852），
+                stickers/{dandan,mojie,duo}/ 表情包三套各 18 个（480×480 透明），emoji/ 文字内小表情 36 个（128×128 透明），lihui/ 立绘八张（540×960 透明），
+                都是 WebP、质量 85；manifest.json 记每张的原图路径与原图 SHA-256，封面另记书脊、封底的取色，表情包与小表情另记名字。
                 由素材仓库 DanMoNovel-assets 的 tools/export_webp.py 从 PNG 原图生成，每次导出先清空这里的 WebP，不要手改；
                 PNG 原图与出图工具都在素材仓库（设定稿 docs/design/mascots.md 第 5 节）。
                 LICENSE 是站娘版权声明：保留所有权利，不适用 AGPL（规则见 license 记忆）。docs/design/mascots/LICENSE 与它逐字相同，
                 素材仓库根目录的 LICENSE 把范围那句换成整个仓库，并去掉了 GitHub 上浏览、派生那句（仓库私有），改措辞时三份一起改；
                 导出只清 WebP，碰不到 LICENSE。
-                自建站点要把这些素材换掉或删掉，所以接入时缺了它们也要能照常运行
+                自建站点要把这些素材换掉或删掉，所以缺了它们也要能照常运行：lib/mascots.ts 用 import.meta.glob 取，缺了只是空的
+                （2026-10-13 把整个目录挪走构建并打开过：三站构建、类型检查都过，启动页是合成封面，短码照原文、表情包写"[表情包]"，
+                "表情"按钮不出现，404 只有印章，"关于"面板不放立绘，控制台无报错）。
+  expressions/  Expressions.tsx + expressions.css（2026-10-13）：RichText（短码 [名字] 换成小表情）、StickerImage（一条消息带的表情包）、
+                ExpressionTools（写字框下面的"表情"按钮与选择面板）。段评、发现、作者站来信与回信、管理站举报摘录在用
 packages/design/scripts/
   check-contrast.mjs   对比度校验（pnpm check:contrast）
   gen-paper-art.mjs    程序画的纸张图案（pnpm gen:paper）
