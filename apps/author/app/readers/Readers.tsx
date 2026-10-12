@@ -4,6 +4,7 @@
  * - 来信：段评、章评、书评都是一张信笺（LetterCard，与书房同一种）。上面按种类、作品筛选，可以只看还没回的。
  *   每封没回的信下面一个"回信"：展开一张横线信笺纸写回信，"寄出"后回信落在信尾，作者的闲章当场盖下去
  *   （盖章就是反馈，不另外弹提示；读屏由 role="status" 播报）。Ctrl/⌘ + 回车也能寄出。
+ *   信笺纸下面有“表情”，只能插文字内小表情、不能带表情包：回信末尾是作者的闲章落款，一张大图会把落款挤开。
  *   从书房点某一封信进来（?focus=信的 id），这一封滚到眼前、红线圈出来。
  * - 读者停下来的地方：段评最多的几句原文，每句下面一笔墨迹，越长越浓表示停下来的人越多；点开是那一章的稿纸。
  * - 书友：写段评最多的读者，名次用汉字，旁边一笔墨迹是段评数。
@@ -12,11 +13,12 @@
  * 回信只在这一页里（原型不保存）；正式版寄给读者，显示在小说站那条评论下面。
  * 互动页是个人页面：服务端按登录的作者渲染（原型用示例数据），缓存头为 private。
  */
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { PenLine } from 'lucide-react';
 import { FANS, HOT_QUOTES, LETTERS, WORKS, type Fan, type HotQuote, type ReaderLetter } from '@danmo/data/author';
 import { chapterTitle } from '@danmo/data/chapters';
 import { Segmented } from '@danmo/design/components/ui';
+import { ExpressionTools } from '@danmo/design/expressions/Expressions';
 import { formatNumber } from '@danmo/design/lib/format';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
 import { InkStroke } from '../components/InkStroke';
@@ -71,6 +73,8 @@ export function ReadersScreen({ data }: ScreenProps<ReadersData>) {
   const text = writing ? (drafts[writing] ?? '') : '';
   const setDraft = (id: string, value: string) => setDrafts((d) => ({ ...d, [id]: value }));
   const [announce, setAnnounce] = useState('');
+  /** 正在写的那张回信纸（同一时间只展开一张） */
+  const slipRef = useRef<HTMLTextAreaElement>(null);
 
   const letters = data.letters.map((l) => (replies[l.id] ? { ...l, reply: replies[l.id] } : l));
   const books = WORKS.filter((w) => data.letters.some((l) => l.bookId === w.book.id));
@@ -166,6 +170,7 @@ export function ReadersScreen({ data }: ScreenProps<ReadersData>) {
                     {writing === l.id && (
                       <div className="reply-slip">
                         <textarea
+                          ref={slipRef}
                           className="reply-slip__text"
                           value={text}
                           maxLength={REPLY_MAX}
@@ -176,6 +181,7 @@ export function ReadersScreen({ data }: ScreenProps<ReadersData>) {
                           onChange={(e) => setDraft(l.id, e.target.value)}
                           onKeyDown={onKey(l)}
                         />
+                        <ExpressionTools textareaRef={slipRef} />
                         <div className="reply-slip__foot">
                           <span className="reply-slip__count">
                             {[...text].length}/{REPLY_MAX}

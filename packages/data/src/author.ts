@@ -318,10 +318,13 @@ export interface ReaderLetter {
   chapter?: number;
   /** 段评引用的那一段 */
   quote?: string;
+  /** 读者写的话；[名字] 是文字内小表情的短码（见 @danmo/design 的 expressions） */
   body: string;
+  /** 读者带的一张表情包的编号（如 dandan/10） */
+  sticker?: string;
   likes: number;
   minutesAgo: number;
-  /** 作者的回复 */
+  /** 作者的回复，也可以有小表情的短码 */
   reply?: string;
 }
 
@@ -334,7 +337,7 @@ export const LETTERS: ReaderLetter[] = [
     bookId: '1002100000010004',
     chapter: 63,
     quote: '伞往他那边偏了一点，雨就全落在了自己的肩上。',
-    body: '看到伞往那边偏的时候我整个人都不好了！！原来从第十三章起就一直是这样撑伞的吗',
+    body: '看到伞往那边偏的时候我整个人都不好了！！原来从第十三章起就一直是这样撑伞的吗[哭]',
     likes: 312,
     minutesAgo: 14,
   },
@@ -391,7 +394,7 @@ export const LETTERS: ReaderLetter[] = [
     bookId: '1002100000010004',
     chapter: 62,
     quote: '他把耳机分给他一只，线太短，两个人只好坐得很近。',
-    body: '耳机线太短这个设定我能吹一整年！！！',
+    body: '耳机线太短这个设定我能吹一整年！！！[嗑到了]',
     likes: 421,
     minutesAgo: 60 * 2,
   },
@@ -402,7 +405,7 @@ export const LETTERS: ReaderLetter[] = [
     readerNote: '陪伴 76 天',
     bookId: '1002100000010004',
     chapter: 63,
-    body: '第六十五章明天几点更新呀？已经定好闹钟了。',
+    body: '第六十五章明天几点更新呀？已经定好闹钟了[催更]',
     likes: 73,
     minutesAgo: 60 * 5,
   },
@@ -415,6 +418,7 @@ export const LETTERS: ReaderLetter[] = [
     chapter: 12,
     quote: '他撑伞的时候，伞沿总是低一点，低到能挡住另一个人的眼睛。',
     body: '从这里就开始埋了吗？？回头看全是细节',
+    sticker: 'dandan/10',
     likes: 88,
     minutesAgo: 60 * 7,
   },
@@ -437,7 +441,7 @@ export const LETTERS: ReaderLetter[] = [
     bookId: '1002100000010004',
     chapter: 41,
     quote: '“窗边的位置要抢。”',
-    body: '窗边的位置要抢，哈哈哈哈他根本不是为了位置',
+    body: '窗边的位置要抢，哈哈哈哈他根本不是为了位置[偷笑]',
     likes: 268,
     minutesAgo: 60 * 40,
   },

@@ -57,6 +57,11 @@
   background-image: linear-gradient(transparent 27px, var(--line) 27px, var(--line) 28px);
   background-size: 100% 28px;
 }
+/* 读者带的表情包：信笺各块之间已经有间距，不再要表情包自带的上边距
+ * （选择器比 expressions.css 的高一级：生产构建里共享的样式表比页面的晚加载） */
+.letter .expr-sticker {
+  margin-top: 0;
+}
 .letter__foot {
   display: flex;
   align-items: center;

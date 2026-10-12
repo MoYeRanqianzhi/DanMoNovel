@@ -1,12 +1,15 @@
 /* 表情：文字内小表情、消息里的表情包、写字框下面的表情按钮与选择面板（见 Expressions.tsx） */
 
-/* 文字里的小表情：比一个字略大一点，下沉一点，和汉字的字身对齐 */
+/* 文字里的小表情：比一个字略大一点，下沉一点，和汉字的字身对齐。
+ * 不能撑高它所在的那一行：作者站信笺的横线按固定行高画，行距不匀的段落也难看。
+ * 行框按图的外边距框算高，上下各 -0.3em 的外边距让它只算 0.75em 高，比哪种行高都矮，图照样画 1.35em 大。
+ * 图的基线是下外边距的边，负外边距把这条边提高了 0.3em，所以 vertical-align 从 -0.32em 改成 -0.02em，图落在原来的位置 */
 .expr-emoji {
   display: inline-block;
   width: 1.35em;
   height: 1.35em;
-  margin: 0 0.06em;
-  vertical-align: -0.32em;
+  margin: -0.3em 0.06em;
+  vertical-align: -0.02em;
   object-fit: contain;
 }
 

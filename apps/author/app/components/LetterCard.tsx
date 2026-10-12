@@ -2,6 +2,8 @@
  * 读者来信：一张横线信笺（书房与互动页共用）
  *
  * 段评先引一句原文，再是读者写的话；左上角一枚书签形标签写明是哪种评论，旁边是出自哪本书、哪一章。
+ * 读者的话和作者的回信里，短码 [名字] 显示成文字内小表情；读者带的表情包跟在读者的话后面（@danmo/design 的 expressions）。
+ * 小表情一个字高，不撑高行，信笺的横线照旧对得上。
  * 信笺的横线与行高对齐，字正好落在线上（样式见 letter.css）。
  * 作者回过的信，末尾多一段"回信"，用作者自己的闲章落款；刚寄出的回信，闲章当场盖下去（Stamp）。
  */
@@ -10,6 +12,7 @@ import type { ReactNode } from 'react';
 import { AUTHOR, WORKS, type ReaderLetter } from '@danmo/data/author';
 import { chapterTitle } from '@danmo/data/chapters';
 import { Stamp } from '@danmo/design/components/Stamp';
+import { RichText, StickerImage } from '@danmo/design/expressions/Expressions';
 import { HangOpen, Seal, TagMark } from '@danmo/design/components/ui';
 import { formatNumber } from '@danmo/design/lib/format';
 import { formatAgo } from '../format';
@@ -45,7 +48,10 @@ export function LetterCard({ letter: l, onOpen, children, focused, stamped = 0 }
         </span>
       </span>
       {l.quote && <span className="letter__quote">{l.quote}</span>}
-      <span className="letter__body">{l.body}</span>
+      <span className="letter__body">
+        <RichText text={l.body} />
+      </span>
+      {l.sticker && <StickerImage id={l.sticker} />}
       <span className="letter__foot">
         <span className="letter__reader">
           {l.reader}
@@ -60,7 +66,9 @@ export function LetterCard({ letter: l, onOpen, children, focused, stamped = 0 }
       </span>
       {l.reply && (
         <span className="letter__reply">
-          <span className="letter__reply-text">{l.reply}</span>
+          <span className="letter__reply-text">
+            <RichText text={l.reply} />
+          </span>
           {stamped > 0 ? <Stamp {...seal} play={stamped} tilt={-4} className="letter__stamp" /> : <Seal {...seal} />}
         </span>
       )}
