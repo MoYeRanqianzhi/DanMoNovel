@@ -174,8 +174,13 @@ export interface MyComment {
   text: string;
   /** 先选中文字再点"段评"时，引的那几个字 */
   quote?: string;
+  /** 带的一张表情包的编号（如 dandan/02）；正文里的 [名字] 是文字内小表情的短码 */
+  sticker?: string;
   at: number;
 }
+
+/** 表情包编号的样子：“套/两位序号” */
+const STICKER_ID = /^[a-z]+\/\d{2}$/;
 
 /** 本机这位读者（原型的示例账号"夜读人"）发的段评："书号:章:段" → 从新到旧 */
 const mine = localRecord<Record<string, MyComment[]>>('danmo:my-comments', (raw) => {
@@ -186,7 +191,13 @@ const mine = localRecord<Record<string, MyComment[]>>('danmo:my-comments', (raw)
         if (!v || typeof v !== 'object') return null;
         const r = v as Record<string, unknown>;
         if (typeof r.id !== 'string' || typeof r.text !== 'string' || !isIndex(r.at)) return null;
-        return { id: r.id, text: r.text, quote: typeof r.quote === 'string' ? r.quote : undefined, at: r.at };
+        return {
+          id: r.id,
+          text: r.text,
+          quote: typeof r.quote === 'string' ? r.quote : undefined,
+          sticker: typeof r.sticker === 'string' && STICKER_ID.test(r.sticker) ? r.sticker : undefined,
+          at: r.at,
+        };
       });
     }
   }
@@ -201,9 +212,9 @@ export function useMyComments(): Record<string, MyComment[]> {
 }
 
 /** 发一条段评（原型：存在本机；正式版要登录，由服务端审核后公开） */
-export function postComment(key: string, text: string, quote?: string): void {
+export function postComment(key: string, text: string, quote?: string, sticker?: string): void {
   const all = mine.get();
-  mine.set({ ...all, [key]: [{ id: newId(), text, quote, at: Date.now() }, ...(all[key] ?? [])] });
+  mine.set({ ...all, [key]: [{ id: newId(), text, quote, sticker, at: Date.now() }, ...(all[key] ?? [])] });
 }
 
 /** 段评按段归档的键："书号:章:段"（与 @danmo/data/comments 的示例数据同一种键） */

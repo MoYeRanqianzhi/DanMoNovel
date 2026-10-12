@@ -1,0 +1,145 @@
+/* 表情：文字内小表情、消息里的表情包、写字框下面的表情按钮与选择面板（见 Expressions.tsx） */
+
+/* 文字里的小表情：比一个字略大一点，下沉一点，和汉字的字身对齐 */
+.expr-emoji {
+  display: inline-block;
+  width: 1.35em;
+  height: 1.35em;
+  margin: 0 0.06em;
+  vertical-align: -0.32em;
+  object-fit: contain;
+}
+
+/* 消息正文下面的一张表情包 */
+.expr-sticker {
+  display: block;
+  width: 112px;
+  height: 112px;
+  margin-top: var(--sp-2);
+  object-fit: contain;
+}
+.expr-sticker--missing {
+  display: inline-block;
+  width: auto;
+  height: auto;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+
+/* 写字框下面的一行：表情按钮、选中的表情包 */
+.expr__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 36px;
+}
+.expr__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px 5px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.expr__toggle svg {
+  width: 18px;
+  height: 18px;
+}
+.expr__toggle[aria-expanded='true'] {
+  color: var(--ink);
+  background: var(--sheet-2);
+}
+.expr__chosen {
+  position: relative;
+  display: inline-flex;
+  padding: 2px;
+}
+.expr__chosen .expr-sticker {
+  width: 48px;
+  height: 48px;
+  margin: 0;
+}
+.expr__chosen button {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--ink-2);
+  background: var(--sheet);
+  box-shadow: 0 1px 3px rgb(var(--shadow-rgb) / 0.25);
+}
+.expr__chosen button svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 选择面板：上面一排页签，下面一格一格的表情；格子区自己滚，不带着整个面板滚 */
+.expr__panel {
+  margin-top: var(--sp-2);
+  border-radius: var(--radius-m);
+  background: var(--sheet-2);
+}
+.expr__tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 6px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.expr__tab {
+  flex: none;
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+.expr__tab[aria-selected='true'] {
+  color: var(--ink);
+  background: var(--sheet);
+}
+.expr__grid {
+  display: grid;
+  gap: 2px;
+  max-height: 208px;
+  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.expr__grid[data-kind='emoji'] {
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+}
+.expr__grid[data-kind='sticker'] {
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+}
+.expr__emoji,
+.expr__sticker {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: var(--radius-s);
+}
+.expr__emoji img {
+  width: 30px;
+  height: 30px;
+}
+.expr__sticker img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+.expr__sticker[aria-pressed='true'] {
+  background: var(--sheet);
+  box-shadow: inset 0 0 0 1.5px var(--ink-2);
+}
+@media (hover: hover) {
+  .expr__emoji:hover,
+  .expr__sticker:hover,
+  .expr__toggle:hover {
+    background: var(--sheet);
+  }
+}

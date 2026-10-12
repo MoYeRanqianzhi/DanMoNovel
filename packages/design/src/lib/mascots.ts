@@ -1,7 +1,7 @@
 /**
  * 站娘素材：品牌书封面与内页的小画、表情包、文字内小表情、立绘
  *
- * 素材在 packages/design/src/mascots/，由素材仓库 DanMoNovel-assets 的 export_webp.py 从 PNG 原图导出成 WebP，
+ * 素材在 packages/design/src/mascots/，由素材仓库 DanMoNovel-assets 的 export_webp.py 从 PNG 原图导出成 WebP（清单 manifest.json 也是它写的），
  * 不要手改（见 docs/design/mascots.md 第 5 节）。站娘耽耽、墨姐的图保留所有权利，不适用代码的 AGPL：
  * 别人用这套代码自建站点时要删掉或换掉那个目录。所以这里一律用 import.meta.glob 取素材——
  * 目录缺了或某张图没有，glob 只是得到空对象，站点照常运行：品牌书退回合成封面与示意内页，
@@ -10,9 +10,11 @@
  * 本模块只管“有哪些图、地址是什么”；地址是构建出来的资源路径，服务端与浏览器一致，可以直接进服务端渲染的 HTML。
  */
 
-/** export_webp.py 写的清单（只列这里用到的字段） */
+/** export_webp.py 写的清单（只列这里用到的字段）。name 是提示词文档里每格冒号前面的名字 */
 interface Manifest {
   cover?: { file: string; edge: string; main: string };
+  stickers?: Record<string, { file: string; name: string }[]>;
+  emoji?: { file: string; name: string }[];
 }
 
 const manifests = import.meta.glob<Manifest>('../mascots/manifest.json', { eager: true, import: 'default' });
@@ -33,6 +35,7 @@ const STICKER_URLS = urls(
   import.meta.glob<string>('../mascots/stickers/*/*.webp', { eager: true, query: '?url', import: 'default' }),
 );
 const LIHUI_URLS = urls(import.meta.glob<string>('../mascots/lihui/*.webp', { eager: true, query: '?url', import: 'default' }));
+const EMOJI_URLS = urls(import.meta.glob<string>('../mascots/emoji/*.webp', { eager: true, query: '?url', import: 'default' }));
 
 /** 品牌书的插画封面：书名与耽墨文库标记已经烤在图里；edge、main 是导出时取的颜色（同 coverArt.ts 的 sampleTones） */
 export const MASCOT_COVER: { src: string; edge: string; main: string } | null =
@@ -45,11 +48,41 @@ export const PAGE_PICTURES: readonly string[] = Object.keys(XIAOHUA_URLS)
   .sort()
   .map((key) => XIAOHUA_URLS[key]);
 
-/** 一张表情包的地址；编号是“套/序号”，如 dandan/01。没有这张图时返回 undefined */
-export function stickerSrc(id: string): string | undefined {
-  const [set, no] = id.split('/');
-  return STICKER_URLS[`stickers/${set}/${set}-${no}.webp`];
+export interface StickerItem {
+  /** 编号：“套/序号”，如 dandan/01。帖子、段评里只存它 */
+  id: string;
+  /** 这一张的名字，如“打招呼”：读屏念它 */
+  name: string;
+  src: string;
 }
+
+/** 三套表情包的显示名 */
+const SET_NAMES: Record<string, string> = { dandan: '耽耽', mojie: '墨姐', duo: '双人' };
+
+/** 默认带的表情包，按套分好；没有素材的套不列 */
+export const STICKER_SETS: readonly { id: string; name: string; stickers: readonly StickerItem[] }[] = Object.entries(
+  manifest.stickers ?? {},
+)
+  .map(([set, list]) => ({
+    id: set,
+    name: SET_NAMES[set] ?? set,
+    stickers: list
+      .filter((e) => STICKER_URLS[e.file])
+      .map((e) => ({ id: `${set}/${e.file.slice(-7, -5)}`, name: e.name, src: STICKER_URLS[e.file] })),
+  }))
+  .filter((s) => s.stickers.length > 0);
+
+const STICKER_BY_ID = new Map(STICKER_SETS.flatMap((s) => s.stickers.map((t) => [t.id, t] as const)));
+
+/** 按编号找一张表情包；没有这张图时返回 undefined */
+export function stickerOf(id: string): StickerItem | undefined {
+  return STICKER_BY_ID.get(id);
+}
+
+/** 文字内小表情：名字就是短码 [名字] 里的那几个字，按编号排好；没有素材时是空的 */
+export const EMOJI: readonly { name: string; src: string }[] = (manifest.emoji ?? [])
+  .filter((e) => EMOJI_URLS[e.file])
+  .map((e) => ({ name: e.name, src: EMOJI_URLS[e.file] }));
 
 /** 一张立绘的地址，名字如 dandan-lihui-baoshu；没有时返回 undefined */
 export function lihuiSrc(name: string): string | undefined {

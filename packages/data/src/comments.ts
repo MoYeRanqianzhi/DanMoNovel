@@ -20,6 +20,8 @@ export interface ParagraphComment {
   text: string;
   /** 评论里引了这一段的哪几个字（读者先选中文字再点"段评"时带上）；没有就是整段的评论 */
   quote?: string;
+  /** 带的一张表情包，存编号（如 dandan/02，见 @danmo/design 的 expressions）；正文里的 [名字] 是文字内小表情的短码 */
+  sticker?: string;
   likes: number;
   /** 多久以前发的（分钟） */
   minutesAgo: number;
@@ -74,10 +76,13 @@ const GENERIC = [
   '这段的画面感，闭上眼就有了。',
   '作者是懂怎么写“不说出口”的。',
   '前排，这一段我愿称为全章最佳。',
+  '[嗑到了][嗑到了][嗑到了]',
+  '笑到邻居来敲墙[笑哭]',
+  '这段看完，蹲后文[催更]',
 ];
 
 /** 为几段写的、贴着正文的评论："书号:章:段" → 评论（章、段都从 0 开始） */
-const HANDWRITTEN: Record<string, readonly { name: string; text: string; likes: number }[]> = {
+const HANDWRITTEN: Record<string, readonly { name: string; text: string; sticker?: string; likes: number }[]> = {
   // 《盐汽水与蝉》第一章
   '1002100000010004:0:0': [
     { name: '夏至未至', text: '第一句就把我拉回了高二的教室。', likes: 412 },
@@ -99,7 +104,7 @@ const HANDWRITTEN: Record<string, readonly { name: string; text: string; likes: 
   ],
   // 《盐汽水与蝉》第二章（早读课）
   '1002100000010004:1:9': [
-    { name: '晚星', text: '哈哈哈哈《赤壁赋》倒着对他。', likes: 733 },
+    { name: '晚星', text: '哈哈哈哈《赤壁赋》倒着对他[笑哭]', likes: 733 },
     { name: '枕书眠', text: '谁上课走神没拿反过书。', likes: 205 },
   ],
   '1002100000010004:1:15': [
@@ -107,7 +112,7 @@ const HANDWRITTEN: Record<string, readonly { name: string; text: string; likes: 
     { name: '云深处', text: '像雨落在很远的湖面上，这个比喻好轻。', likes: 498 },
   ],
   '1002100000010004:1:18': [
-    { name: '青梅煮酒', text: '他也拿反了！！！', likes: 2794 },
+    { name: '青梅煮酒', text: '他也拿反了！！！', sticker: 'dandan/02', likes: 2794 },
     { name: '山有木兮', text: '原来两个人都没在看书。', likes: 1630 },
     { name: '夏至未至', text: '结尾这一下，我在被窝里打滚。', likes: 812 },
   ],
@@ -126,7 +131,7 @@ const HANDWRITTEN: Record<string, readonly { name: string; text: string; likes: 
   ],
   '1001100000010002:0:7': [{ name: '鹿呦呦', text: '一下，两下，三下。数得我心慌。', likes: 640 }],
   '1001100000010002:0:8': [
-    { name: '半盏茶', text: '十年……', likes: 2215 },
+    { name: '半盏茶', text: '十年……', sticker: 'mojie/04', likes: 2215 },
     { name: '南风知意', text: '门开的那一下，我屏住了呼吸。', likes: 1386 },
   ],
   '1001100000010002:0:10': [
@@ -135,7 +140,7 @@ const HANDWRITTEN: Record<string, readonly { name: string; text: string; likes: 
   ],
   '1001100000010002:0:12': [
     { name: '慢慢来', text: '结尾这一下，像心跳漏了一拍。', likes: 1849 },
-    { name: '山有木兮', text: '梅：我替你翻过去了。', likes: 3120 },
+    { name: '山有木兮', text: '梅：我替你翻过去了[偷笑]', likes: 3120 },
   ],
 };
 

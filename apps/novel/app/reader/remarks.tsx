@@ -4,13 +4,14 @@
  * 两者都放在阅读器的面板（Sheet）里，外层由 Reader 提供。
  * - ThoughtEditor：上面是划下的那几个字（画成它的线），下面写想法。给新划线写、改已有的想法都用它；清空再保存就是删掉想法。
  * - CommentsPanel：上面是这一段的原文，下面是段评（我发的在最前，其余按点赞从多到少），最下面写一条。
- *   先选中文字再点"段评"时，引的那几个字放在写字框上方，可以叉掉不引。
+ *   先选中文字再点"段评"时，引的那几个字放在写字框上方，可以叉掉不引。写字框下面是表情：可以插小表情，带一张表情包。
  *   原型的读者是示例账号"夜读人"，发表存在本机（marks.ts 的 postComment）；正式版要登录，由服务端审核后公开。
  */
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { Heart, X } from 'lucide-react';
 import type { Book } from '@danmo/data/books';
 import { paragraphComments, type ParagraphComment } from '@danmo/data/comments';
+import { ExpressionTools, RichText, StickerImage } from '@danmo/design/expressions/Expressions';
 import { agoText } from './directory';
 import { commentKey, postComment, useMyComments, type LineStyle } from './marks';
 
@@ -84,7 +85,12 @@ function CommentItem({ c, mine, liked, onLike }: { c: ParagraphComment; mine?: b
           <time className="rd-talk__time">{agoText(Date.now() - c.minutesAgo * 60000)}</time>
         </p>
         {c.quote && <p className="rd-talk__cite">{c.quote}</p>}
-        <p className="rd-talk__text">{c.text}</p>
+        {c.text && (
+          <p className="rd-talk__text">
+            <RichText text={c.text} />
+          </p>
+        )}
+        {c.sticker && <StickerImage id={c.sticker} />}
       </div>
       {!mine && (
         <button
@@ -123,6 +129,8 @@ export function CommentsPanel({
   const data = useMemo(() => paragraphComments(book.id, chapter, paragraph), [book.id, chapter, paragraph]);
   const mine = useMyComments()[key] ?? [];
   const [draft, setDraft] = useState('');
+  const [sticker, setSticker] = useState<string>();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [liked, setLiked] = useState<ReadonlySet<string>>(new Set());
   const total = data.count + mine.length;
   const rest = data.count - data.top.length;
@@ -130,9 +138,11 @@ export function CommentsPanel({
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!trimmed || trimmed.length > COMMENT_MAX) return;
-    postComment(key, trimmed, quote);
+    // 只带一张表情包、不写字也可以发
+    if ((!trimmed && !sticker) || trimmed.length > COMMENT_MAX) return;
+    postComment(key, trimmed, quote, sticker);
     setDraft('');
+    setSticker(undefined);
     onClearQuote();
   };
   const toggle = (id: string) =>
@@ -154,7 +164,15 @@ export function CommentsPanel({
               mine
               liked={false}
               onLike={() => {}}
-              c={{ id: m.id, name: '夜读人', text: m.text, quote: m.quote, likes: 0, minutesAgo: Math.floor((Date.now() - m.at) / 60000) }}
+              c={{
+                id: m.id,
+                name: '夜读人',
+                text: m.text,
+                quote: m.quote,
+                sticker: m.sticker,
+                likes: 0,
+                minutesAgo: Math.floor((Date.now() - m.at) / 60000),
+              }}
             />
           ))}
           {data.top.map((c) => (
@@ -173,6 +191,7 @@ export function CommentsPanel({
           </p>
         )}
         <textarea
+          ref={textareaRef}
           className="rd-textarea"
           rows={2}
           maxLength={COMMENT_MAX}
@@ -181,9 +200,10 @@ export function CommentsPanel({
           placeholder="写一条段评"
           aria-label="写一条段评"
         />
+        <ExpressionTools textareaRef={textareaRef} sticker={sticker} onSticker={setSticker} />
         <div className="rd-form-actions">
           <span className="rd-talk__as">以“夜读人”发表</span>
-          <button type="submit" className="btn btn--primary" disabled={!trimmed}>
+          <button type="submit" className="btn btn--primary" disabled={!trimmed && !sticker}>
             发表
           </button>
         </div>

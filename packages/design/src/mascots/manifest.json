@@ -155,7 +155,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "打招呼"
    },
    {
     "file": "stickers/dandan/dandan-02.webp",
@@ -164,7 +165,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "嗑到了"
    },
    {
     "file": "stickers/dandan/dandan-03.webp",
@@ -173,7 +175,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "发呆"
    },
    {
     "file": "stickers/dandan/dandan-04.webp",
@@ -182,7 +185,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "大哭"
    },
    {
     "file": "stickers/dandan/dandan-05.webp",
@@ -191,7 +195,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "熬夜追更"
    },
    {
     "file": "stickers/dandan/dandan-06.webp",
@@ -200,7 +205,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "穷"
    },
    {
     "file": "stickers/dandan/dandan-07.webp",
@@ -209,7 +215,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "比心"
    },
    {
     "file": "stickers/dandan/dandan-08.webp",
@@ -218,7 +225,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "偷看"
    },
    {
     "file": "stickers/dandan/dandan-09.webp",
@@ -227,7 +235,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "晚安"
    },
    {
     "file": "stickers/dandan/dandan-10.webp",
@@ -236,7 +245,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "震惊"
    },
    {
     "file": "stickers/dandan/dandan-11.webp",
@@ -245,7 +255,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "生气"
    },
    {
     "file": "stickers/dandan/dandan-12.webp",
@@ -254,7 +265,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "点赞"
    },
    {
     "file": "stickers/dandan/dandan-13.webp",
@@ -263,7 +275,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "学霸模式"
    },
    {
     "file": "stickers/dandan/dandan-14.webp",
@@ -272,7 +285,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "摸鱼"
    },
    {
     "file": "stickers/dandan/dandan-15.webp",
@@ -281,7 +295,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "害羞"
    },
    {
     "file": "stickers/dandan/dandan-16.webp",
@@ -290,7 +305,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "等更新"
    },
    {
     "file": "stickers/dandan/dandan-17.webp",
@@ -299,7 +315,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "抱抱"
    },
    {
     "file": "stickers/dandan/dandan-18.webp",
@@ -308,7 +325,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "疑惑"
    }
   ],
   "mojie": [
@@ -319,7 +337,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "朕知道了"
    },
    {
     "file": "stickers/mojie/mojie-02.webp",
@@ -328,7 +347,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "拔剑"
    },
    {
     "file": "stickers/mojie/mojie-03.webp",
@@ -337,7 +357,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "哼"
    },
    {
     "file": "stickers/mojie/mojie-04.webp",
@@ -346,7 +367,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "看哭了"
    },
    {
     "file": "stickers/mojie/mojie-05.webp",
@@ -355,7 +377,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "赐字"
    },
    {
     "file": "stickers/mojie/mojie-06.webp",
@@ -364,7 +387,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "催更"
    },
    {
     "file": "stickers/mojie/mojie-07.webp",
@@ -373,7 +397,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "偷笑"
    },
    {
     "file": "stickers/mojie/mojie-08.webp",
@@ -382,7 +407,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "震怒"
    },
    {
     "file": "stickers/mojie/mojie-09.webp",
@@ -391,7 +417,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "赏"
    },
    {
     "file": "stickers/mojie/mojie-10.webp",
@@ -400,7 +427,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "看戏"
    },
    {
     "file": "stickers/mojie/mojie-11.webp",
@@ -409,7 +437,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "拆快递"
    },
    {
     "file": "stickers/mojie/mojie-12.webp",
@@ -418,7 +447,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "嫌弃"
    },
    {
     "file": "stickers/mojie/mojie-13.webp",
@@ -427,7 +457,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "被萌到"
    },
    {
     "file": "stickers/mojie/mojie-14.webp",
@@ -436,7 +467,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "疑惑"
    },
    {
     "file": "stickers/mojie/mojie-15.webp",
@@ -445,7 +477,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "放空"
    },
    {
     "file": "stickers/mojie/mojie-16.webp",
@@ -454,7 +487,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "准了"
    },
    {
     "file": "stickers/mojie/mojie-17.webp",
@@ -463,7 +497,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "害羞"
    },
    {
     "file": "stickers/mojie/mojie-18.webp",
@@ -472,7 +507,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "晚安"
    }
   ],
   "duo": [
@@ -483,7 +519,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "贴贴"
    },
    {
     "file": "stickers/duo/duo-02.webp",
@@ -492,7 +529,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "摸头"
    },
    {
     "file": "stickers/duo/duo-03.webp",
@@ -501,7 +539,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "扑抱"
    },
    {
     "file": "stickers/duo/duo-04.webp",
@@ -510,7 +549,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "一起嗑到了"
    },
    {
     "file": "stickers/duo/duo-05.webp",
@@ -519,7 +559,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "合力比心"
    },
    {
     "file": "stickers/duo/duo-06.webp",
@@ -528,7 +569,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "牵手"
    },
    {
     "file": "stickers/duo/duo-07.webp",
@@ -537,7 +579,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "喂食"
    },
    {
     "file": "stickers/duo/duo-08.webp",
@@ -546,7 +589,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "击掌"
    },
    {
     "file": "stickers/duo/duo-09.webp",
@@ -555,7 +599,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "抱头痛哭"
    },
    {
     "file": "stickers/duo/duo-10.webp",
@@ -564,7 +609,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "靠肩"
    },
    {
     "file": "stickers/duo/duo-11.webp",
@@ -573,7 +619,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "拉回来"
    },
    {
     "file": "stickers/duo/duo-12.webp",
@@ -582,7 +629,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "公主抱"
    },
    {
     "file": "stickers/duo/duo-13.webp",
@@ -591,7 +639,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "一起催更"
    },
    {
     "file": "stickers/duo/duo-14.webp",
@@ -600,7 +649,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "擦眼泪"
    },
    {
     "file": "stickers/duo/duo-15.webp",
@@ -609,7 +659,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "背靠背"
    },
    {
     "file": "stickers/duo/duo-16.webp",
@@ -618,7 +669,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "捏脸"
    },
    {
     "file": "stickers/duo/duo-17.webp",
@@ -627,7 +679,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "披外袍"
    },
    {
     "file": "stickers/duo/duo-18.webp",
@@ -636,7 +689,8 @@
     "size": [
      480,
      480
-    ]
+    ],
+    "name": "晚安"
    }
   ]
  },
@@ -712,6 +766,368 @@
     540,
     960
    ]
+  }
+ ],
+ "emoji": [
+  {
+   "file": "emoji/emoji-01.webp",
+   "source": "mascots/emoji/emoji-01.png",
+   "sha256": "020a8995cac60fa39ffb3458afb8d83e1a01ac3ed426e2bade9e51c6f0b521b6",
+   "size": [
+    128,
+    128
+   ],
+   "name": "微笑"
+  },
+  {
+   "file": "emoji/emoji-02.webp",
+   "source": "mascots/emoji/emoji-02.png",
+   "sha256": "fb66fb273df2bbca30f0a56937777724a5886268e554f2687cdc0390327c987b",
+   "size": [
+    128,
+    128
+   ],
+   "name": "大笑"
+  },
+  {
+   "file": "emoji/emoji-03.webp",
+   "source": "mascots/emoji/emoji-03.png",
+   "sha256": "4a5445dac855f4730cf06d9600f010b4d212af81ea4afae4d934df61b410a5cb",
+   "size": [
+    128,
+    128
+   ],
+   "name": "偷笑"
+  },
+  {
+   "file": "emoji/emoji-04.webp",
+   "source": "mascots/emoji/emoji-04.png",
+   "sha256": "75f9251998d48206e143bf709c536c636604073f49a8b2906eae5ade62df94c2",
+   "size": [
+    128,
+    128
+   ],
+   "name": "害羞"
+  },
+  {
+   "file": "emoji/emoji-05.webp",
+   "source": "mascots/emoji/emoji-05.png",
+   "sha256": "5da783fef4010323e19f411f9815c01424eec2357989753048f1f12a9da31535",
+   "size": [
+    128,
+    128
+   ],
+   "name": "哭"
+  },
+  {
+   "file": "emoji/emoji-06.webp",
+   "source": "mascots/emoji/emoji-06.png",
+   "sha256": "80c4da6535a429192bc2d058b9470fc358be3c2cefa298f28ff4c30392116445",
+   "size": [
+    128,
+    128
+   ],
+   "name": "笑哭"
+  },
+  {
+   "file": "emoji/emoji-07.webp",
+   "source": "mascots/emoji/emoji-07.png",
+   "sha256": "bb3730cd5919c26b09bd1e7ae8cb600e7d38f00e75b91add03fa0f8fa6f80c4e",
+   "size": [
+    128,
+    128
+   ],
+   "name": "生气"
+  },
+  {
+   "file": "emoji/emoji-08.webp",
+   "source": "mascots/emoji/emoji-08.png",
+   "sha256": "9722239d3988b95dfa9cc24fdb3f710fb40cb88b3bd1546ec7a8d6a568a7fe13",
+   "size": [
+    128,
+    128
+   ],
+   "name": "震惊"
+  },
+  {
+   "file": "emoji/emoji-09.webp",
+   "source": "mascots/emoji/emoji-09.png",
+   "sha256": "449ee31a5ccd8d9911b30f24d55470c7a1af400c176d2328fb4e154ae147f5d3",
+   "size": [
+    128,
+    128
+   ],
+   "name": "疑惑"
+  },
+  {
+   "file": "emoji/emoji-10.webp",
+   "source": "mascots/emoji/emoji-10.png",
+   "sha256": "3c1740a78837c3d89b6174237b778c3883f69bf65466a6ffb4908c362d388fce",
+   "size": [
+    128,
+    128
+   ],
+   "name": "嗑到了"
+  },
+  {
+   "file": "emoji/emoji-11.webp",
+   "source": "mascots/emoji/emoji-11.png",
+   "sha256": "515b940b4c60fc774a835c9addbb3cfff76eabffeaa1c5cc3fedf53f42200411",
+   "size": [
+    128,
+    128
+   ],
+   "name": "心动"
+  },
+  {
+   "file": "emoji/emoji-12.webp",
+   "source": "mascots/emoji/emoji-12.png",
+   "sha256": "656bdd9a0b90216e95dde2425d2867650761e543aeb7af8edb8ff71f6c6bdb3a",
+   "size": [
+    128,
+    128
+   ],
+   "name": "捂脸"
+  },
+  {
+   "file": "emoji/emoji-13.webp",
+   "source": "mascots/emoji/emoji-13.png",
+   "sha256": "4ed82aa73533a6e7a6b2607d0bd1d25829d367182426d4f6bc2e4369386b41d5",
+   "size": [
+    128,
+    128
+   ],
+   "name": "催更"
+  },
+  {
+   "file": "emoji/emoji-14.webp",
+   "source": "mascots/emoji/emoji-14.png",
+   "sha256": "c7c140711504d6ae191b82aae4bac67b3da3a8fad9d9df09d226bc91bbc3d597",
+   "size": [
+    128,
+    128
+   ],
+   "name": "点赞"
+  },
+  {
+   "file": "emoji/emoji-15.webp",
+   "source": "mascots/emoji/emoji-15.png",
+   "sha256": "21bdaa1e3c82613c721d0b7e8dc7992f383c18c3754779c23448a95d8d07b63f",
+   "size": [
+    128,
+    128
+   ],
+   "name": "抱抱"
+  },
+  {
+   "file": "emoji/emoji-16.webp",
+   "source": "mascots/emoji/emoji-16.png",
+   "sha256": "84580b5ab547e0c9830374e44a5ea5c59a57ad50b0c7dee73dd57fdecddf82a9",
+   "size": [
+    128,
+    128
+   ],
+   "name": "晚安"
+  },
+  {
+   "file": "emoji/emoji-17.webp",
+   "source": "mascots/emoji/emoji-17.png",
+   "sha256": "ee4e9098f0527a29fa432334ca29664a7461297b5434f4b23cbb6887e8813a12",
+   "size": [
+    128,
+    128
+   ],
+   "name": "吃瓜"
+  },
+  {
+   "file": "emoji/emoji-18.webp",
+   "source": "mascots/emoji/emoji-18.png",
+   "sha256": "7dcce47d14bd68547777a116f24622014f4b78ea2b369d457929e6a3fb28ca0d",
+   "size": [
+    128,
+    128
+   ],
+   "name": "鼓掌"
+  },
+  {
+   "file": "emoji/emoji-19.webp",
+   "source": "mascots/emoji/emoji-19.png",
+   "sha256": "da698c5a98452450a5da91aa72d0a90f965f95fc14a4b0e1009637026848a46c",
+   "size": [
+    128,
+    128
+   ],
+   "name": "委屈"
+  },
+  {
+   "file": "emoji/emoji-20.webp",
+   "source": "mascots/emoji/emoji-20.png",
+   "sha256": "8e258f6131ad800ddd369e0a3ba1bff4a364fb1a70fc8a3bb16b39730286dc45",
+   "size": [
+    128,
+    128
+   ],
+   "name": "得意"
+  },
+  {
+   "file": "emoji/emoji-21.webp",
+   "source": "mascots/emoji/emoji-21.png",
+   "sha256": "ab0967911ffbc3519cadd974a74da0a93038fae801481f9869184960890caa96",
+   "size": [
+    128,
+    128
+   ],
+   "name": "发呆"
+  },
+  {
+   "file": "emoji/emoji-22.webp",
+   "source": "mascots/emoji/emoji-22.png",
+   "sha256": "243def4ea54d0050f821561866f6f4c821ca701fcb7c2233626a02df303c4335",
+   "size": [
+    128,
+    128
+   ],
+   "name": "流汗"
+  },
+  {
+   "file": "emoji/emoji-23.webp",
+   "source": "mascots/emoji/emoji-23.png",
+   "sha256": "34fe07681779536386911b46d1219c92ccfe232244120d54ec3bd211bbf5fdc6",
+   "size": [
+    128,
+    128
+   ],
+   "name": "害怕"
+  },
+  {
+   "file": "emoji/emoji-24.webp",
+   "source": "mascots/emoji/emoji-24.png",
+   "sha256": "cb9aca773b658bc40872ec92cdfa7bcdf9dcb602369a4c0f9d6fe9d072866f3e",
+   "size": [
+    128,
+    128
+   ],
+   "name": "比心"
+  },
+  {
+   "file": "emoji/emoji-25.webp",
+   "source": "mascots/emoji/emoji-25.png",
+   "sha256": "0cf7006587e6f7c93302689d4deaecc201bbef49e19f817b3ee234bfedaa2836",
+   "size": [
+    128,
+    128
+   ],
+   "name": "拜托"
+  },
+  {
+   "file": "emoji/emoji-26.webp",
+   "source": "mascots/emoji/emoji-26.png",
+   "sha256": "044d53a2daf90f6f7367d01c1b1a4ed6efcb19cdbc2db4772d11f5b21c11bb2c",
+   "size": [
+    128,
+    128
+   ],
+   "name": "再见"
+  },
+  {
+   "file": "emoji/emoji-27.webp",
+   "source": "mascots/emoji/emoji-27.png",
+   "sha256": "8b398ba691595e290edbe826f88562226a3816fadd85bdce702f54fa02188b21",
+   "size": [
+    128,
+    128
+   ],
+   "name": "叹气"
+  },
+  {
+   "file": "emoji/emoji-28.webp",
+   "source": "mascots/emoji/emoji-28.png",
+   "sha256": "07ba50661e0d5501c3dc8d71a13d5483c0802f3f771f912a0f5ead1cbf305253",
+   "size": [
+    128,
+    128
+   ],
+   "name": "酸了"
+  },
+  {
+   "file": "emoji/emoji-29.webp",
+   "source": "mascots/emoji/emoji-29.png",
+   "sha256": "7710ccd6d586a220beae6eed8bd5a18947d773022dc704815ba4e0a502d88a56",
+   "size": [
+    128,
+    128
+   ],
+   "name": "好耶"
+  },
+  {
+   "file": "emoji/emoji-30.webp",
+   "source": "mascots/emoji/emoji-30.png",
+   "sha256": "4dd2b3392084c1bbc3a7d0a2cfd30260f0c3dd9a45ea68dff761066b1e3461ca",
+   "size": [
+    128,
+    128
+   ],
+   "name": "加油"
+  },
+  {
+   "file": "emoji/emoji-31.webp",
+   "source": "mascots/emoji/emoji-31.png",
+   "sha256": "5412acf62f69e94f717e580d399f37d310da75d3b71bf67876618f0327c7e504",
+   "size": [
+    128,
+    128
+   ],
+   "name": "撒花"
+  },
+  {
+   "file": "emoji/emoji-32.webp",
+   "source": "mascots/emoji/emoji-32.png",
+   "sha256": "5a09bcd74879a6d4c0ea52c1c05165f0d920b8789a89a5da908005ab19127899",
+   "size": [
+    128,
+    128
+   ],
+   "name": "思考"
+  },
+  {
+   "file": "emoji/emoji-33.webp",
+   "source": "mascots/emoji/emoji-33.png",
+   "sha256": "473d4ed58002ade9050ce641aabe28d3f7b8dc2dccbcaa4702aac1c332b4e790",
+   "size": [
+    128,
+    128
+   ],
+   "name": "熬夜"
+  },
+  {
+   "file": "emoji/emoji-34.webp",
+   "source": "mascots/emoji/emoji-34.png",
+   "sha256": "788aa47f8f708143fe70f3604602d6f9486f2e2523cb5304ae16e0f9298dff3a",
+   "size": [
+    128,
+    128
+   ],
+   "name": "无语"
+  },
+  {
+   "file": "emoji/emoji-35.webp",
+   "source": "mascots/emoji/emoji-35.png",
+   "sha256": "c4e6dce01fa51ade58663dd46ccbabdc89f0bcf34f1b49ce8fe8d0d396c15e60",
+   "size": [
+    128,
+    128
+   ],
+   "name": "晕"
+  },
+  {
+   "file": "emoji/emoji-36.webp",
+   "source": "mascots/emoji/emoji-36.png",
+   "sha256": "02b99999ea10875c0dc144b5db024535ec59308607817138f0d59ed54543e938",
+   "size": [
+    128,
+    128
+   ],
+   "name": "亲亲"
   }
  ],
  "cover": {
