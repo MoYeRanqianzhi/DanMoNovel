@@ -1,6 +1,6 @@
 /**
  * 这次打开管理站期间做过的事（原型没有后端）：审核的决定与朱批、处理过的举报、对工作人员的任命与处置、
- * 编辑对作者做的事（寄出合同、备忘、写信）、设置页批在校样上的与付印的、贴的告示、新记的账
+ * 编辑对作者做的事（寄出合同、备忘、写信）、设置页批在校样上的与付印的、贴的告示、上传的站娘素材、新记的账
  *
  * 只存在内存里，刷新就没了。正式版每一个决定都写进服务端，账簿由服务端追加。
  * 几页靠它对得上：审核页盖了章，案卷挪进"已审"，日志页的账簿当场多一笔，总览的待办少一份；
@@ -13,6 +13,7 @@
 import { useSyncExternalStore } from 'react';
 import {
   AUTHORS,
+  MASCOT_EDITION,
   POLICY,
   POLICY_EDITION,
   ROLES,
@@ -35,6 +36,7 @@ import {
 import type { ReviewNote } from '@danmo/data/author';
 import { SHOWCASE, getBook, type Showcase } from '@danmo/data/books';
 import { chapterTitle, toChineseNumber } from '@danmo/data/chapters';
+import { EMOJI, PAGE_PICTURES, STICKER_SETS } from '@danmo/design/lib/mascots';
 import { countKai, rangeLabel } from './format';
 
 /**
@@ -166,9 +168,12 @@ interface Session {
   staff: Record<string, StaffChange>;
   /** 以作者的 id 为键 */
   authors: Record<string, AuthorChange>;
-  /** 设置页的两份校样 */
+  /** 设置页的三份校样 */
   showcase: ProofState<Showcase>;
   policy: ProofState<PolicyValues>;
+  mascots: ProofState<MascotShelves>;
+  /** 这次上传的站娘素材，由远到近（不要了的也留在这里，只是不在校样上） */
+  uploads: MascotAsset[];
   /** 这次贴的告示，由远到近 */
   notices: PostedNotice[];
   /** 由远到近 */
@@ -185,6 +190,8 @@ let state: Session = {
   authors: {},
   showcase: { prints: 0 },
   policy: { prints: 0 },
+  mascots: { prints: 0 },
+  uploads: [],
   notices: [],
   ledger: [],
 };
@@ -601,4 +608,157 @@ export function postNotice(notice: Pick<Notice, 'title' | 'body' | 'from' | 'to'
     ledger: [...state.ledger, entry(by, '公告', notice.title, rangeLabel(notice.from, notice.to))],
   });
   return posted.id;
+}
+
+/* ---------------- 设置：站娘素材（批在校样上，付印才生效） ---------------- */
+
+/** 站娘素材的几组（顺序就是设置页里页签的顺序）：文字内小表情、三套表情包、品牌书内页的小画 */
+export const MASCOT_GROUPS = ['emoji', 'dandan', 'mojie', 'duo', 'xiaohua'] as const;
+export type MascotGroup = (typeof MASCOT_GROUPS)[number];
+
+/** 每组在账簿、批注、读屏里的叫法与量词 */
+export const MASCOT_GROUP_NAMES: Record<MascotGroup, { name: string; unit: string }> = {
+  emoji: { name: '小表情', unit: '个' },
+  dandan: { name: '表情包·耽耽', unit: '张' },
+  mojie: { name: '表情包·墨姐', unit: '张' },
+  duo: { name: '表情包·双人', unit: '张' },
+  xiaohua: { name: '品牌书内页', unit: '张' },
+};
+
+/** 一件素材：小表情的名字就是短码里的字，表情包的名字是读屏念的，小画的名字是“第几张” */
+export interface MascotAsset {
+  id: string;
+  group: MascotGroup;
+  name: string;
+  src: string;
+  /** 这次上传的：什么时候、谁传的（图在浏览器内存里，刷新就没了）。默认带的没有这一项 */
+  uploaded?: { at: number; by: string };
+}
+
+/** 一组里的一件：在不在架上。下架的还在库里，只是写字时的表情面板、品牌书的内页不再用它 */
+export interface ShelfItem {
+  id: string;
+  on: boolean;
+}
+
+/** 每一组素材的先后与上下架 */
+export type MascotShelves = Readonly<Record<MascotGroup, readonly ShelfItem[]>>;
+
+const isGroup = (id: string): id is MascotGroup => (MASCOT_GROUPS as readonly string[]).includes(id);
+
+/** 随代码带的默认一套（@danmo/design 的 lib/mascots.ts）；自建站点删了站娘素材时是空的 */
+const DEFAULT_ASSETS: readonly MascotAsset[] = [
+  ...EMOJI.map((e, i): MascotAsset => ({ id: `emoji/${String(i + 1).padStart(2, '0')}`, group: 'emoji', name: e.name, src: e.src })),
+  ...STICKER_SETS.flatMap((set) =>
+    isGroup(set.id) ? set.stickers.map((t): MascotAsset => ({ id: t.id, group: set.id as MascotGroup, name: t.name, src: t.src })) : [],
+  ),
+  ...PAGE_PICTURES.map(
+    (src, i): MascotAsset => ({ id: `xiaohua/${String(i + 1).padStart(2, '0')}`, group: 'xiaohua', name: `第${toChineseNumber(i + 1)}张`, src }),
+  ),
+];
+
+/** 第一版：默认带的全部在架上，按编号排 */
+const MASCOT_SHELVES = Object.fromEntries(
+  MASCOT_GROUPS.map((g) => [g, DEFAULT_ASSETS.filter((a) => a.group === g).map((a) => ({ id: a.id, on: true }))]),
+) as unknown as MascotShelves;
+
+let assetsFor: MascotAsset[] | null = null;
+let assets: ReadonlyMap<string, MascotAsset> = new Map();
+
+/** 素材库：默认带的加上这次上传的，以 id 为键。上传的没变时返回同一个 Map */
+function assetsOf(session: Session): ReadonlyMap<string, MascotAsset> {
+  if (session.uploads !== assetsFor) {
+    assetsFor = session.uploads;
+    assets = new Map([...DEFAULT_ASSETS, ...session.uploads].map((a) => [a.id, a]));
+  }
+  return assets;
+}
+
+/** 读素材库（订阅这次打开期间上传的） */
+export function useMascotAssets(): ReadonlyMap<string, MascotAsset> {
+  return assetsOf(useSession());
+}
+
+/** 素材校样的一处批改：哪一组的哪一件，现在排第几、原来排第几（新上传的没有原来），在不在架上，上下架变没变 */
+export interface MascotChange {
+  group: MascotGroup;
+  id: string;
+  index: number;
+  from?: number;
+  on: boolean;
+  toggled: boolean;
+}
+
+/** 校样比付印过的改了哪几件（按组、各组从前往后）：新上传的、上下架变了的、挪了位置的；一件兼有几样也只算一处 */
+export function mascotChanges(printed: MascotShelves, draft: MascotShelves): MascotChange[] {
+  return MASCOT_GROUPS.flatMap((group) =>
+    draft[group].flatMap((item, index): MascotChange[] => {
+      const from = printed[group].findIndex((x) => x.id === item.id);
+      if (from < 0) return [{ group, id: item.id, index, on: item.on, toggled: false }];
+      const toggled = printed[group][from].on !== item.on;
+      return from !== index || toggled ? [{ group, id: item.id, index, from, on: item.on, toggled }] : [];
+    }),
+  );
+}
+
+/** 站娘素材现在的样子（订阅这次打开期间的改动） */
+export function useMascots(): ProofView<MascotShelves> {
+  const { mascots } = useSession();
+  const printed = mascots.printed ?? MASCOT_SHELVES;
+  return { printed, draft: mascots.draft ?? printed, marked: !!mascots.draft, edition: editionOf(mascots, MASCOT_EDITION) };
+}
+
+/** 在素材的校样上批一处（上下架、挪位置、不要新上传的）；批完与付印过的一样时，校样上的批改清掉 */
+export function markMascots(draft: MascotShelves) {
+  const printed = state.mascots.printed ?? MASCOT_SHELVES;
+  const same = mascotChanges(printed, draft).length === 0;
+  update({ ...state, mascots: { ...state.mascots, draft: same ? undefined : draft } });
+}
+
+/** 撤掉素材校样上的全部批改（新上传的也一起不要了） */
+export function clearMascots() {
+  update({ ...state, mascots: { ...state.mascots, draft: undefined } });
+}
+
+let uploadSeq = 0;
+/** 上传一件素材：放进素材库，批在校样上这一组的末尾（在架上），付印才上架。返回它的 id */
+export function uploadMascot(group: MascotGroup, name: string, src: string, by: string): string {
+  uploadSeq += 1;
+  const asset: MascotAsset = { id: `up/${uploadSeq}`, group, name, src, uploaded: { at: Date.now(), by } };
+  const draft = state.mascots.draft ?? state.mascots.printed ?? MASCOT_SHELVES;
+  update({
+    ...state,
+    uploads: [...state.uploads, asset],
+    mascots: { ...state.mascots, draft: { ...draft, [group]: [...draft[group], { id: asset.id, on: true }] } },
+  });
+  return asset.id;
+}
+
+/**
+ * 付印站娘素材：批改生效，版次加一。新上传的、重新上架的各记一笔“上架”，下架的记一笔“下架”（对象写“小表情‘笑哭’”）；
+ * 挪了位置的不一件件记，每组记一笔“排序”，附注写调了几件的先后
+ */
+export function printMascots(by: string) {
+  const { draft } = state.mascots;
+  if (!draft) return;
+  const printed = state.mascots.printed ?? MASCOT_SHELVES;
+  const library = assetsOf(state);
+  const changes = mascotChanges(printed, draft);
+  const lines = changes.flatMap((c) => {
+    const { name, unit } = MASCOT_GROUP_NAMES[c.group];
+    const target = `${name}“${library.get(c.id)?.name ?? ''}”`;
+    if (c.from === undefined) return [entry(by, '上架', target, `新上传，排在第${toChineseNumber(c.index + 1)}${unit}`)];
+    if (!c.toggled) return [];
+    return [c.on ? entry(by, '上架', target, '下架后重新放回') : entry(by, '下架', target, `原排在第${toChineseNumber(c.from + 1)}${unit}`)];
+  });
+  for (const group of MASCOT_GROUPS) {
+    const moved = changes.filter((c) => c.group === group && c.from !== undefined && c.from !== c.index).length;
+    const { name, unit } = MASCOT_GROUP_NAMES[group];
+    if (moved) lines.push(entry(by, '排序', name, `调了${countKai(moved)}${unit}的先后`));
+  }
+  update({
+    ...state,
+    mascots: { printed: draft, prints: state.mascots.prints + 1, last: { at: Date.now(), by } },
+    ledger: [...state.ledger, ...lines],
+  });
 }

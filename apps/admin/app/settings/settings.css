@@ -1,5 +1,5 @@
 /* ============================================================
- * 设置 /settings（settings/）：橱窗、告示、站规
+ * 设置 /settings（settings/）：橱窗、告示、站规、站娘素材
  *
  * 校样（.proof）：纸的四角外面是裁切线，上边与左右两边的正中是套准标记，纸下面的留白里一行版次与灰梯尺——都是墨色。
  * 批改用朱色（批改是还没生效的改动，是信息；design-direction 记忆"红线只承载信息"）：
@@ -219,7 +219,8 @@
 /* 编了号的红点：校样上的那一格、条文、批注栏的浮签同一种（与审核页的朱批编号一样） */
 .proof-slot__no,
 .clause__mark,
-.margin__no {
+.margin__no,
+.mascot-tile__no {
   display: block;
   width: 16px;
   height: 16px;
@@ -229,7 +230,8 @@
 }
 .proof-slot__no::before,
 .clause__mark::before,
-.margin__no::before {
+.margin__no::before,
+.mascot-tile__no::before {
   content: attr(data-n);
   display: block;
   font-family: var(--font-sans);
@@ -1099,4 +1101,250 @@
 .blank__option:focus-visible {
   outline: 2px solid var(--thread);
   outline-offset: 1px;
+}
+
+/* ---------------- 站娘素材（Mascots.tsx）：一次排一组，批改的样子同橱窗 ---------------- */
+.mascot-tabs {
+  margin-top: var(--sp-3);
+}
+.mascot-proof {
+  display: grid;
+  gap: 14px;
+  padding: 4px 2px 2px;
+}
+.mascot-proof__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  color: var(--ink);
+}
+.mascot-proof__head span {
+  font-family: var(--font-sans);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+/* 一格的最小宽度按组：小表情小，表情包大，小画是书页的比例 */
+.mascot-grid {
+  --tile: 64px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr));
+  gap: 14px 10px;
+  list-style: none;
+}
+.mascot-grid[data-group='emoji'] {
+  --tile: 42px;
+}
+.mascot-grid[data-group='xiaohua'] {
+  --tile: 58px;
+}
+.mascot-tile,
+.mascot-add {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+}
+.mascot-grid[data-group='xiaohua'] :is(.mascot-tile, .mascot-add) {
+  aspect-ratio: 200 / 284;
+}
+.mascot-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: translate var(--dur-base) var(--ease-soft);
+}
+.mascot-grid[data-group='xiaohua'] .mascot-tile img {
+  object-fit: cover;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px var(--line);
+}
+@media (hover: hover) {
+  .mascot-tile:hover img {
+    translate: 0 -2px;
+  }
+}
+.mascot-tile:focus-visible,
+.mascot-add:focus-visible {
+  outline: 2px solid var(--thread);
+  outline-offset: 2px;
+}
+/* 下架的：淡下去，斜着划一道（校对时删去的写法）。是现状不是批改，用墨色 */
+.mascot-tile[data-off] img {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+.mascot-tile[data-off]::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 6%;
+  right: 6%;
+  height: 1.5px;
+  background: color-mix(in oklab, var(--ink) 60%, transparent);
+  rotate: -28deg;
+}
+/* 批改过的：朱笔圈出来（歪一点的椭圆），左上角编了号的红点 */
+.mascot-tile[data-marked]::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border: 1.5px solid color-mix(in oklab, var(--thread) 85%, transparent);
+  border-radius: 50%;
+  rotate: -7deg;
+  pointer-events: none;
+}
+.mascot-tile__no {
+  position: absolute;
+  top: -9px;
+  left: -9px;
+}
+/* 每组末尾的“+”：一个虚线框 */
+.mascot-add {
+  border: 1.5px dashed color-mix(in oklab, var(--ink) 30%, transparent);
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-2);
+  transition: border-color var(--dur-quick) ease;
+}
+@media (hover: hover) {
+  .mascot-add:hover {
+    border-color: color-mix(in oklab, var(--ink) 55%, transparent);
+  }
+}
+
+/* 一件素材的面板 */
+.asset-form {
+  display: grid;
+  gap: 14px;
+}
+.asset-form__now {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.asset-form__img {
+  flex: none;
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+}
+.asset-form__img[data-group='emoji'] {
+  width: 72px;
+  height: 72px;
+}
+.asset-form__img[data-group='xiaohua'] {
+  width: 100px;
+  height: 142px;
+  object-fit: cover;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.asset-form__meta {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.asset-form__meta + .asset-form__meta {
+  margin-top: 2px;
+}
+.asset-form__was {
+  margin-top: 6px;
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  color: var(--thread-ink);
+}
+.asset-form__note {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.asset-form__moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 上传：左边是图的位置（棋盘格底，透明的地方看得出来），右边选图与规矩 */
+.upload-form {
+  display: grid;
+  gap: 16px;
+}
+.upload-form__pick {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.upload-form__preview {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 112px;
+  border-radius: 8px;
+  font-size: 24px;
+  color: var(--ink-2);
+  background: repeating-conic-gradient(color-mix(in oklab, var(--ink) 7%, transparent) 0 25%, transparent 0 50%) 0 0 / 14px 14px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.upload-form__preview[data-group='xiaohua'] {
+  width: 100px;
+  height: 142px;
+}
+.upload-form__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.upload-form__rule {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.upload-form__error {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--thread-ink);
+}
+.upload-form__error:empty {
+  display: none;
+}
+.upload-form__name {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.upload-form__name input {
+  height: 42px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-family: var(--font-kai);
+  font-size: var(--fs-18);
+  color: var(--ink);
+  background: var(--sheet-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  outline: none;
+}
+.upload-form__name input:focus-visible {
+  box-shadow: inset 0 0 0 1.5px var(--thread);
+}
+.upload-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.upload-form__missing {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.upload-form__actions .btn:is([aria-disabled], :disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
 }

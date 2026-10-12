@@ -536,6 +536,9 @@ export interface Edition {
 /** 橱窗最后一次付印：阿梨把《盐汽水与蝉》放进"新书上架"（样例账 l5） */
 export const SHOWCASE_EDITION: Edition = { no: 12, by: 's4', minutesAgo: 3000 };
 
+/** 站娘素材（表情与品牌书内页）的第一版就是随代码带的默认一套（packages/design/src/mascots/），算作砚田一天前付印 */
+export const MASCOT_EDITION: Edition = { no: 1, by: 's1', minutesAgo: 1440 };
+
 /** 一张告示：标题、正文、起止（YYYY-MM-DD，含两头）、贴的人与距今几分钟 */
 export interface Notice {
   id: string;
@@ -684,7 +687,7 @@ export const REPORTS: readonly Report[] = [
   { id: 'r1', kind: '段评', excerpt: '提醒一下后面的人，第九十章他们……', reason: '剧透', count: 14, minutesAgo: 22 },
   { id: 'r2', kind: '帖子', excerpt: '加群领全本，私信我……', reason: '广告', count: 6, minutesAgo: 95 },
   { id: 'r3', kind: '书评', excerpt: '作者写成这样也好意思……', reason: '人身攻击', count: 3, minutesAgo: 240 },
-  { id: 'r4', kind: '章评', excerpt: '这种设定的都别看了，懂的都懂……', reason: '引战', count: 2, minutesAgo: 610 },
+  { id: 'r4', kind: '章评', excerpt: '这种设定的都别看了[无语]懂的都懂……', reason: '引战', count: 2, minutesAgo: 610 },
 ];
 
 /* ---------------- 全站的数（总览的"今日"） ---------------- */
@@ -713,7 +716,8 @@ export const SITE_NEWCOMERS = 2364;
 /**
  * 事由：账簿上最显眼的一栏，一两个字。撤回：账簿不改不删，收回一个决定也是另记一笔。
  * 处理举报的两种：删除（删去被举报的内容）、保留（举报不成立，内容留着）。
- * 人事的几种：任命、撤销（身份）、停用（账号）、重置（两步验证）、下线（强制退出所有设备上的登录）
+ * 人事的几种：任命、撤销（身份）、停用（账号）、重置（两步验证）、下线（强制退出所有设备上的登录）。
+ * 站娘素材的三种：上架（新上传的或重新放回去的）、下架、排序（一组里调了先后）
  */
 export type LedgerAct =
   | '通过'
@@ -730,7 +734,10 @@ export type LedgerAct =
   | '推荐'
   | '公告'
   | '修订'
-  | '签约';
+  | '签约'
+  | '上架'
+  | '下架'
+  | '排序';
 
 /** 查账时要一眼看到的事由：不予上架、删去读者写的内容、撤销身份、停用账号（日志页与总览的账簿摘录用红线色，其余的戳是墨色） */
 export const ALERT_ACTS: ReadonlySet<LedgerAct> = new Set<LedgerAct>(['驳回', '删除', '撤销', '停用']);

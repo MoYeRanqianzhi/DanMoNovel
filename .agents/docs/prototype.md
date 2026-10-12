@@ -39,7 +39,7 @@ packages/data/src/
   comments.ts   阅读器的示例段评：paragraphCommentCount、paragraphComments（第 10 节"书签、划线、想法与段评"）；固定散列 hash（posts.ts 也用）
   author.ts     作者站的示例数据（第 13 节）：AUTHOR、WORKS、volumesOf、MESSAGES、LETTERS、statsOf、FANS、REVIEWS（朱批）、今日字数
   manuscripts.ts 写作页与审核页的示例稿件：manuscriptOf、wordCount、draftWords
-  admin.ts      管理站的示例数据（第 16 节）：身份与权限、工作人员、审核队列、作者名册、设置页的三份（橱窗、告示、站规）、举报、全站三十天的数、账簿
+  admin.ts      管理站的示例数据（第 16 节）：身份与权限、工作人员、审核队列、作者名册、设置页的几份（橱窗、告示、站规，站娘素材的第一版 MASCOT_EDITION）、举报、全站三十天的数、账簿
 packages/design/src/
   styles/       index.ts（按顺序引入字体与 tokens → themes → base → transitions → layout）、tokens.css（@property 注册）、
                 themes.css（8 套主题）、base.css、transitions.css（墨晕与页面进出场）、layout.css（.app/.stage/.screen、版心、按钮、设置列表与"关于"）
@@ -122,7 +122,7 @@ apps/admin/app/        管理站（SPA，react-router.config.ts 里 ssr: false�
   staff/        身份：Staff.tsx（印谱与名帖）、Dossier.tsx（面板：印的释文、名帖、札子）、rules.ts（谁能对谁做什么、理由）、staff.css
   audit/        日志：Audit.tsx（一卷流水账）、audit.css
   authors/      作者：Authors.tsx（信封的名册）、Author.tsx（拆开的信：八行笺、作品与签约）、authors.css
-  settings/     设置：Settings.tsx（三份校样）、proof.tsx（校样与批注栏）、Showcase.tsx（橱窗）、Notices.tsx（告示）、Policy.tsx（站规）、settings.css
+  settings/     设置：Settings.tsx（四节）、proof.tsx（校样与批注栏）、Showcase.tsx（橱窗）、Notices.tsx（告示）、Policy.tsx（站规）、Mascots.tsx（站娘素材）、settings.css
   overview/     总览：Overview.tsx（案头）、Pile.tsx（一摞稿子）、Reports.tsx（举报的面板）、overview.css
   me/           我
 ```
@@ -1121,7 +1121,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - 告示 NOTICES（n3 十月征文 10-01~10-31、n2 停机维护 10-03、n1 九月书单 09-01~09-30），起止是写死的 YYYY-MM-DD；n3、n2 对得上 l10、l1。
     - 站规 POLICY 七条 `PolicyArticle {id, name, before, after, control, value}`；control 是 count `{unit, min, max, step?}` 或 choice `{options}`。
       第四条（deadline）的值是 REVIEW_LIMIT_MINUTES / 60，步长六小时、六到七十二。POLICY_EDITION `{no: 7, by: 's3', minutesAgo: 1800}` 对得上 l7。
-  - 账簿 LEDGER（l1~l15，数组由近到远，编号越大越晚）。LedgerAct 含"撤回"与"下线"（强制退出所有设备上的登录，身份页记的），以及处理举报的"删除""保留"。ALERT_ACTS（驳回、删除、撤销、停用）是查账时要一眼看到的事由，日志页与总览的账簿摘录都用红线色。
+  - 账簿 LEDGER（l1~l15，数组由近到远，编号越大越晚）。LedgerAct 含"撤回"与"下线"（强制退出所有设备上的登录，身份页记的），处理举报的"删除""保留"，以及站娘素材的"上架""下架""排序"（2026-10-13）。ALERT_ACTS（驳回、删除、撤销、停用）是查账时要一眼看到的事由，日志页与总览的账簿摘录都用红线色。
   - appointPermission(role)：任命这种身份要的权限（超管 appoint.super，其余 appoint，站长 null）。身份页的红线、能不能给某方印都由它与 can 推出。
     - 与作者站对得上的几笔：l12 青砚通过《盐汽水与蝉》第六十五章（定时明天 20:00）、l8 拾遗退回《晚风信号》第三章（两条朱批）、l5 阿梨的"新书上架"推荐、l13 知秋发起的签约、l6 长庚任命霁月。
     - 链值：CHAIN_SEED 起，chainNext(上一笔之后的值, 这一笔) 用 FNV-1a 串下去，给日志页的骑缝章用。内容不含时刻（样例账的时刻每次打开都不同，含了链值就会变）；正式版由服务端连同时刻用加密哈希算。
@@ -1160,7 +1160,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
   - **账簿**：样例账（OPENED_AT − minutesAgo）与 session.ledger 合在一起，由近到远取五笔。有 audit 的（站长、超管）标题"账簿"、每笔带名章、"翻开账簿"进 /audit；其余身份标题"我经手的"，只取 by 是自己的，没有名章那一栏；一笔都没有时写"还没有经手的事"。
     - 一笔两行（名章 | 对象、事由 | 附注、时刻），与日志页手机上的排法一样；640~1239px 账簿铺满一栏宽，一笔排成一行（栏宽都定死：每一行各是一个网格，时刻那一栏用 auto 时，"昨天 22:20"那一行的附注会往左错开）。
     - 时刻：今天写几点几分，昨天"昨天 22:20"，再早"9月30日"。这次新记、一分钟之内的墨迹未干（ov-wet）。
-  - **举报的面板**（Reports.tsx）：Sheet 挂在 body 下，样式不能靠 .overview 上的变量。一条一张纸条（种类、理由、几人举报、多久以前，被举报内容的开头加引号），交替歪 −0.4°、0.3°。种类是墨底小签，长夜里换成 --blush 底、--blush-ink 字（第 5 节）。
+  - **举报的面板**（Reports.tsx）：Sheet 挂在 body 下，样式不能靠 .overview 上的变量。一条一张纸条（种类、理由、几人举报、多久以前，被举报内容的开头加引号；开头里的短码 `[名字]` 用 RichText 显示成小表情，r4 带一个），交替歪 −0.4°、0.3°。种类是墨底小签，长夜里换成 --blush 底、--blush-ink 字（第 5 节）。
     - 两方印：删（白文）、留（朱文），印下写"删去""留下"，与审核页的印盒同一个样子。盖了印 settleReport 记一笔"删除"（附注"剧透，十四人举报"）或"保留"（附注"举报不成立（广告）"）；纸条上的字划掉（删）或淡下去（留），右下角落印，写"已删去 / 已留下"与"撤回"。
     - 撤回：reopenReport 删掉处理，另记一笔"撤回"（附注 `撤回“删除”`），原来那一笔不动。
     - 印的 key 是处理的时刻：这次打开面板之前处理过的（at 早于打开的时刻）直接在纸上（still），撤回再盖是新的一方。
@@ -1188,6 +1188,9 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - printShowcase 一格记一笔"推荐"：对象《新书》，附注"书环第三本（换下《旧书》）"；printPolicy 一条记一笔"修订"：对象"站规第四条"，附注是条文前半、新值与后半第一个逗号（分号、句号）之前的部分，后面"（原为旧值）"（revisionNote）。
     - policyText(article, value)：几用 countKai 写成汉字加单位（两天、十二小时），选的照原样。useReviewLimit 是付印过的第四条乘六十。
   - notices：这次贴出的告示（id p1、p2……），postNotice 记一笔"公告"：对象是标题，附注 rangeLabel（"10 月 2 日至 7 日"）。
+  - mascots：站娘素材的校样，`ProofState<MascotShelves>`：每组（MASCOT_GROUPS：emoji、dandan、mojie、duo、xiaohua）是一串 `{id, on}`，先后就是站上的顺序，on 是在不在架上。printed 缺省是 @danmo/design 的 lib/mascots.ts 里默认的一套，全部在架上（自建站点删了素材时每组都是空的）。uploads 是这次上传的（MascotAsset，id up/1、up/2……，图是 blob 地址）。
+    - mascotChanges(printed, draft)：一件一处（新上传、上下架、挪了位置可以兼有）；useMascotAssets() 是默认的加上传的，以 id 为键。
+    - uploadMascot 把上传的放进 uploads、批在这一组末尾；printMascots 新上传与重新放回的各记一笔"上架"、下架的记"下架"（对象"小表情“笑哭”"），挪了位置的每组记一笔"排序"（附注"调了两张的先后"）。
   - update 一律 `{...state, ...}`：新加的字段不会被别的动作丢掉。
 - **审核**（review/）：/review 与 /review/:id 两个路由共用 ReviewScreen，data 是 `{id, kind?}`：/review?kind=… 先按那一种筛好（clientLoader 对着 QUEUE_KINDS 校验，不认得的当作没筛；总览点一摞进来），之后由页面上的筛选自己管。/review/:id 的 handle 是 back 'hop'、book 取案卷的书、parent 回 /review。
   - **版面**（review.css）：
@@ -1235,7 +1238,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - 页末两行空行（.ledger-blank）：竖线用一条多段的 linear-gradient 画，段位必须与 --ledger-cols 对上（三段定宽，第四道在余下宽度的 1.25/2.25 处）。过去的页划一道从左上到右下的斜线（`to top right` 的 50% 等值线就是这条对角线），"以下空白"顺着斜线写：容器是 inline-size，转角是 `atan2(高, 100cqw)`，斜线在字底下用 mask 断开。今天这一页的第一行空行淡淡写"下一笔记在这里"。
     - 骑缝（.ledger-seam）：高 0，左右负外边距铺满整张纸。::before 是一排齿孔（桌面色的小孔加一圈淡影），盖在骑缝章上面，像打穿了印泥；::after 是两侧的半圆缺口。骑缝章"耽墨账簿"58px 靠右、歪着压在线上，旁边写较早那天结账时的链值（"十月一日结 8650 1691"）。
     - 宽屏右边是书口索引：一排小签从纸的右边沿底下伸出来（.ledger 的 z-index 盖住小签左边一截；.audit-body 是 isolation: isolate，这个 z-index 只在这一卷里比，见第 4 节），正在看的那天多伸出一点、外沿一道红线。窄屏隐藏索引，一笔改成两行（名章在左；对象与事由一行，附注与时刻一行），没有竖线。
-  - **筛选**：拿起一方名章（只看这个人经手的，aria-pressed，拿起的变白文）、按事由的类别（审核与举报、人事、推荐与公告、站规、签约；审核与举报合成一类，两样都是对内容下的决定，撤回是共用的事由，分开了按事由筛也分不清撤回的是哪一样）。筛掉的行不显示，页脚写"另有几笔 / 都不在筛选里"；链值与骑缝照旧。工具下面写"筛出 n 笔，共 N 笔"。
+  - **筛选**：拿起一方名章（只看这个人经手的，aria-pressed，拿起的变白文）、按事由的类别（审核与举报、人事、推荐与公告、站规、签约、站娘素材；审核与举报合成一类，两样都是对内容下的决定，撤回是共用的事由，分开了按事由筛也分不清撤回的是哪一样）。筛掉的行不显示，页脚写"另有几笔 / 都不在筛选里"；链值与骑缝照旧。工具下面写"筛出 n 笔，共 N 笔"。
   - **核对**：从最早的那道骑缝起，每 480ms 核一道（印重新按一下、写"对得上"），最后 role="status" 给结论"核对完毕：N 笔账，几道骑缝的链值都对得上"；减少动效时一次核完。离开页面时清掉计时器。播报区空着时用 `position: absolute` 让出位置，不能 display:none：不在无障碍树里的播报区，填进文字时读屏不念。**导出**：Toast 提示原型未接入。
   - **墨迹未干**：打开这一页之前不到一分钟记下的（WET_MS）、打开之后新记的，文字有模糊与晕开的影子、名章更艳，3.2 秒内干透。审核页盖章、撤回后切到日志就能看到。干透时（ledger-wet 的 animationend）记进 AuditScreen 的 dried：筛掉的行会卸载，筛回来时不能在挂载时重新判断，否则一分钟之内会再湿一遍。
   - **书口索引的当前页**：滚动时取开头已过屏幕上方 140px 的最后一页；滚到底取最后一页（短页的开头到不了那条线）。点书口翻页时直接标在点的那一天，1 秒内不按滚动改（平滑滚动还没停）；jumpedAt 的初值是负无穷，新开的页面 performance.now() 从 0 起算，初值 0 会挡掉第一次计算。
@@ -1305,7 +1308,7 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
       - LetterSheet：一张横格信笺，有称呼、正文 textarea（最多 300 字，首行缩进）、落款"某组 某某"与名章落下的空位；常用语点一下接在后面。
       - 钤印寄出调 sendLetter（不记账），名章 Stamp 落在信尾，落定后再留 520ms 收起；减少动效时立刻收起。面板里的 role="status" 播报"已寄出给某某的信"。
 - **设置**（settings/，/settings 标签页，need 'operate'：站长、超管、管理员；修订站规另要 policy）：母题是校样。图标 lucide ScrollText，在日志之后。
-  改动先用朱笔批在样张上，按"付印"才生效、记账；付印之前每一处都能撤销。批改在 session 里，离开这一页再回来还在。三节由上往下：橱窗、告示、站规。
+  改动先用朱笔批在样张上，按"付印"才生效、记账；付印之前每一处都能撤销。批改在 session 里，离开这一页再回来还在。四节由上往下：橱窗、告示、站规、站娘素材。
   - **校样**（proof.tsx 的 ProofSheet）：figure 里一张纸（.proof__sheet），四角外面裁切线，上边与左右两边正中套准标记（SVG 圆圈加十字），
     纸下面的留白里一行版次（"耽墨小说 · 书城 · 第十二版 · 九月三十日阿梨付印"；有批改时"第十三版校样 · 批改两处"）与五格灰梯尺。这些都是墨色。
     没有批改时右上角钤着"付印"（Stamp still）；一有批改印就不在了；付印时 play 加一，印落一遍。
@@ -1353,6 +1356,13 @@ React Router 负责地址、数据、服务端渲染、缓存头与 SEO。页面
     - 手里没有 policy（管理员）：控件都 aria-disabled、aria-describedby 指向 #policy-why（"修订站规要站长或超管的印；你手里是管理员的印。"）；点了不动。
     - 窄屏（< 600px）：条号与小标题并排一行、条文占满整行，红点挪到条号前面（不伸出纸外）。
     - 第四条付印之后审核页按新的时限算超时：样例在二十四小时下只有 q4 超时，改成六小时后三份超时。
+  - **站娘素材**（Mascots.tsx，2026-10-13）：小表情、三套表情包、品牌书内页的校样，上面一排 Segmented 页签，样张上一次排一组（标题写架上几件、下架几件）。
+    - 一件一格（.mascot-tile，按钮里一张图）：下架的淡下去、灰、斜着划一道（墨色：是现状）；批改过的朱笔圈出来、左上角编号的红点（同橱窗）。每组末尾一格虚线"+"上传。
+    - 点一件打开面板（标题"表情包·耽耽“打招呼”"）：第几张、在不在架上、谁什么时候上传的、"批改：……"；下架或重新上架、往前往后挪一格、恢复原样；在架上的写一句下架的后果（表情：写字时的面板里不再有它，已经发出去的照常显示；小画：品牌书不再翻到）。
+      新上传还没付印的只有"不要这张"（站上还没有它，不说下架）；拿掉以后焦点交给这一组的"+"。打开时记下这一件与样张、收起时 inert，同橱窗的 SlotSheet。
+    - 上传（UploadForm）：棋盘格底的预览、"选一张 PNG"（隐藏的 file input）。查文件开头的八个字节是不是 PNG（扩展名和类型都不信）、不超过 2 MB、比例与最小尺寸（表情包、小表情正方形，至少 480、128；小画 200∶284，至少 600 宽，同 export_webp.py 导出的尺寸），不合格的写在按钮下面（role=alert），blob 地址收回。
+      名字：小表情是短码里的字（一到四个，不带空白和方括号，不能和校样上、付印过的小表情重名），表情包是读屏念的（最多八个字），小画自动叫"第几张"。差什么写在按钮旁边，"放上样张"aria-disabled 并指向它（同告示）。
+    - 原型只在管理站这次打开期间，影响不到小说站（三站各自一个源）；默认的一套只能下架，新上传的付印以后也只能下架。
   - **数字、日子与引号**：数量后面跟量词时用 format.ts 的 countKai（2 写"两"：两张、两笔、两天），序数与日子仍用 toChineseNumber。身份页"在册几人"与 headcount 也改用它。
     rangeLabel、rangeKai 跨了年时两头都写年（yearKai 在 format.ts，站规末尾的修订日子也用它）。
     设置页的样例文案（告示正文、第七条、SHELF_NAMES、l5 的附注）用弯引号“”。

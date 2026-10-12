@@ -2,6 +2,7 @@
  * 举报：总览里点"举报"那一摞打开的面板（举报没有自己的一页，要管运营的印：站长、超管、管理员）
  *
  * - 一条举报一张纸条：哪一种内容、举报的理由、几个人举报、多久以前，下面是被举报内容的开头（楷书，加引号）。
+ *   开头里的短码 [名字] 照小说站的样子显示成文字内小表情（@danmo/design 的 expressions），看到的就是读者看到的。
  * - 处理是盖印，与审核页的印盒同一个样子：删（删去这条内容，白文印）、留（举报不成立，内容留着，朱文印）。
  *   印落在纸条右边，账簿记一笔"删除"或"保留"（session.ts 的 settleReport）；盖过的纸条留在原处，
  *   删去的那句划一道、留下的淡一些，可以撤回（账簿另记一笔"撤回"，原来那一笔不动）。
@@ -14,6 +15,7 @@ import { REPORTS, type Report } from '@danmo/data/admin';
 import { Sheet } from '@danmo/design/components/overlays';
 import { Stamp } from '@danmo/design/components/Stamp';
 import { Seal } from '@danmo/design/components/ui';
+import { RichText } from '@danmo/design/expressions/Expressions';
 import { ago, countKai } from '../format';
 import { useIdentity } from '../identity';
 import { REPORT_ACT, reopenReport, settleReport, useSession, type ReportVerdict } from '../session';
@@ -80,7 +82,9 @@ export function Reports({ open, onClose }: { open: boolean; onClose: () => void 
                   {countKai(r.count)}人举报 · {ago(r.minutesAgo)}
                 </span>
               </p>
-              <blockquote className="report__excerpt">“{r.excerpt}”</blockquote>
+              <blockquote className="report__excerpt">
+                “<RichText text={r.excerpt} />”
+              </blockquote>
               {d ? (
                 <p className="report__done">
                   <span>{d.verdict === '删' ? '已删去' : '已留下'}</span>

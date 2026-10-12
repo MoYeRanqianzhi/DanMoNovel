@@ -35,6 +35,7 @@ const ACT_GROUPS: readonly { name: string; acts: readonly LedgerAct[] }[] = [
   { name: '推荐与公告', acts: ['推荐', '公告'] },
   { name: '站规', acts: ['修订'] },
   { name: '签约', acts: ['签约'] },
+  { name: '站娘素材', acts: ['上架', '下架', '排序'] },
 ];
 
 /** 核对时每一道骑缝停多久 */
