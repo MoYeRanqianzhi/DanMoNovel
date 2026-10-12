@@ -4,11 +4,16 @@
  * 用在两处：各站根组件的 ErrorBoundary（loader 抛出错误时，在 Provider 之外渲染，
  * 所以这里不用任何上下文，只用静态的纸面样式；三站共用 RouteErrorPage）；以及页面栈里的 404 页（inline 为 true）。
  * 印文"缺"表示找不到、"误"表示出了差错。
+ * 找不到时印章旁边站着耽耽，边走边看书，没留意走到了哪里；印盖在她脚边。站娘素材缺了（自建站点删了）就只有印章。
  * 找不到时的说法各站不同（copy）：小说站说书架、作者站说书房、管理站说案卷；不传时用不分站点的说法。
  */
 import type { ReactNode } from 'react';
 import { isRouteErrorResponse } from 'react-router';
+import { lihuiSrc } from '../lib/mascots';
 import './error-page.css';
+
+/** 找不到时的立绘：耽耽边走边看书 */
+const WANDERER = lihuiSrc('dandan-lihui-zoudu');
 
 /** 找不到时的标题与说明 */
 export interface NotFoundCopy {
@@ -37,9 +42,18 @@ export function ErrorPage({ kind, action, inline, detail, copy = NEUTRAL }: Erro
   const Root = inline ? 'div' : 'main';
   return (
     <Root className="error-page paper" data-inline={inline || undefined}>
-      <p className="error-page__seal" aria-hidden="true">
-        {notFound ? '缺' : '误'}
-      </p>
+      {notFound && WANDERER ? (
+        <div className="error-page__figure">
+          <img className="error-page__lihui" src={WANDERER} alt="" draggable={false} />
+          <p className="error-page__seal" aria-hidden="true">
+            缺
+          </p>
+        </div>
+      ) : (
+        <p className="error-page__seal" aria-hidden="true">
+          {notFound ? '缺' : '误'}
+        </p>
+      )}
       <h1 className="error-page__title">{notFound ? copy.title : '出了点差错'}</h1>
       <p className="error-page__text">{notFound ? copy.text : '页面没能打开，请稍后再试。'}</p>
       {action}

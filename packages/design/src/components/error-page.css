@@ -33,6 +33,37 @@
   transform: rotate(-4deg);
   clip-path: polygon(0 0, 100% 0, 100% 78%, 84% 100%, 0 100%);
 }
+/* 找不到时：耽耽边走边看书，印章盖在她脚边、压着裙摆。人随屏高缩一点，不把标题和按钮挤出去 */
+.error-page__figure {
+  position: relative;
+  margin-bottom: var(--sp-2);
+}
+.error-page__lihui {
+  display: block;
+  width: auto;
+  height: min(240px, 32vh);
+}
+.error-page__figure .error-page__seal {
+  position: absolute;
+  right: -10px;
+  bottom: 4px;
+  width: 52px;
+  height: 52px;
+  margin: 0;
+  font-size: 31px;
+}
+/* 矮屏（横放的手机）：人缩到一百来像素就看不清了，还会把按钮挤出屏幕。不放人，印章照原来的样子 */
+@media (max-height: 540px) {
+  .error-page__lihui {
+    display: none;
+  }
+  .error-page__figure .error-page__seal {
+    position: static;
+    width: 64px;
+    height: 64px;
+    font-size: 38px;
+  }
+}
 .error-page__title {
   font-family: var(--font-kai);
   font-weight: 400;

@@ -7,6 +7,7 @@
  * 下方是读完的书（同样可以飞进详情）和设置入口。
  * 宽屏（≥1100px）分成两栏，与书架的"书桌 + 书架"同一种分法：左栏是"你"——一方大印、名字、设置；
  * 右栏是"你读的"——这一周的印章（章下写着每天读了几分钟）和读完的书（书下写着读了多久）。
+ * "关于耽墨"面板里站着两位站娘：耽耽抱书、墨姐按剑（站娘素材见 @danmo/design 的 lib/mascots.ts，没有素材的站点不放，那句版权说明也不写）。
  */
 import { useState, type CSSProperties } from 'react';
 import { ChevronRight, FlaskConical, Info, Palette, Sparkles } from 'lucide-react';
@@ -15,6 +16,7 @@ import { POSES } from '@danmo/design/book3d/Book3D';
 import { Sheet } from '@danmo/design/components/overlays';
 import { Logo, Seal, Segmented } from '@danmo/design/components/ui';
 import { BookSlot } from '@danmo/design/flight/FlightContext';
+import { lihuiSrc } from '@danmo/design/lib/mascots';
 import { useClientValue } from '@danmo/design/lib/useClientValue';
 import { VERSION } from '@danmo/design/lib/version';
 import { useStack, type ScreenProps } from '@danmo/design/shell/stack';
@@ -22,6 +24,10 @@ import { useTheme, type MotionPref } from '@danmo/design/theme/ThemeContext';
 import { getTheme } from '@danmo/design/theme/themes';
 import { SAMPLE_WEEK, dayKey, formatReadTime, useReadingTime } from '../readingTime';
 import './profile.css';
+
+/** "关于"面板里的两张立绘：耽耽的标准立绘（抱书）、墨姐的标准立绘（按剑） */
+const ABOUT_DANDAN = lihuiSrc('dandan-lihui-baoshu');
+const ABOUT_MOJIE = lihuiSrc('mojie-lihui-anjian');
 
 const DAY_NAMES = ['一', '二', '三', '四', '五', '六', '日'];
 
@@ -186,6 +192,18 @@ export function ProfileScreen({ data, screen }: ScreenProps<ProfileData>) {
         <div className="about">
           <Logo size={44} />
           <p>耽墨是一个开源、多平台的原耽小说阅读器。你现在看到的是 UI 原型（{VERSION}），书目、人物与正文都是示例内容。</p>
+          {ABOUT_DANDAN && ABOUT_MOJIE && (
+            <>
+              <figure className="about__mascots">
+                <span className="about__pair">
+                  <img className="about__dandan" src={ABOUT_DANDAN} alt="" draggable={false} />
+                  <img className="about__mojie" src={ABOUT_MOJIE} alt="" draggable={false} />
+                </span>
+                <figcaption>站娘耽耽、墨姐</figcaption>
+              </figure>
+              <p>站娘耽耽、墨姐的名字、形象、设定与图片保留所有权利，不适用代码的开源许可。</p>
+            </>
+          )}
           <p>界面字体：霞鹜文楷、马善政毛笔楷书、思源宋体，均以 SIL Open Font License 1.1 授权。</p>
         </div>
       </Sheet>

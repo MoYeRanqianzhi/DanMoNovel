@@ -203,3 +203,47 @@
 }
 
 /* 设置列表与"关于"的样式与作者站共用，在 packages/design 的 layout.css 里 */
+
+/* "关于"面板里的两位站娘：并肩站着，脚落在同一条线上。
+ * 两张立绘都是人顶天立地画满的，设定里耽耽 158 cm、墨姐 166 cm，所以耽耽画成墨姐的 0.95 倍；
+ * 两张图左右各有一大片透明，墨姐往左压一点，两人才挨得近 */
+.about__mascots {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: var(--sp-2) 0 0;
+}
+.about__pair {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  isolation: isolate;
+}
+/* 脚下一小片影子：人是站在纸上的 */
+.about__pair::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 16%;
+  right: 16%;
+  bottom: -2px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(var(--shadow-rgb) / 0.22), transparent);
+}
+.about__pair img {
+  width: auto;
+  height: 180px;
+}
+.about__pair .about__dandan {
+  height: 171px;
+}
+.about__pair .about__mojie {
+  margin-left: -28px;
+}
+.about__mascots figcaption {
+  font-family: var(--font-kai);
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
